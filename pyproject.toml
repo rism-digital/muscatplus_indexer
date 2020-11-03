@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "muscatplus_indexer"
+version = "0.1.0"
+description = ""
+authors = ["Andrew Hankinson <andrew.hankinson@rism.digital>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pysolr = "^3.9.0"
+dbutils = "^1.3"
+pymarc = "^4.0.0"
+mysqlclient = "^2.0.1"
+pyyaml = "^5.3.1"
+uvloop = "^0.14.0"
+ujson = "^3.2.0"
+httpx = "^0.14.3"
+
+[tool.poetry.dev-dependencies]
+ipython = "^7.18.1"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

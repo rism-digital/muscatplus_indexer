@@ -1,0 +1,8 @@
+---
+solr:
+  server: http://localhost:8983/solr
+  ingest_core: muscat-plus-ingest
+  production_core: muscat-plus-production
+
+mysql:
+  resultsize: 1000

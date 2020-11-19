@@ -1,5 +1,4 @@
 import logging
-import uuid
 import itertools
 from collections import defaultdict
 from typing import TypedDict, Optional, List, Dict
@@ -8,7 +7,7 @@ import pymarc
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi
+from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi, normalize_id
 
 log = logging.getLogger("muscat_indexer")
 
@@ -23,6 +22,7 @@ class PersonRelationshipIndexDocument(TypedDict):
     title_s: str
     relationship_id: str
     name_s: Optional[str]
+    date_statement_s: Optional[str]
     person_id: Optional[str]
     relationship_s: Optional[str]
     qualifier_s: Optional[str]
@@ -65,77 +65,98 @@ class IncipitIndexDocument(TypedDict):
     title_s: Optional[str]
 
 
+class SourceSubjectIndexDocument(TypedDict):
+    id: str
+    type: str
+    source_id: str
+    term_s: str
+
+
 class SourceIndexDocument(TypedDict):
     id: str
+    type: str
     source_id: str
     source_membership_id: Optional[str]
-    type: str
+    source_membership_title_s: Optional[str]
     subtype_s: str
     title_s: str
     source_title_s: Optional[str]
-    creator_name_s: str
+    creator_name_s: Optional[str]
+    creator_id: Optional[str]
     general_notes_sm: Optional[List[str]]
+    source_type_sm: Optional[List[str]]
     source_members_sm: Optional[List[str]]
-    people_sm: Optional[List[str]]
-    people_ids: Optional[List[str]]
+    related_people_sm: Optional[List[str]]
+    related_people_ids: Optional[List[str]]
     institutions_sm: Optional[List[str]]
     institutions_ids: Optional[List[str]]
+    subject_ids: Optional[List[str]]
 
 
-def create_source_index_documents(source: str, record_id: int, record_type_id: int, membership_id: Optional[int]) -> List:
+def create_source_index_documents(record: Dict) -> List:
+    source: str = record['marc_source']
+    # A source is always either its own member, or belonging to a membership
+    # of a "parent" source.
+    membership_id: int = m if (m := record.get('source_id')) else record['id']
+    record_type_id: int = record['record_type']
+
     log.debug("Creating a source document.")
     record_subtype: str = RECORD_TYPES_BY_ID.get(record_type_id)
-    record: pymarc.Record = create_marc(source)
+    marc_record: pymarc.Record = create_marc(source)
 
-    source_id: str = f"source_{to_solr_single_required(record, '001')}"
+    source_id: str = f"source_{normalize_id(to_solr_single_required(marc_record, '001'))}"
+    log.info("Processing source %s", source_id)
 
-    people_marc_ids: List = to_solr_multi(record, "700", "0") or []
+    people_marc_ids: List = to_solr_multi(marc_record, "700", "0") or []
     people_ids: List = [f"person_{p}" for p in people_marc_ids]
 
-    institution_marc_ids: List = to_solr_multi(record, "710", "0") or []
+    creator_id: Optional[str] = f"person_{cid}" if (cid := to_solr_single(marc_record, '100', '0')) else None
+
+    institution_marc_ids: List = to_solr_multi(marc_record, "710", "0") or []
     institution_ids: List = [f"institution_{i}" for i in institution_marc_ids]
 
-    main_title: str = _get_main_title(record)
-    source_title: str = to_solr_single_required(record, "245", "a")
+    subject_marc_ids: List = to_solr_multi(marc_record, "650", "0") or []
+    subject_ids: List = [f"subject_{i}" for i in subject_marc_ids]
+
+    main_title: str = _get_main_title(marc_record)
+    source_title: str = to_solr_single_required(marc_record, "245", "a")
 
     d: SourceIndexDocument = {
         "id": source_id,
         "type": "source",
         "source_id": source_id,
-        "source_membership_id": f"source_{membership_id:09}",  # for IDs that are less than nine digits, pad with zeros.
+        "source_membership_id": f"source_{membership_id}",
+        "source_membership_title_s": record.get("parent_title"),
         "subtype_s": record_subtype,
         "title_s": main_title,
         "source_title_s": source_title,
-        "creator_name_s": to_solr_single(record, "100", "a"),
-        "source_members_sm": to_solr_multi(record, "774", "w"),
-        "people_sm": to_solr_multi(record, "700", "a"),
-        "people_ids": people_ids,
-        "institutions_sm": to_solr_multi(record, "710", "a"),
+        "creator_name_s": to_solr_single(marc_record, "100", "a"),
+        "creator_id": creator_id,
+        "source_members_sm": _get_source_membership(marc_record),
+        "related_people_sm": to_solr_multi(marc_record, "700", "a"),
+        "related_people_ids": people_ids,
+        "institutions_sm": to_solr_multi(marc_record, "710", "a"),
         "institutions_ids": institution_ids,
-        "general_notes_sm": to_solr_multi(record, "500", "a"),
-        # "material_groups": _get_material_groups(record),
-        # "creator": _get_creator(record),
-        # "people_relationships": _get_people_relationships(record),
+        "general_notes_sm": to_solr_multi(marc_record, "500", "a"),
+        "source_type_sm": to_solr_multi(marc_record, "593", "a"),  # A list of all types associated with all material groups; Individual material groups also get their own Solr doc
+        "subject_ids": subject_ids
     }
 
-    people_relationships: Optional[List] = _get_people_relationships(record, source_id, source_title) or []
-    institution_relationships: Optional[List] = _get_institution_relationships(record, source_id, source_title) or []
-    creator: Optional[List] = _get_creator(record, source_id) or {}
-    material_groups: Optional[List] = _get_material_groups(record, source_id) or []
-    incipits: Optional[List] = _get_incipits(record, source_id) or []
+    people_relationships: List = _get_people_relationships(marc_record, source_id, source_title) or []
+    institution_relationships: List = _get_institution_relationships(marc_record, source_id, source_title) or []
+    creator: List = _get_creator(marc_record, source_id) or []
+    material_groups: List = _get_material_groups(marc_record, source_id) or []
+    incipits: List = _get_incipits(marc_record, source_id) or []
 
+    # Create a list of all the Solr records to send off for indexing, and extend with any additional records if there
+    # are results. We don't need to check these, since they're guaranteed to be a list (even if they are empty).
     res: List = [d]
 
-    if creator:
-        res.extend(creator)
-    if people_relationships:
-        res.extend(people_relationships)
-    if institution_relationships:
-        res.extend(institution_relationships)
-    if material_groups:
-        res.extend(material_groups)
-    if incipits:
-        res.extend(incipits)
+    res.extend(creator)
+    res.extend(people_relationships)
+    res.extend(institution_relationships)
+    res.extend(material_groups)
+    res.extend(incipits)
 
     return res
 
@@ -143,17 +164,21 @@ def create_source_index_documents(source: str, record_id: int, record_type_id: i
 def _get_main_title(record: pymarc.Record) -> str:
     standardized_title: str = to_solr_single_required(record, '240', 'a')
     arrangement: Optional[str] = to_solr_single(record, '240', 'o')
-    # subheading: Optional[str] = to_solr_single(record, '240', 'k')
-    # key: Optional[str] = to_solr_single(record, '240', 'r')
-    # score_summary: Optional[str] = to_solr_single(record, '240', 'm')
+    subheading: Optional[str] = to_solr_single(record, '240', 'k')
+    key: Optional[str] = to_solr_single(record, '240', 'r')
+    score_summary: Optional[str] = to_solr_single(record, '240', 'm')
+    siglum: Optional[str] = to_solr_single(record, '852', 'a')
+    shelfmark: Optional[str] = to_solr_single(record, '852', 'c')
 
     # collect the title statement in a list to be joined later.
     title: List[str] = [standardized_title]
 
     if arrangement:
-        title.append(f"({arrangement})")
+        title.append(f" ({arrangement})")
+    if shelfmark and siglum:
+        title.append(f"; {siglum} {shelfmark}")
 
-    return " ".join(title)
+    return "".join(title)
 
 
 def _get_creator(record: pymarc.Record, source_id: str) -> Optional[List]:
@@ -166,8 +191,9 @@ def _get_creator(record: pymarc.Record, source_id: str) -> Optional[List]:
         "type": "source_creator",
         "source_id": source_id,
         "name_s": creator["a"],
+        "date_statement_s": to_solr_single(record, "100", "d"),
         "person_id": creator["0"],
-        "relationship_s": creator["j"]
+        "qualifier_s": creator["j"]
     }]
 
 
@@ -188,6 +214,7 @@ def __person_relationship(field: pymarc.Field, source_id: str, source_title: str
         "name_s": field["a"] or None,
         "title_s": source_title,
         "qualifier_s": field["j"] or None,
+        "date_statement_s":  field["d"] or None,
         "person_id": f"person_{field['0']}",
         "relationship_s": field["4"] or None,
         "relationship_id": relationship_id
@@ -230,6 +257,14 @@ def _get_institution_relationships(record: pymarc.Record, source_id: str, source
         return None
 
     return [__institution_relationship(i, source_id, source_title, num) for num, i in enumerate(institutions, 1)]
+
+
+def _get_source_membership(record: pymarc.Record) -> Optional[List]:
+    values: Optional[List] = to_solr_multi(record, "774", "w")
+    if not values:
+        return None
+
+    return [f"source_{normalize_id(i)}" for i in values if i]
 
 
 def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:

@@ -21,7 +21,8 @@ def index_places(cfg: Dict) -> bool:
         alternate_terms, 
         topic, 
         sub_topic 
-        FROM muscat_development.places;""")
+        FROM muscat_development.places
+        WHERE wf_stage = 1;""")
 
     all_places: List[Dict] = curs._cursor.fetchall()
 

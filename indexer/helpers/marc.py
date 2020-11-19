@@ -60,7 +60,7 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    lines: List = re.split(r"\r\n|\r|\n", record, re.ASCII)
+    lines: List = re.split(r"[\r\n]+", record)
     fields: List[MarcField] = [_parse_field(line) for line in lines if line != '']
     r: pymarc.Record = pymarc.Record()
 

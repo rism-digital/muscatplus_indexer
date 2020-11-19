@@ -1,5 +1,7 @@
 from typing import TypedDict, Dict, Optional, List
 
+from indexer.helpers.utilities import clean_multivalued
+
 
 class PlaceIndexDocument(TypedDict):
     id: str
@@ -26,16 +28,9 @@ def create_place_index_document(place: Dict) -> PlaceIndexDocument:
         "name_s": place["name"],
         "country_s": place.get("country"),
         "district_s": place.get("district"),
-        "alternate_terms_sm": _clean_multivalued(place, "alternate_terms"),
-        "topic_sm": _clean_multivalued(place, "topic"),
-        "subtopic_sm": _clean_multivalued(place, "sub_topic")
+        "alternate_terms_sm": clean_multivalued(place, "alternate_terms"),
+        "topic_sm": clean_multivalued(place, "topic"),
+        "subtopic_sm": clean_multivalued(place, "sub_topic")
     }
 
     return d
-
-
-def _clean_multivalued(place: Dict, field_name: str) -> Optional[List[str]]:
-    if not place.get(field_name):
-        return None
-
-    return [t for t in place.get(field_name).splitlines() if t.strip()]

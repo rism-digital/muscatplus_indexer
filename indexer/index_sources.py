@@ -14,9 +14,10 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT id, source_id, marc_source, record_type 
-                    FROM muscat_development.sources 
-                    WHERE wf_stage > 0
+    curs.execute("""SELECT child.id AS id, child.title AS title, child.source_id AS source_id, child.marc_source AS marc_source, child.record_type AS record_type, parent.title AS parent_title
+                    FROM muscat_development.sources AS child
+                    LEFT JOIN muscat_development.sources AS parent ON parent.id = child.source_id
+                    WHERE child.wf_stage > 0
                     ORDER BY id asc
                     LIMIT 10000;""")
 
@@ -40,14 +41,7 @@ def index_source_groups(sources: List) -> bool:
     records_to_index: List = []
 
     for record in sources:
-        m_source: str = record['marc_source']
-        # A source is always either its own member, or belonging to a membership
-        # of a "parent" source.
-        m_membership_id: int = m if (m := record.get('source_id')) else record['id']
-        m_type: int = record['record_type']
-        m_id: str = record['id']
-
-        docs = create_source_index_documents(m_source, m_id, m_type, m_membership_id)
+        docs = create_source_index_documents(record)
         log.debug("Appending source document")
         records_to_index.extend(docs)
 

@@ -1,9 +1,10 @@
 import logging
+import re
 import timeit
 import concurrent.futures
 from functools import wraps
-from typing import List, Any, Iterable, Optional
-from indexer.exceptions import RequiredFieldException
+from typing import List, Any, Iterable, Optional, Dict
+from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
 import pymarc
 
 log = logging.getLogger("muscat_indexer")
@@ -66,6 +67,7 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
         return None
 
     # If the subfield argument is None, return the whole field value.
+    # If the field is a control field, strip off the first 2 digits since they are the indicator values
     if subfield is None:
         return f"{fields[0].value()}"
 
@@ -111,4 +113,29 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: str) -> Optional[
         return list({f.value() for f in fields if f})
 
     # Treat the subfields as a list of lists, and flatten their values
+    # NB: Note that this is a Set Comprehension, not a Dictionary!
     return list({val for field in fields for val in field.get_subfields(subfield)})
+
+
+def normalize_id(identifier: str) -> str:
+    """
+    Muscat IDs come in a wide variety of shapes and sizes, some with leading zeroes, others without.
+
+    This method ensures any identifier is consistent by stripping any leading zeroes off a string. This is done
+    by parsing it as an integer, and then returning it as a string again.
+
+    :param identifier: An identifier to normalize
+    :return: A normalized identifier
+    """
+
+    if not (m := re.match(r"[\d]+", identifier)):
+        raise MalformedIdentifierException(f"The identifier {identifier} is not well-formed.")
+
+    return f"{int(m.group())}"
+
+
+def clean_multivalued(fields: Dict, field_name: str) -> Optional[List[str]]:
+    if not fields.get(field_name):
+        return None
+
+    return [t for t in fields.get(field_name).splitlines() if t.strip()]

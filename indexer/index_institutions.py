@@ -31,7 +31,7 @@ def index_institutions(cfg: Dict) -> bool:
 
 
 def index_institution_groups(institutions: List) -> bool:
-    log.debug("Indexing Institutions")
+    log.info("Indexing Institutions")
     records_to_index: List = []
 
     for record in institutions:

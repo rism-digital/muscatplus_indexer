@@ -9,6 +9,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def index_places(cfg: Dict) -> bool:
+    log.info("Indexing places")
     conn = mysql_pool.connection()
     curs = conn.cursor()
 

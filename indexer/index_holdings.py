@@ -30,7 +30,7 @@ def index_holdings(cfg: Dict) -> bool:
 
 
 def index_holdings_groups(holdings: List) -> bool:
-    log.debug("Indexing holidngs")
+    log.info("Indexing holdings")
     records_to_index: List = []
 
     for record in holdings:

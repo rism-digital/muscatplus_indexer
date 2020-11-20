@@ -10,7 +10,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
-    log.debug("Getting list of sources to index")
+    log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
@@ -29,7 +29,7 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
 
 
 def index_sources(cfg: Dict) -> bool:
-    log.debug("Indexing all source groups")
+    log.info("Indexing sources")
     source_groups = _get_parent_sources(cfg)
     parallelise(source_groups, index_source_groups)
 

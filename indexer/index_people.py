@@ -30,7 +30,7 @@ def index_people(cfg: Dict) -> bool:
 
 
 def index_people_groups(people: List) -> bool:
-    log.debug("Indexing People")
+    log.info("Indexing People")
     records_to_index: List = []
 
     for record in people:

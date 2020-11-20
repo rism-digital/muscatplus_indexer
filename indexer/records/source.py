@@ -81,9 +81,11 @@ class SourceIndexDocument(TypedDict):
     subtype_s: str
     title_s: str
     source_title_s: Optional[str]
+    additional_title_s: Optional[str]
     creator_name_s: Optional[str]
     creator_id: Optional[str]
     general_notes_sm: Optional[List[str]]
+    description_summary_sm: Optional[List[str]]
     source_type_sm: Optional[List[str]]
     source_members_sm: Optional[List[str]]
     related_people_sm: Optional[List[str]]
@@ -130,7 +132,8 @@ def create_source_index_documents(record: Dict) -> List:
         "subtype_s": record_subtype,
         "title_s": main_title,
         "source_title_s": source_title,
-        "creator_name_s": to_solr_single(marc_record, "100", "a"),
+        "additional_title_s": to_solr_single(marc_record, "730", "a"),
+        "creator_name_s": _get_creator_name(marc_record),
         "creator_id": creator_id,
         "source_members_sm": _get_source_membership(marc_record),
         "related_people_sm": to_solr_multi(marc_record, "700", "a"),
@@ -138,6 +141,7 @@ def create_source_index_documents(record: Dict) -> List:
         "institutions_sm": to_solr_multi(marc_record, "710", "a"),
         "institutions_ids": institution_ids,
         "general_notes_sm": to_solr_multi(marc_record, "500", "a"),
+        "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),  # A list of all types associated with all material groups; Individual material groups also get their own Solr doc
         "subject_ids": subject_ids
     }
@@ -179,6 +183,17 @@ def _get_main_title(record: pymarc.Record) -> str:
         title.append(f"; {siglum} {shelfmark}")
 
     return "".join(title)
+
+
+def _get_creator_name(record: pymarc.Record) -> Optional[str]:
+    creator: pymarc.Field = record["100"]
+    if not creator:
+        return None
+
+    name: str = creator["a"]
+    dates: str = f" ({d})" if (d := to_solr_single(record, "100", "d")) else ""
+
+    return f"{name}{dates}"
 
 
 def _get_creator(record: pymarc.Record, source_id: str) -> Optional[List]:

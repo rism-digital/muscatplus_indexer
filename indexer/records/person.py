@@ -68,6 +68,6 @@ def _get_related_people(record: pymarc.Record) -> Optional[List[Dict]]:
     if not people:
         return None
 
-    related_id: str = "person_{to_solr_single_required(record, '001')}"
+    related_id: str = f"person_{to_solr_single_required(record, '001')}"
 
     return [__related_person(p, related_id) for p in people if p]

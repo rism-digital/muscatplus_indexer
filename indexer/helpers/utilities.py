@@ -2,6 +2,7 @@ import logging
 import re
 import timeit
 import concurrent.futures
+from collections import OrderedDict
 from functools import wraps
 from typing import List, Any, Iterable, Optional, Dict
 from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
@@ -97,8 +98,8 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
 def to_solr_multi(record: pymarc.Record, field: str, subfield: str) -> Optional[List[str]]:
     """
     Returns all the values for a given field and subfield. Extracting this data from the
-    field is done by creating a Set of values from the MARC record, so duplicate values
-    will be removed.
+    field is done by creating an OrderedDict from the keys, and then casting it back to a list. This removes
+    duplicates but keeps the original order.
 
     :param record: A pymarc.Record instance
     :param field: A string indicating the tag that should be extracted
@@ -110,11 +111,10 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: str) -> Optional[
         return None
 
     if subfield is None:
-        return list({f.value() for f in fields if f})
+        return list(OrderedDict.fromkeys(f.value() for f in fields if f))
 
     # Treat the subfields as a list of lists, and flatten their values
-    # NB: Note that this is a Set Comprehension, not a Dictionary!
-    return list({val for field in fields for val in field.get_subfields(subfield)})
+    return list(OrderedDict.fromkeys(val for field in fields for val in field.get_subfields(subfield)))
 
 
 def normalize_id(identifier: str) -> str:

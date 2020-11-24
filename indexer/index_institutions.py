@@ -14,7 +14,7 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT id, marc_source FROM muscat_development.institutions;""")
+    curs.execute("""SELECT id, marc_source FROM muscat_development.institutions WHERE wf_stage = 1;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows

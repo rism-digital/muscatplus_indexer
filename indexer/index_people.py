@@ -13,7 +13,7 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT id, marc_source FROM muscat_development.people;""")
+    curs.execute("""SELECT id, marc_source FROM muscat_development.people WHERE wf_stage = 1;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

@@ -2,7 +2,7 @@ import logging
 from typing import Tuple, Generator, List, Optional, Dict
 
 from indexer.helpers.db import mysql_pool
-from indexer.helpers.solr import submit_to_solr
+from indexer.helpers.solr import submit_to_solr, solr_conn
 from indexer.helpers.utilities import parallelise
 from indexer.records.source import SourceIndexDocument, create_source_index_documents
 
@@ -14,11 +14,15 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT child.id AS id, child.title AS title, child.source_id AS source_id, child.marc_source AS marc_source, child.record_type AS record_type, parent.title AS parent_title
+    curs.execute("""SELECT child.id AS id, child.title AS title, child.source_id AS source_id, 
+                           child.marc_source AS marc_source, child.record_type AS record_type, 
+                           parent.title AS parent_title, COUNT(h.id) AS holdings_count
                     FROM muscat_development.sources AS child
                     LEFT JOIN muscat_development.sources AS parent ON parent.id = child.source_id
-                    WHERE child.wf_stage > 0
-                    ORDER BY id asc
+                    LEFT JOIN muscat_development.holdings h on child.id = h.source_id
+                    WHERE child.wf_stage = 1
+                    GROUP BY child.id
+                    ORDER BY child.id desc
                     LIMIT 10000;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa

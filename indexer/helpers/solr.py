@@ -6,7 +6,7 @@ import pysolr
 log = logging.getLogger("muscat_indexer")
 
 solr_conn: pysolr.Solr = pysolr.Solr("http://localhost:8983/solr/muscat-plus-ingest",
-                                     decoder=ujson, timeout=120)
+                                     decoder=ujson, always_commit=False, timeout=120)
 
 
 def submit_to_solr(records: List) -> bool:
@@ -18,11 +18,11 @@ def submit_to_solr(records: List) -> bool:
     """
     log.debug("Indexing records to Solr")
     try:
-        solr_conn.add(records)
+        solr_conn.add(records, commit=False)
     except pysolr.SolrError as e:
         log.error("Could not index to Solr. %s", e)
         log.error(records)
         return False
 
-    solr_conn.commit()
+    # solr_conn.commit()
     return True

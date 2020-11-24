@@ -79,12 +79,15 @@ class SourceIndexDocument(TypedDict):
     source_membership_id: Optional[str]
     source_membership_title_s: Optional[str]
     subtype_s: str
-    title_s: str
+    main_title_s: str
     source_title_s: Optional[str]
     additional_title_s: Optional[str]
+    key_mode_s: Optional[str]
+    scoring_summary_sm: Optional[List[str]]
     creator_name_s: Optional[str]
     creator_id: Optional[str]
     general_notes_sm: Optional[List[str]]
+    binding_notes_sm: Optional[List[str]]
     description_summary_sm: Optional[List[str]]
     source_type_sm: Optional[List[str]]
     source_members_sm: Optional[List[str]]
@@ -93,6 +96,8 @@ class SourceIndexDocument(TypedDict):
     institutions_sm: Optional[List[str]]
     institutions_ids: Optional[List[str]]
     subject_ids: Optional[List[str]]
+    num_holdings_i: Optional[int]
+    date_statements_sm: Optional[List[str]]
 
 
 def create_source_index_documents(record: Dict) -> List:
@@ -120,6 +125,8 @@ def create_source_index_documents(record: Dict) -> List:
     subject_marc_ids: List = to_solr_multi(marc_record, "650", "0") or []
     subject_ids: List = [f"subject_{i}" for i in subject_marc_ids]
 
+    num_holdings: int = record.get("holdings_count")
+
     main_title: str = _get_main_title(marc_record)
     source_title: str = to_solr_single_required(marc_record, "245", "a")
 
@@ -130,8 +137,10 @@ def create_source_index_documents(record: Dict) -> List:
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),
         "subtype_s": record_subtype,
-        "title_s": main_title,
+        "main_title_s": main_title,
         "source_title_s": source_title,
+        "key_mode_s": to_solr_single(marc_record, "240", "r"),
+        "scoring_summary_sm": to_solr_multi(marc_record, "240", "m"),
         "additional_title_s": to_solr_single(marc_record, "730", "a"),
         "creator_name_s": _get_creator_name(marc_record),
         "creator_id": creator_id,
@@ -141,9 +150,12 @@ def create_source_index_documents(record: Dict) -> List:
         "institutions_sm": to_solr_multi(marc_record, "710", "a"),
         "institutions_ids": institution_ids,
         "general_notes_sm": to_solr_multi(marc_record, "500", "a"),
+        "binding_notes_sm": to_solr_multi(marc_record, "563", "a"),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),  # A list of all types associated with all material groups; Individual material groups also get their own Solr doc
-        "subject_ids": subject_ids
+        "subject_ids": subject_ids,
+        "num_holdings_i": num_holdings,
+        "date_statements_sm": to_solr_multi(marc_record, "260", "c")
     }
 
     people_relationships: List = _get_people_relationships(marc_record, source_id, source_title) or []
@@ -291,11 +303,21 @@ def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_pub(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "place_publication_sm": field.get_subfields("a"),
+        "name_publisher_sm": field.get_subfields("b"),
+        "date_statements_sm": field.get_subfields("c")
+    }
+
+    return res
 
 
 def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "physical_extent_sm": field.get_subfields("a")
+    }
+
+    return res
 
 
 def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
@@ -303,11 +325,19 @@ def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "general_notes_sm": field.get_subfields("a")
+    }
+
+    return res
 
 
 def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "binding_notes_sm": field.get_subfields("a")
+    }
+
+    return res
 
 
 def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
@@ -333,14 +363,19 @@ def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
 def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
         "people_sm": field.get_subfields('a'),
-        "people_ids": field.get_subfields('0')
+        "people_ids": [f"person_{normalize_id(f)}" for f in field.get_subfields('0') if f]
     }
 
     return res
 
 
 def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "institutions_sm": field.get_subfields("a"),
+        "institutions_ids": [f"institution_{normalize_id(f)}" for f in field.get_subfields("0") if f]
+    }
+
+    return res
 
 
 def __mg_external(field: pymarc.Field) -> MaterialGroupFields:

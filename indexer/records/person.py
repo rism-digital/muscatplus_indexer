@@ -35,8 +35,7 @@ def create_person_index_documents(source: str) -> List:
         "alternate_names_sm": to_solr_multi(record, '400', 'a'),
         "gender_s": to_solr_single(record, '375', 'a'),
         "roles_sm": to_solr_multi(record, '550', 'a'),
-        "external_ids": _get_external_ids(record),
-        # "related_people": _get_related_people(record),
+        "external_ids": _get_external_ids(record)
     }
 
     related_people: Optional[List] = _get_related_people(record) or []

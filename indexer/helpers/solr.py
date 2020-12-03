@@ -6,7 +6,7 @@ import pysolr
 log = logging.getLogger("muscat_indexer")
 
 solr_conn: pysolr.Solr = pysolr.Solr("http://localhost:8983/solr/muscat-plus-ingest",
-                                     decoder=ujson, always_commit=False, timeout=120)
+                                     decoder=ujson, encoder=ujson, timeout=120)
 
 
 def submit_to_solr(records: List) -> bool:

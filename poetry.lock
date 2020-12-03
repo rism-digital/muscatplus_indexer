@@ -233,17 +233,24 @@ python-versions = ">=3.6.*"
 
 [[package]]
 name = "pysolr"
-version = "3.9.0"
+version = "3.9.1.dev44+g98c78c2"
 description = "Lightweight Python client for Apache Solr"
 category = "main"
 optional = false
 python-versions = "*"
+develop = false
 
 [package.dependencies]
 requests = ">=2.9.1"
 
 [package.extras]
 solrcloud = ["kazoo (>=2.5.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/django-haystack/pysolr"
+reference = "master"
+resolved_reference = "98c78c2204ba19f40ecd32b34880daeb40b2080d"
 
 [[package]]
 name = "pyyaml"
@@ -347,7 +354,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3870752c1c4db36b76abba29778fd501b9a1a810f468b37254a48886cc1db8d5"
+content-hash = "15600fecd488c8a13bcdb5bf69622dca05248fa8e8f4222a82200605993cc926"
 
 [metadata.files]
 appnope = [
@@ -438,9 +445,7 @@ pygments = [
 pymarc = [
     {file = "pymarc-4.0.0.tar.gz", hash = "sha256:e5abe4d9243babd89811ddb3b841e3dbc18ae5dc6c062813e102bf42e0b09067"},
 ]
-pysolr = [
-    {file = "pysolr-3.9.0.tar.gz", hash = "sha256:6ef05feb87c614894243eddc62e9b0a6134a889c159ae868655cf6cd749545e6"},
-]
+pysolr = []
 pyyaml = [
     {file = "PyYAML-5.3.1-cp27-cp27m-win32.whl", hash = "sha256:74809a57b329d6cc0fdccee6318f44b9b8649961fa73144a98735b0aaf029f1f"},
     {file = "PyYAML-5.3.1-cp27-cp27m-win_amd64.whl", hash = "sha256:240097ff019d7c70a4922b6869d8a86407758333f02203e0fc6ff79c5dcede76"},

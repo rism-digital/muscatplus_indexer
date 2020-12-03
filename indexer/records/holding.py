@@ -24,7 +24,7 @@ def create_holding_index_document(source: str, record_id: int, membership_id: in
 
     d: HoldingIndexDocument = {
         "id": f"holding_{record_id}",
-        "type": "source_holding",
+        "type": "holding",
         "source_membership_id": f"source_{membership_id:09}",
         "holding_institution_s": to_solr_single(record, '852', 'e'),
         "holding_institution_id": f"institution_{to_solr_single(record, '852', 'x')}",

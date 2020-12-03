@@ -24,5 +24,4 @@ def submit_to_solr(records: List) -> bool:
         log.error(records)
         return False
 
-    # solr_conn.commit()
     return True

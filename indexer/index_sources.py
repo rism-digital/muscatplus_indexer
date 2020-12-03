@@ -22,8 +22,7 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
                     LEFT JOIN muscat_development.holdings h on child.id = h.source_id
                     WHERE child.wf_stage = 1
                     GROUP BY child.id
-                    ORDER BY child.id desc
-                    LIMIT 10000;""")
+                    ORDER BY child.id desc;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows
@@ -41,7 +40,7 @@ def index_sources(cfg: Dict) -> bool:
 
 
 def index_source_groups(sources: List) -> bool:
-    log.debug("Index source group")
+    log.info("Index source group")
     records_to_index: List = []
 
     for record in sources:

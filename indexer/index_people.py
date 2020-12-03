@@ -13,7 +13,11 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT id, marc_source FROM muscat_development.people WHERE wf_stage = 1;""")
+    curs.execute("""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count
+                    FROM muscat_development.people AS p
+                    JOIN muscat_development.sources_to_people AS s ON p.id = s.person_id
+                    WHERE wf_stage = 1
+                    GROUP BY p.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows
@@ -34,8 +38,7 @@ def index_people_groups(people: List) -> bool:
     records_to_index: List = []
 
     for record in people:
-        m_source = record['marc_source']
-        docs = create_person_index_documents(m_source)
+        docs = create_person_index_documents(record)
         records_to_index.extend(docs)
 
     check: bool = submit_to_solr(records_to_index)

@@ -13,7 +13,7 @@ def _get_holdings_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT id, source_id, marc_source FROM muscat_development.holdings WHERE wf_stage = 1;""")
+    curs.execute("""SELECT id, source_id, marc_source FROM muscat_development.holdings WHERE wf_stage = 'published';""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

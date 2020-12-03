@@ -15,6 +15,7 @@ log_config: Dict = yaml.full_load(open('logging.yml', 'r'))
 idx_config: Dict = yaml.full_load(open('index_config.yml', 'r'))
 
 logging.config.dictConfig(log_config)
+log = logging.getLogger("muscat_indexer")
 
 
 @elapsedtime
@@ -26,6 +27,7 @@ def main() -> bool:
     hld: bool = index_holdings(idx_config)
     sub: bool = index_subjects(idx_config)
 
+    log.info("Performing Solr Commit")
     solr_conn.commit()
 
     return src and ppl and plc and ins and hld and sub

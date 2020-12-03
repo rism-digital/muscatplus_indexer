@@ -20,30 +20,33 @@ class PersonIndexDocument(TypedDict):
     gender_s: Optional[str]
     roles_sm: Optional[List]
     external_ids: Optional[List]
-    # related_people: Optional[List[Dict]]
+    boost: int
 
 
-def create_person_index_documents(source: str) -> List:
-    record: pymarc.Record = create_marc(source)
+def create_person_index_documents(record: Dict) -> List:
+    marc_record: pymarc.Record = create_marc(record['marc_source'])
+    pid: str = f"person_{to_solr_single_required(marc_record, '001')}"
 
     d: PersonIndexDocument = {
         "type": "person",
-        "id": f"person_{to_solr_single_required(record, '001')}",
-        "person_id": to_solr_single_required(record, '001'),
-        "name_s": to_solr_single(record, '100', 'a'),
-        "date_statement_s": to_solr_single(record, '100', 'd'),
-        "alternate_names_sm": to_solr_multi(record, '400', 'a'),
-        "gender_s": to_solr_single(record, '375', 'a'),
-        "roles_sm": to_solr_multi(record, '550', 'a'),
-        "external_ids": _get_external_ids(record)
+        "id": pid,
+        "person_id": pid,
+        "name_s": to_solr_single(marc_record, '100', 'a'),
+        "date_statement_s": to_solr_single(marc_record, '100', 'd'),
+        "alternate_names_sm": to_solr_multi(marc_record, '400', 'a'),
+        "gender_s": to_solr_single(marc_record, '375', 'a'),
+        "roles_sm": to_solr_multi(marc_record, '550', 'a'),
+        "external_ids": _get_external_ids(marc_record),
+        "boost": record.get("source_count", 0)
     }
 
-    related_people: Optional[List] = _get_related_people(record) or []
+    related_people: List = _get_related_people(marc_record) or []
 
     return [d, *related_people]
 
 
 def _get_external_ids(record: pymarc.Record) -> Optional[List]:
+    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later. """
     ids: List = record.get_fields('024')
     if not ids:
         return None
@@ -52,12 +55,20 @@ def _get_external_ids(record: pymarc.Record) -> Optional[List]:
 
 
 def __related_person(field: pymarc.Field, related_id: str) -> Dict:
+    """
+    Generate a related person record. The target of the relationship is given in the person_id field,
+    while the source of the relationship is given in the related_id field.
+
+    :param field: The pymarc field for the relationship
+    :param related_id: The ID of the source person for the relationship
+    :return: A Solr record for the person relationship
+    """
     return {
         "id": f"{uuid.uuid4()}",
         "type": "related_person",
         "name_s": field['a'],
         "relationship_s": field['i'],
-        "person_id": field['0'],
+        "person_id": f"person_{field['0']}",
         "related_id": related_id
     }
 

@@ -9,6 +9,11 @@ handlers:
     level: INFO
     formatter: simple
     stream: ext://sys.stdout
+  consoledebug:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
   file:
     class: logging.handlers.TimedRotatingFileHandler
     level: ERROR

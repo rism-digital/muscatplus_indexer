@@ -19,19 +19,25 @@ class InstitutionIndexDocument(TypedDict):
     siglum_s: Optional[str]
     alternate_names_sm: Optional[List[str]]
     location_loc: Optional[str]
+    related_institutions_sm: Optional[List[str]]
+    website_s: Optional[str]
 
 
 def create_institution_index_document(institution: str) -> InstitutionIndexDocument:
     record: pymarc.Record = create_marc(institution)
+    institution_id: str = f"institution_{to_solr_single_required(record, '001')}"
+    related_institutions_ids: List = to_solr_multi(record, "710", "0") or []
 
     d: InstitutionIndexDocument = {
-        "id": f"institution_{to_solr_single_required(record, '001')}",
+        "id": institution_id,
         "type": "institution",
-        "institution_id": to_solr_single_required(record, '001'),
+        "institution_id": institution_id,
         "name_s": to_solr_single_required(record, '110', 'a'),
         "city_s": to_solr_single(record, '110', 'c'),
         "siglum_s": to_solr_single(record, '110', 'g'),
         "alternate_names_sm": to_solr_multi(record, '410', 'a'),
+        "website_s": to_solr_single(record, "371", "u"),
+        "related_institutions_sm": [f"institution_{i}" for i in related_institutions_ids if i],
         "location_loc": _get_location(record)
     }
 

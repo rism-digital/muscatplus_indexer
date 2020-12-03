@@ -19,7 +19,7 @@ class PersonRelationshipIndexDocument(TypedDict):
     id: str
     type: str
     source_id: str
-    title_s: str
+    main_title_s: str
     relationship_id: str
     name_s: Optional[str]
     date_statement_s: Optional[str]
@@ -33,7 +33,7 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     type: str
     source_id: str
     relationship_id: str
-    title_s: str
+    main_title_s: str
     name_s: Optional[str]
     institution_id: Optional[str]
     relationship_s: Optional[str]
@@ -107,13 +107,10 @@ def create_source_index_documents(record: Dict) -> List:
     membership_id: int = m if (m := record.get('source_id')) else record['id']
     record_type_id: int = record['record_type']
 
-    log.debug("Creating a source document.")
     record_subtype: str = RECORD_TYPES_BY_ID.get(record_type_id)
     marc_record: pymarc.Record = create_marc(source)
 
     source_id: str = f"source_{normalize_id(to_solr_single_required(marc_record, '001'))}"
-    log.info("Processing source %s", source_id)
-
     people_marc_ids: List = to_solr_multi(marc_record, "700", "0") or []
     people_ids: List = [f"person_{p}" for p in people_marc_ids]
 
@@ -158,9 +155,9 @@ def create_source_index_documents(record: Dict) -> List:
         "date_statements_sm": to_solr_multi(marc_record, "260", "c")
     }
 
-    people_relationships: List = _get_people_relationships(marc_record, source_id, source_title) or []
-    institution_relationships: List = _get_institution_relationships(marc_record, source_id, source_title) or []
-    creator: List = _get_creator(marc_record, source_id) or []
+    people_relationships: List = _get_people_relationships(marc_record, source_id, main_title) or []
+    institution_relationships: List = _get_institution_relationships(marc_record, source_id, main_title) or []
+    creator: List = _get_creator(marc_record, source_id, main_title) or []
     material_groups: List = _get_material_groups(marc_record, source_id) or []
     incipits: List = _get_incipits(marc_record, source_id) or []
 
@@ -180,21 +177,28 @@ def create_source_index_documents(record: Dict) -> List:
 def _get_main_title(record: pymarc.Record) -> str:
     standardized_title: str = to_solr_single_required(record, '240', 'a')
     arrangement: Optional[str] = to_solr_single(record, '240', 'o')
-    subheading: Optional[str] = to_solr_single(record, '240', 'k')
+    excerpts: Optional[str] = to_solr_single(record, '240', 'k')
     key: Optional[str] = to_solr_single(record, '240', 'r')
     score_summary: Optional[str] = to_solr_single(record, '240', 'm')
     siglum: Optional[str] = to_solr_single(record, '852', 'a')
     shelfmark: Optional[str] = to_solr_single(record, '852', 'c')
+    opus: Optional[str] = to_solr_single(record, "383", "b")
+    source_type: Optional[str] = to_solr_single(record, "593", "a")
 
     # collect the title statement in a list to be joined later.
-    title: List[str] = [standardized_title]
+    title: List[str] = [f"{standardized_title};"]
 
+    if excerpts:
+        title.append(f" ({excerpts});")
     if arrangement:
-        title.append(f" ({arrangement})")
+        title.append(f" ({arrangement});")
+    if source_type:
+        title.append(f" {source_type};")
     if shelfmark and siglum:
-        title.append(f"; {siglum} {shelfmark}")
+        title.append(f" {siglum} {shelfmark}")
 
-    return "".join(title)
+    # Be sure to stop off any trailing semicolons if there are any.
+    return "".join(title).rstrip(";")
 
 
 def _get_creator_name(record: pymarc.Record) -> Optional[str]:
@@ -208,19 +212,22 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
     return f"{name}{dates}"
 
 
-def _get_creator(record: pymarc.Record, source_id: str) -> Optional[List]:
+def _get_creator(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List[PersonRelationshipIndexDocument]]:
     creator: pymarc.Field = record['100']
     if not creator:
         return None
 
     return [{
-        "id": f"source_{to_solr_single_required(record, '001')}_creator",
-        "type": "source_creator",
+        "id": f"{source_id}_relationship_creator",
+        "type": "source_person_relationship",
         "source_id": source_id,
-        "name_s": creator["a"],
+        "name_s": to_solr_single(record, "100", "a"),
+        "main_title_s": source_title,
+        "qualifier_s": to_solr_single(record, "100", "j"),
         "date_statement_s": to_solr_single(record, "100", "d"),
-        "person_id": creator["0"],
-        "qualifier_s": creator["j"]
+        "person_id": f"person_{c}" if (c := to_solr_single(record, "100", "0")) else None,
+        "relationship_s": "cre",
+        "relationship_id": "creator"
     }]
 
 
@@ -239,9 +246,9 @@ def __person_relationship(field: pymarc.Field, source_id: str, source_title: str
         "source_id": source_id,
         "type": "source_person_relationship",
         "name_s": field["a"] or None,
-        "title_s": source_title,
+        "main_title_s": source_title,
         "qualifier_s": field["j"] or None,
-        "date_statement_s":  field["d"] or None,
+        "date_statement_s": field["d"] or None,
         "person_id": f"person_{field['0']}",
         "relationship_s": field["4"] or None,
         "relationship_id": relationship_id
@@ -270,7 +277,7 @@ def __institution_relationship(field: pymarc.Field, source_id: str, source_title
         "type": "source_institution_relationship",
         "source_id": source_id,
         "name_s": field["a"] or None,
-        "title_s": source_title,
+        "main_title_s": source_title,
         "qualifier_s": field["g"] or None,
         "institution_id": f"institution_{field['0']}",
         "relationship_s": field["4"] or None,
@@ -287,11 +294,24 @@ def _get_institution_relationships(record: pymarc.Record, source_id: str, source
 
 
 def _get_source_membership(record: pymarc.Record) -> Optional[List]:
-    values: Optional[List] = to_solr_multi(record, "774", "w")
-    if not values:
+    members: Optional[List] = record.get_fields("774")
+    if not members:
         return None
 
-    return [f"source_{normalize_id(i)}" for i in values if i]
+    ret: List = []
+
+    for tag in members:
+        member_id: Optional[str] = tag["w"] or None
+        if not member_id:
+            continue
+
+        member_type: Optional[str] = tag["4"] or None
+        # Create an ID like "holding_12345" or "source_4567" (default)
+        ret.append(
+            f"{'source' if not member_type else member_type}_{normalize_id(member_id)}"
+        )
+
+    return ret
 
 
 def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:

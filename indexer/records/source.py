@@ -5,7 +5,7 @@ from typing import TypedDict, Optional, List, Dict
 
 import pymarc
 
-from indexer.helpers.identifiers import RECORD_TYPES_BY_ID
+from indexer.helpers.identifiers import RECORD_TYPES_BY_ID, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi, normalize_id
 
@@ -80,12 +80,14 @@ class SourceIndexDocument(TypedDict):
     source_membership_title_s: Optional[str]
     subtype_s: str
     main_title_s: str
+    standardized_title_s: Optional[str]
     source_title_s: Optional[str]
     additional_title_s: Optional[str]
     key_mode_s: Optional[str]
     scoring_summary_sm: Optional[List[str]]
     creator_name_s: Optional[str]
     creator_id: Optional[str]
+    opus_numbers_sm: Optional[List[str]]
     general_notes_sm: Optional[List[str]]
     binding_notes_sm: Optional[List[str]]
     description_summary_sm: Optional[List[str]]
@@ -98,6 +100,11 @@ class SourceIndexDocument(TypedDict):
     subject_ids: Optional[List[str]]
     num_holdings_i: Optional[int]
     date_statements_sm: Optional[List[str]]
+    country_code_s: Optional[str]
+    siglum_s: Optional[str]
+    shelfmark_s: Optional[str]
+    former_shelfmarks_sm: Optional[List[str]]
+    holding_institution_id: Optional[str]
 
 
 def create_source_index_documents(record: Dict) -> List:
@@ -122,6 +129,9 @@ def create_source_index_documents(record: Dict) -> List:
     subject_marc_ids: List = to_solr_multi(marc_record, "650", "0") or []
     subject_ids: List = [f"subject_{i}" for i in subject_marc_ids]
 
+    holding_institution_ident: Optional[str] = to_solr_single(marc_record, "852", "x")
+    holding_institution_id: Optional[str] = f"institution_{holding_institution_ident}" if holding_institution_ident else None
+
     num_holdings: int = record.get("holdings_count")
 
     main_title: str = _get_main_title(marc_record)
@@ -136,6 +146,7 @@ def create_source_index_documents(record: Dict) -> List:
         "subtype_s": record_subtype,
         "main_title_s": main_title,
         "source_title_s": source_title,
+        "standardized_title_s": to_solr_single(marc_record, "240", "a"),
         "key_mode_s": to_solr_single(marc_record, "240", "r"),
         "scoring_summary_sm": to_solr_multi(marc_record, "240", "m"),
         "additional_title_s": to_solr_single(marc_record, "730", "a"),
@@ -146,13 +157,19 @@ def create_source_index_documents(record: Dict) -> List:
         "related_people_ids": people_ids,
         "institutions_sm": to_solr_multi(marc_record, "710", "a"),
         "institutions_ids": institution_ids,
+        "opus_numbers_sm": to_solr_multi(marc_record, "383", "b"),
         "general_notes_sm": to_solr_multi(marc_record, "500", "a"),
         "binding_notes_sm": to_solr_multi(marc_record, "563", "a"),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),  # A list of all types associated with all material groups; Individual material groups also get their own Solr doc
         "subject_ids": subject_ids,
         "num_holdings_i": num_holdings,
-        "date_statements_sm": to_solr_multi(marc_record, "260", "c")
+        "date_statements_sm": to_solr_multi(marc_record, "260", "c"),
+        "country_code_s": _get_country_code(marc_record),
+        "siglum_s": to_solr_single(marc_record, "852", "a"),
+        "shelfmark_s": to_solr_single(marc_record, "852", "c"),
+        "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
+        "holding_institution_id": holding_institution_id
     }
 
     people_relationships: List = _get_people_relationships(marc_record, source_id, main_title) or []
@@ -516,3 +533,10 @@ def _get_incipits(record: pymarc.Record, source_id: str) -> Optional[List]:
 
     return [__incipit(f, source_id, num) for num, f in enumerate(incipits)]
 
+
+def _get_country_code(record: pymarc.Record) -> Optional[str]:
+    siglum: Optional[str] = to_solr_single(record, "852", "a")
+    if not siglum:
+        return None
+
+    return country_code_from_siglum(siglum)

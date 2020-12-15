@@ -17,6 +17,7 @@ class InstitutionIndexDocument(TypedDict):
     name_s: str
     city_s: Optional[str]
     siglum_s: Optional[str]
+    country_code_s: Optional[str]
     alternate_names_sm: Optional[List[str]]
     location_loc: Optional[str]
     related_institutions_sm: Optional[List[str]]
@@ -35,6 +36,7 @@ def create_institution_index_document(institution: str) -> InstitutionIndexDocum
         "name_s": to_solr_single_required(record, '110', 'a'),
         "city_s": to_solr_single(record, '110', 'c'),
         "siglum_s": to_solr_single(record, '110', 'g'),
+        "country_code_s": _get_country_code(record),
         "alternate_names_sm": to_solr_multi(record, '410', 'a'),
         "website_s": to_solr_single(record, "371", "u"),
         "related_institutions_sm": [f"institution_{i}" for i in related_institutions_ids if i],

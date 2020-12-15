@@ -1,3 +1,4 @@
+from typing import Optional
 
 RECORD_TYPES = {
     "unspecified": 0,
@@ -16,3 +17,14 @@ RECORD_TYPES = {
 
 # Invert record types table for lookups
 RECORD_TYPES_BY_ID = {v: k for k, v in RECORD_TYPES.items()}
+
+
+def country_code_from_siglum(siglum: str) -> str:
+    # split the country code from the rest of the siglum, and return that. If there was a problem splitting the siglum
+    # because it was malformed, return it wholescale and keep going.
+    try:
+        country, _ = siglum.split("-")
+    except ValueError:
+        return siglum
+
+    return country

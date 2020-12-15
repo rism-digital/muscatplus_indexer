@@ -16,7 +16,7 @@ class PersonIndexDocument(TypedDict):
     person_id: str
     name_s: Optional[str]
     date_statement_s: Optional[str]
-    alternate_names_sm: Optional[List]
+    name_variants_sm: Optional[List]
     gender_s: Optional[str]
     roles_sm: Optional[List]
     external_ids: Optional[List]
@@ -33,7 +33,7 @@ def create_person_index_documents(record: Dict) -> List:
         "person_id": pid,
         "name_s": to_solr_single(marc_record, '100', 'a'),
         "date_statement_s": to_solr_single(marc_record, '100', 'd'),
-        "alternate_names_sm": to_solr_multi(marc_record, '400', 'a'),
+        "name_variants_sm": to_solr_multi(marc_record, '400', 'a'),
         "gender_s": to_solr_single(marc_record, '375', 'a'),
         "roles_sm": to_solr_multi(marc_record, '550', 'a'),
         "external_ids": _get_external_ids(marc_record),

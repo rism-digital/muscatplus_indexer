@@ -14,9 +14,11 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT child.id AS id, child.title AS title, child.source_id AS source_id, 
-                           child.marc_source AS marc_source, child.record_type AS record_type, 
-                           parent.title AS parent_title, COUNT(h.id) AS holdings_count
+    curs.execute("""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
+                           child.source_id AS source_id, child.marc_source AS marc_source,
+                           child.created_at AS created, child.updated_at AS updated, 
+                           child.record_type AS record_type, parent.std_title AS parent_title, 
+                           COUNT(h.id) AS holdings_count
                     FROM muscat_development.sources AS child
                     LEFT JOIN muscat_development.sources AS parent ON parent.id = child.source_id
                     LEFT JOIN muscat_development.holdings h on child.id = h.source_id

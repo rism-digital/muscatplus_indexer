@@ -1,5 +1,6 @@
 import logging
 import itertools
+from datetime import datetime
 from collections import defaultdict
 from typing import TypedDict, Optional, List, Dict
 
@@ -105,6 +106,8 @@ class SourceIndexDocument(TypedDict):
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
     holding_institution_id: Optional[str]
+    created: datetime
+    updated: datetime
 
 
 def create_source_index_documents(record: Dict) -> List:
@@ -137,6 +140,9 @@ def create_source_index_documents(record: Dict) -> List:
     main_title: str = _get_main_title(marc_record)
     source_title: str = to_solr_single_required(marc_record, "245", "a")
 
+    created: datetime = record["created"].strftime("%Y-%m-%dT%H:%M:%SZ")
+    updated: datetime = record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
+
     d: SourceIndexDocument = {
         "id": source_id,
         "type": "source",
@@ -144,9 +150,9 @@ def create_source_index_documents(record: Dict) -> List:
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),
         "subtype_s": record_subtype,
-        "main_title_s": main_title,
+        "main_title_s": main_title,  # matches the display title form in the OPAC
         "source_title_s": source_title,
-        "standardized_title_s": to_solr_single(marc_record, "240", "a"),
+        "standardized_title_s": record.get("std_title"),  # uses the std_title column in the Muscat database
         "key_mode_s": to_solr_single(marc_record, "240", "r"),
         "scoring_summary_sm": to_solr_multi(marc_record, "240", "m"),
         "additional_title_s": to_solr_single(marc_record, "730", "a"),
@@ -169,7 +175,9 @@ def create_source_index_documents(record: Dict) -> List:
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
-        "holding_institution_id": holding_institution_id
+        "holding_institution_id": holding_institution_id,
+        "created": created,
+        "updated": updated
     }
 
     people_relationships: List = _get_people_relationships(marc_record, source_id, main_title) or []
@@ -202,8 +210,8 @@ def _get_main_title(record: pymarc.Record) -> str:
     opus: Optional[str] = to_solr_single(record, "383", "b")
     source_type: Optional[str] = to_solr_single(record, "593", "a")
 
-    # collect the title statement in a list to be joined later.
-    title: List[str] = [f"{standardized_title};"]
+    # collect the title statement in a list to be joined later. This is easier than appending strings together!
+    title: List[str] = [f"{standardized_title.strip()};"]
 
     if excerpts:
         title.append(f" ({excerpts});")
@@ -214,7 +222,8 @@ def _get_main_title(record: pymarc.Record) -> str:
     if shelfmark and siglum:
         title.append(f" {siglum} {shelfmark}")
 
-    # Be sure to stop off any trailing semicolons if there are any.
+    # Be sure to stop off any trailing semicolons if there are any, and any leading or
+    # trailing spaces
     return "".join(title).rstrip(";")
 
 

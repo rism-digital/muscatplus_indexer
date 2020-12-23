@@ -68,7 +68,6 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
         return None
 
     # If the subfield argument is None, return the whole field value.
-    # If the field is a control field, strip off the first 2 digits since they are the indicator values
     if subfield is None:
         return f"{fields[0].value()}"
 

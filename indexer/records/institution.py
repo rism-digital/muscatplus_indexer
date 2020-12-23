@@ -2,6 +2,7 @@ from typing import TypedDict, Optional, List, Tuple
 
 import pymarc
 
+from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.marc import create_marc
 import logging
 
@@ -51,3 +52,11 @@ def _get_location(record: pymarc.Record) -> Optional[str]:
         return f"{lat},{lon}"
 
     return None
+
+
+def _get_country_code(record: pymarc.Record) -> Optional[str]:
+    siglum: Optional[str] = to_solr_single(record, "110", "g")
+    if not siglum:
+        return None
+
+    return country_code_from_siglum(siglum)

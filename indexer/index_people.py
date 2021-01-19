@@ -1,10 +1,10 @@
 import logging
-from typing import List, Tuple, Generator, Dict
+from typing import List, Generator, Dict
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.person import create_person_index_documents, PersonIndexDocument
+from indexer.records.person import create_person_index_documents
 
 log = logging.getLogger("muscat_indexer")
 

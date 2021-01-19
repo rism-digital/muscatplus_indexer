@@ -1,8 +1,12 @@
 ---
 solr:
   server: http://localhost:8983/solr
-  ingest_core: muscat-plus-ingest
-  production_core: muscat-plus-production
+  indexing_core: muscatplus_indexing
+  live_core: muscatplus_live
 
 mysql:
+  server: localhost
+  username: muscat
+  password: muscat
+  database: muscat_development
   resultsize: 1000

@@ -5,6 +5,9 @@ import concurrent.futures
 from collections import OrderedDict
 from functools import wraps
 from typing import List, Any, Iterable, Optional, Dict
+
+import pysolr
+
 from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
 import pymarc
 
@@ -43,6 +46,7 @@ def parallelise(records: Iterable, func: Any, *args, **kwargs) -> None:
 
     :param records: A list of records to be processed by `func`. Should be the first argument
     :param func: A function to process and index the records
+    :param func: A shared Solr connection object
     :return: None
     """
     with concurrent.futures.ProcessPoolExecutor() as executor:

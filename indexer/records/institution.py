@@ -24,7 +24,6 @@ class InstitutionIndexDocument(TypedDict):
     related_institutions_sm: Optional[List[str]]
     website_s: Optional[str]
 
-
 def create_institution_index_document(institution: str) -> InstitutionIndexDocument:
     record: pymarc.Record = create_marc(institution)
     institution_id: str = f"institution_{to_solr_single_required(record, '001')}"
@@ -40,6 +39,7 @@ def create_institution_index_document(institution: str) -> InstitutionIndexDocum
         "country_code_s": _get_country_code(record),
         "alternate_names_sm": to_solr_multi(record, '410', 'a'),
         "website_s": to_solr_single(record, "371", "u"),
+        "external_ids": _get_external_ids(record),
         "related_institutions_sm": [f"institution_{i}" for i in related_institutions_ids if i],
         "location_loc": _get_location(record)
     }
@@ -60,3 +60,12 @@ def _get_country_code(record: pymarc.Record) -> Optional[str]:
         return None
 
     return country_code_from_siglum(siglum)
+
+
+def _get_external_ids(record: pymarc.Record) -> Optional[List]:
+    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later. """
+    ids: List = record.get_fields('024')
+    if not ids:
+        return None
+
+    return [f"{idf['2'].lower()}:{idf['a']}" for idf in ids if (idf and idf['2'])]

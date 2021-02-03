@@ -233,7 +233,7 @@ python-versions = ">=3.6.*"
 
 [[package]]
 name = "pysolr"
-version = "3.9.1.dev44+g98c78c2"
+version = "3.9.1.dev52+g5bd07ea"
 description = "Lightweight Python client for Apache Solr"
 category = "main"
 optional = false
@@ -250,7 +250,7 @@ solrcloud = ["kazoo (>=2.5.0)"]
 type = "git"
 url = "https://github.com/django-haystack/pysolr"
 reference = "master"
-resolved_reference = "98c78c2204ba19f40ecd32b34880daeb40b2080d"
+resolved_reference = "5bd07eaed3fab110c9c41e05a765f9d95ac731b2"
 
 [[package]]
 name = "pyyaml"
@@ -344,6 +344,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "verovio"
+version = "3.1.0"
+description = "A library and toolkit for engraving MEI music notation into SVG"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "wcwidth"
 version = "0.2.5"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -354,7 +362,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "15600fecd488c8a13bcdb5bf69622dca05248fa8e8f4222a82200605993cc926"
+content-hash = "108fc8d38da82ae5086fa0a8e4c877ac47b3561217bf45da232f7e619d961d66"
 
 [metadata.files]
 appnope = [
@@ -512,6 +520,25 @@ uvloop = [
     {file = "uvloop-0.14.0-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:bcac356d62edd330080aed082e78d4b580ff260a677508718f88016333e2c9c5"},
     {file = "uvloop-0.14.0-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:4315d2ec3ca393dd5bc0b0089d23101276778c304d42faff5dc4579cb6caef09"},
     {file = "uvloop-0.14.0.tar.gz", hash = "sha256:123ac9c0c7dd71464f58f1b4ee0bbd81285d96cdda8bc3519281b8973e3a461e"},
+]
+verovio = [
+    {file = "verovio-3.1.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:625e196b38f671e1cb8953bd31f973ecb7e66a317e97fcef13b5b6e757bc6976"},
+    {file = "verovio-3.1.0-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:229a5e2ff3ccd86ee8c9790c102abeb69af6421fef87ae4e0e46a6415d89a809"},
+    {file = "verovio-3.1.0-cp36-cp36m-win32.whl", hash = "sha256:92fde97e9b4db7f528903e2ba0329053627ca38189e74bd536fd38f6688040f0"},
+    {file = "verovio-3.1.0-cp36-cp36m-win_amd64.whl", hash = "sha256:663926b9237483e486e8d6bb14c56d0a5f7ffc2814099c72d1eaaaf2cb51d3f6"},
+    {file = "verovio-3.1.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:df549f7ef969a7cf353686c6731d702a27af618970ff4f3f2ae88cb31c624eaa"},
+    {file = "verovio-3.1.0-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:15251572292174b57417b57da28f9d751a8a2f5808d201414a004981de38f564"},
+    {file = "verovio-3.1.0-cp37-cp37m-win32.whl", hash = "sha256:b65a74d3902a2b936e12d990679b00624e12b5ec15d8a92efc76154a4cc7ba69"},
+    {file = "verovio-3.1.0-cp37-cp37m-win_amd64.whl", hash = "sha256:7eeb8b605d34d65139a05d54100dcb8ddebc7da77d3dab86797786d15723bcad"},
+    {file = "verovio-3.1.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:5c9e29ea68d55cd00e9e9f0a8ccac80e2b04126de11a6aca48760e18c55dfeeb"},
+    {file = "verovio-3.1.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:9279d91fbe7899720a2e6f0f97dac9911a38b945146a2a064d1ccdf3851e90df"},
+    {file = "verovio-3.1.0-cp38-cp38-win32.whl", hash = "sha256:e1986bc1e2fd564d3abc4ef2e3155e871274cfec3038ca4595e579f299ee840a"},
+    {file = "verovio-3.1.0-cp38-cp38-win_amd64.whl", hash = "sha256:d052a4a6c0eacaa8c0a13dde1c41131f1505a87e77a55230bfd1c569a072c91c"},
+    {file = "verovio-3.1.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:858244b791c5369c0fceb8f994bb83afca387bf88ed2cdc5b5cf6727a7db3d3f"},
+    {file = "verovio-3.1.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:2935991f0c7d880d4368f42f7b473ce7725ecb1d91f3be4b7f1775d940dc407b"},
+    {file = "verovio-3.1.0-cp39-cp39-win32.whl", hash = "sha256:81c6f3004172c3d8d10b8e17eeaf064bd3437c75dceb87fe67e25fd58dad8486"},
+    {file = "verovio-3.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:17816476097d0ecf6507f04cf7fa8c6181b8034f2c35e307869f564b64c7fa9e"},
+    {file = "verovio-3.1.0.tar.gz", hash = "sha256:1b387b1443352a94293e04b3c1ba8d670613a210ce3597eafd3e7f695eb10b4c"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},

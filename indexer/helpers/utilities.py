@@ -6,8 +6,6 @@ from collections import OrderedDict
 from functools import wraps
 from typing import List, Any, Iterable, Optional, Dict
 
-import pysolr
-
 from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
 import pymarc
 
@@ -98,7 +96,7 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
     return ret
 
 
-def to_solr_multi(record: pymarc.Record, field: str, subfield: str) -> Optional[List[str]]:
+def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None) -> Optional[List[str]]:
     """
     Returns all the values for a given field and subfield. Extracting this data from the
     field is done by creating an OrderedDict from the keys, and then casting it back to a list. This removes
@@ -106,7 +104,8 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: str) -> Optional[
 
     :param record: A pymarc.Record instance
     :param field: A string indicating the tag that should be extracted
-    :param subfield: An optional subfield. If this is not provided, the full value of the field will be returned.
+    :param subfield: An optional subfield. If this is not provided, the full value of the field will be returned
+        as a MARC string (e.g., "$aFoo$bBar).
     :return: A list of strings, or None if not found.
     """
     fields: List[pymarc.Field] = record.get_fields(field)

@@ -1,8 +1,9 @@
 import logging
 import itertools
+import re
 from datetime import datetime
 from collections import defaultdict
-from typing import TypedDict, Optional, List, Dict
+from typing import TypedDict, Optional, List, Dict, Pattern
 
 import pymarc
 
@@ -99,13 +100,15 @@ class SourceIndexDocument(TypedDict):
     institutions_sm: Optional[List[str]]
     institutions_ids: Optional[List[str]]
     subject_ids: Optional[List[str]]
+    rism_series_sm: Optional[List[str]]
+    rism_series_ids: Optional[List[str]]
+    rism_series_statement_smni: Optional[List[str]]
     num_holdings_i: Optional[int]
     date_statements_sm: Optional[List[str]]
     country_code_s: Optional[str]
     siglum_s: Optional[str]
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
-    holding_institution_id: Optional[str]
     created: datetime
     updated: datetime
 
@@ -132,8 +135,11 @@ def create_source_index_documents(record: Dict) -> List:
     subject_marc_ids: List = to_solr_multi(marc_record, "650", "0") or []
     subject_ids: List = [f"subject_{i}" for i in subject_marc_ids]
 
-    holding_institution_ident: Optional[str] = to_solr_single(marc_record, "852", "x")
-    holding_institution_id: Optional[str] = f"institution_{holding_institution_ident}" if holding_institution_ident else None
+    rism_series_values: List = to_solr_multi(marc_record, "596", "a") or []
+    rism_series_unique: Optional[List] = list(set(rism_series_values)) or None
+
+    rism_series_ids_values: List = to_solr_multi(marc_record, "596", "b") or []
+    rism_series_unique_ids: Optional[List] = list(set(rism_series_ids_values)) or []
 
     num_holdings: int = record.get("holdings_count")
 
@@ -168,14 +174,17 @@ def create_source_index_documents(record: Dict) -> List:
         "binding_notes_sm": to_solr_multi(marc_record, "563", "a"),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),  # A list of all types associated with all material groups; Individual material groups also get their own Solr doc
+        "rism_series_sm": rism_series_unique,
+        "rism_series_ids": rism_series_unique_ids,
+        "rism_series_statement_smni": _get_rism_series_statements(marc_record),
         "subject_ids": subject_ids,
-        "num_holdings_i": num_holdings,
+        "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
         "date_statements_sm": to_solr_multi(marc_record, "260", "c"),
         "country_code_s": _get_country_code(marc_record),
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
-        "holding_institution_id": holding_institution_id,
+        "holding_institution_ids": _get_holding_institution_ids(marc_record, record['holdings_marc']),
         "created": created,
         "updated": updated
     }
@@ -185,6 +194,7 @@ def create_source_index_documents(record: Dict) -> List:
     creator: List = _get_creator(marc_record, source_id, main_title) or []
     material_groups: List = _get_material_groups(marc_record, source_id) or []
     incipits: List = _get_incipits(marc_record, source_id) or []
+    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title)
 
     # Create a list of all the Solr records to send off for indexing, and extend with any additional records if there
     # are results. We don't need to check these, since they're guaranteed to be a list (even if they are empty).
@@ -195,6 +205,7 @@ def create_source_index_documents(record: Dict) -> List:
     res.extend(institution_relationships)
     res.extend(material_groups)
     res.extend(incipits)
+    res.extend(manuscript_holdings)
 
     return res
 
@@ -236,6 +247,24 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
     dates: str = f" ({d})" if (d := to_solr_single(record, "100", "d")) else ""
 
     return f"{name}{dates}"
+
+
+def _get_holding_institution_ids(record: pymarc.Record, holdings_marc: Optional[str]) -> Optional[List[str]]:
+    holding_ids: List = []
+    source_ids: List = []
+
+    if holdings_marc:
+        holding_institution_pattern: Pattern = re.compile(r'^=852\s{2}.*\$x(?P<id>[\d]+).*$', re.MULTILINE)
+        institution_ids: List = re.findall(holding_institution_pattern, holdings_marc)
+
+        # Cast a set to a list to remove duplicates
+        holding_ids = list({f"institution_{i}" for i in institution_ids if i})
+
+    # Get any holding ids from the source record itself
+    source_holdings: List = to_solr_multi(record, "852", "x") or []
+    source_ids = list({f"institution_{i}" for i in source_holdings if i})
+
+    return holding_ids + source_ids
 
 
 def _get_creator(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List[PersonRelationshipIndexDocument]]:
@@ -549,3 +578,44 @@ def _get_country_code(record: pymarc.Record) -> Optional[str]:
         return None
 
     return country_code_from_siglum(siglum)
+
+
+def _get_rism_series_statements(record: pymarc.Record) -> Optional[List[str]]:
+    fields: List[pymarc.Field] = record.get_fields("596")
+    if not fields:
+        return None
+
+    return [f"{field['a']} {field['b']}" for field in fields if field['a'] and field['b']]
+
+
+def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str) -> List[Dict]:
+    """
+        Create a holding record for sources that do not actually have a holding record.
+        This is so that we can provide a unified interface for searching all holdings of an institution
+        using the holding record mechanism, rather than a mixture of several different record types.
+    """
+    # First check to see if the record has 852 fields; if it doesn't, skip trying to process any further.
+    has_holdings: bool = record.get_fields("852") != []
+    if not has_holdings:
+        return []
+
+    holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
+    # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
+    # should result in a unique identifier for this holding record.
+    holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
+    holding_institution_name: Optional[str] = to_solr_single(record, "852", "e")
+    holding_institution_siglum: Optional[str] = to_solr_single(record, "852", "a")
+    holding_institution_shelfmark: Optional[str] = to_solr_single(record, "852", "c")
+
+    return [{
+        "id": holding_id,
+        "type": "holding",
+        "source_id": source_id,
+        "siglum_s": holding_institution_siglum,
+        "main_title_s": main_title,
+        "country_code_s": country_code_from_siglum(holding_institution_siglum) if holding_institution_siglum else None,
+        "institution_s": holding_institution_name,
+        "institution_id": f"institution_{holding_institution_ident}",
+        "shelfmark_s": holding_institution_shelfmark,
+        "material_held_sm": to_solr_multi(record, "852", "q")
+    }]

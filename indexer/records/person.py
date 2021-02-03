@@ -65,7 +65,7 @@ def __related_person(field: pymarc.Field, related_id: str) -> Dict:
     """
     return {
         "id": f"{uuid.uuid4()}",
-        "type": "related_person",
+        "type": "person_person_relationship",
         "name_s": field['a'],
         "relationship_s": field['i'],
         "person_id": f"person_{field['0']}",

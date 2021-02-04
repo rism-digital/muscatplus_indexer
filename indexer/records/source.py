@@ -78,7 +78,8 @@ class SourceIndexDocument(TypedDict):
     id: str
     type: str
     source_id: str
-    source_membership_id: Optional[str]
+    source_membership_id: str
+    is_item_record_b: bool
     source_membership_title_s: Optional[str]
     subtype_s: str
     main_title_s: str
@@ -109,6 +110,7 @@ class SourceIndexDocument(TypedDict):
     siglum_s: Optional[str]
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
+    holding_institution_ids: Optional[List[str]]
     created: datetime
     updated: datetime
 
@@ -153,13 +155,18 @@ def create_source_index_documents(record: Dict) -> List:
         "id": source_id,
         "type": "source",
         "source_id": source_id,
+        # The id of a 'parent' record; can be thought of as a bunch of sources belonging to the same 'group',
+        # hence the use of 'membership' but without the implied hierarchy. ('children' cannot themselves have 'children'
+        # so the treey is always just two members deep.)
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),
+        # item records have a different id from the 'parent' source; this allows filtering out of 'item' records.
+        "is_item_record_b": source_id != f"source_{membership_id}",
         "subtype_s": record_subtype,
         "main_title_s": main_title,  # matches the display title form in the OPAC
         "source_title_s": source_title,
         "standardized_title_s": record.get("std_title"),  # uses the std_title column in the Muscat database
-        "key_mode_s": to_solr_single(marc_record, "240", "r"),
+        "key_mode_s": k.strip() if (k := to_solr_single(marc_record, "240", "r")) else k,
         "scoring_summary_sm": to_solr_multi(marc_record, "240", "m"),
         "additional_title_s": to_solr_single(marc_record, "730", "a"),
         "creator_name_s": _get_creator_name(marc_record),

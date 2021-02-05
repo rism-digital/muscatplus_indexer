@@ -10,9 +10,12 @@ import pymarc
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi, normalize_id
+from indexer.records.holding import HoldingIndexDocument
 
 log = logging.getLogger("muscat_indexer")
 
+MARC_HOLDING_ID_REGEX: Pattern = re.compile(r'^=852\s{2}.*\$x(?P<id>[\d]+).*$', re.MULTILINE)
+MARC_HOLDING_NAME_REGEX: Pattern = re.compile(r'^=852\s{2}.*\$e(?P<name>.*)\$.*$', re.MULTILINE)
 
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed
 # contain the expected fields of the expected types, and serve as a point of reference to know
@@ -192,6 +195,7 @@ def create_source_index_documents(record: Dict) -> List:
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
         "holding_institution_ids": _get_holding_institution_ids(marc_record, record['holdings_marc']),
+        "holding_institution_sm": _get_holding_institution_names(marc_record, record['holdings_marc']),
         "created": created,
         "updated": updated
     }
@@ -258,20 +262,27 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
 
 def _get_holding_institution_ids(record: pymarc.Record, holdings_marc: Optional[str]) -> Optional[List[str]]:
     holding_ids: List = []
-    source_ids: List = []
 
     if holdings_marc:
-        holding_institution_pattern: Pattern = re.compile(r'^=852\s{2}.*\$x(?P<id>[\d]+).*$', re.MULTILINE)
-        institution_ids: List = re.findall(holding_institution_pattern, holdings_marc)
-
-        # Cast a set to a list to remove duplicates
-        holding_ids = list({f"institution_{i}" for i in institution_ids if i})
+        holding_ids = re.findall(MARC_HOLDING_ID_REGEX, holdings_marc)
 
     # Get any holding ids from the source record itself
     source_holdings: List = to_solr_multi(record, "852", "x") or []
-    source_ids = list({f"institution_{i}" for i in source_holdings if i})
+    all_ids: List = list({f"institution_{i}" for i in holding_ids + source_holdings if i})
 
-    return holding_ids + source_ids
+    return all_ids
+
+
+def _get_holding_institution_names(record: pymarc.Record, holdings_marc: Optional[str]) -> Optional[List[str]]:
+    holding_names: List = []
+
+    if holdings_marc:
+        holding_names: List = re.findall(MARC_HOLDING_NAME_REGEX, holdings_marc)
+
+    # Get any holding ids from the source record itself
+    source_names: List = to_solr_multi(record, "852", "e") or []
+
+    return list({f"{i}" for i in holding_names + source_names if i})
 
 
 def _get_creator(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List[PersonRelationshipIndexDocument]]:
@@ -595,7 +606,7 @@ def _get_rism_series_statements(record: pymarc.Record) -> Optional[List[str]]:
     return [f"{field['a']} {field['b']}" for field in fields if field['a'] and field['b']]
 
 
-def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str) -> List[Dict]:
+def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str) -> List[HoldingIndexDocument]:
     """
         Create a holding record for sources that do not actually have a holding record.
         This is so that we can provide a unified interface for searching all holdings of an institution
@@ -606,6 +617,7 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     if not has_holdings:
         return []
 
+    source_num: str = to_solr_single_required(record, '001')
     holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
     # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
     # should result in a unique identifier for this holding record.
@@ -614,15 +626,19 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     holding_institution_siglum: Optional[str] = to_solr_single(record, "852", "a")
     holding_institution_shelfmark: Optional[str] = to_solr_single(record, "852", "c")
 
-    return [{
+    d: HoldingIndexDocument = {
         "id": holding_id,
         "type": "holding",
         "source_id": source_id,
+        "holding_id_sni": f"{holding_institution_ident}-{source_num}",
         "siglum_s": holding_institution_siglum,
         "main_title_s": main_title,
         "country_code_s": country_code_from_siglum(holding_institution_siglum) if holding_institution_siglum else None,
         "institution_s": holding_institution_name,
         "institution_id": f"institution_{holding_institution_ident}",
         "shelfmark_s": holding_institution_shelfmark,
+        "former_shelfmarks_sm": to_solr_multi(record, '852', 'd'),
         "material_held_sm": to_solr_multi(record, "852", "q")
-    }]
+    }
+
+    return [d]

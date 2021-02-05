@@ -15,6 +15,7 @@ class HoldingIndexDocument(TypedDict):
     type: str
     source_id: str
     main_title_s: str
+    holding_id_sni: str  # Convenience for URL construction; should not be used for lookups.
     siglum_s: Optional[str]
     country_code_s: Optional[str]
     institution_s: Optional[str]
@@ -33,6 +34,7 @@ def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
     d: HoldingIndexDocument = {
         "id": f"holding_{record_id}",
         "type": "holding",
+        "holding_id_sni": f"{record_id}",  # Convenience for URL construction; should not be used for lookups.
         "source_id": f"source_{membership_id}",
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "main_title_s": record["source_title"],

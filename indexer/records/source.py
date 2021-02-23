@@ -68,6 +68,10 @@ class IncipitIndexDocument(TypedDict):
     music_incipit_s: Optional[str]
     text_incipit_s: Optional[str]
     title_s: Optional[str]
+    key_mode_s: Optional[str]
+    key_s: Optional[str]
+    timesig_s: Optional[str]
+    clef_s: Optional[str]
 
 
 class SourceSubjectIndexDocument(TypedDict):
@@ -578,7 +582,11 @@ def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocu
         "text_incipit_s": field['t'],
         "title_s": field['d'],
         "incipit_num_s": str(num),
-        "work_num_s": work_number
+        "work_num_s": work_number,
+        "key_mode_s": field['r'],
+        "key_s": field['n'],
+        "timesig_s": field['o'],
+        "clef_s": field['g'],
     }
 
 

@@ -16,6 +16,12 @@ solr_idx_conn: pysolr.Solr = pysolr.Solr(solr_idx_server,
                                          decoder=ujson, encoder=ujson, timeout=120)
 
 
+def empty_solr_core() -> bool:
+    solr_idx_conn.delete(q="*:*")
+    solr_idx_conn.commit()
+    return True
+
+
 def submit_to_solr(records: List) -> bool:
     """
     Submits a set of records to a Solr server.

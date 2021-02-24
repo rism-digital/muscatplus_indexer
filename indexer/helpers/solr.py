@@ -15,6 +15,8 @@ solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 solr_idx_conn: pysolr.Solr = pysolr.Solr(solr_idx_server,
                                          decoder=ujson, encoder=ujson, timeout=120)
 
+session = requests.Session()
+
 
 def empty_solr_core() -> bool:
     solr_idx_conn.delete(q="*:*")
@@ -31,10 +33,7 @@ def submit_to_solr(records: List) -> bool:
     :return: True if successful, false if not.
     """
     log.debug("Indexing records to Solr")
-    # try:
-        # solr_idx_conn.add(records, commit=False)
-    # except pysolr.SolrError as e:
-    res = requests.post(f"{solr_idx_server}/update", json=records, headers={"Content-Type": "application/json"})
+    res = session.post(f"{solr_idx_server}/update", json=records, headers={"Content-Type": "application/json"})
     if 200 <= res.status_code < 400:
         log.debug("Indexing was successful")
         return True

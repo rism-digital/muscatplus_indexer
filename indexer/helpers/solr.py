@@ -34,7 +34,7 @@ def submit_to_solr(records: List) -> bool:
     # try:
         # solr_idx_conn.add(records, commit=False)
     # except pysolr.SolrError as e:
-    res = requests.post(f"{solr_idx_server}/update", data=records, headers={"Content-Type": "application/json"})
+    res = requests.post(f"{solr_idx_server}/update", json=records, headers={"Content-Type": "application/json"})
     if 200 <= res.status_code < 400:
         log.debug("Indexing was successful")
         return True

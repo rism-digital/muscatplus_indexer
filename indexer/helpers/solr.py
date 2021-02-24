@@ -31,14 +31,17 @@ def submit_to_solr(records: List) -> bool:
     :return: True if successful, false if not.
     """
     log.debug("Indexing records to Solr")
-    try:
-        solr_idx_conn.add(records, commit=False)
-    except pysolr.SolrError as e:
-        log.error("Could not index to Solr. %s", e)
-        log.error(records)
-        return False
+    # try:
+        # solr_idx_conn.add(records, commit=False)
+    # except pysolr.SolrError as e:
+    res = requests.post(f"{solr_idx_server}/update", data=records, headers={"Content-Type": "application/json"})
+    if 200 <= res.status_code < 400:
+        log.debug("Indexing was successful")
+        return True
 
-    return True
+    log.error("Could not index to Solr. %s: %s", res.status_code, res.text)
+    log.error(records)
+    return False
 
 
 def swap_cores(server_address: str, index_core: str, live_core: str) -> bool:

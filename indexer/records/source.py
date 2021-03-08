@@ -423,7 +423,12 @@ def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "printing_techniques_sm": field.get_subfields("d"),
+        "book_formats_sm": field.get_subfields("m")
+    }
+
+    return res
 
 
 def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
@@ -445,13 +450,16 @@ def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
 def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
         "parts_held_sm": field.get_subfields('a'),
-        "extent_sm": field.get_subfields('b')
+        "parts_extent_sm": e if (e := field.get_subfields('b')) else []
     }
     return res
 
 
 def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    res: MaterialGroupFields = {
+        "watermark_notes_sm": field.get_subfields("a")
+    }
+    return res
 
 
 def __mg_type(field: pymarc.Field) -> MaterialGroupFields:

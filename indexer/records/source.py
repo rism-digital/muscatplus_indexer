@@ -182,6 +182,7 @@ def create_source_index_documents(record: Dict) -> List:
         "key_mode_s": k.strip() if (k := to_solr_single(marc_record, "240", "r")) else k,
         "scoring_summary_sm": to_solr_multi(marc_record, "240", "m"),
         "additional_title_s": to_solr_single(marc_record, "730", "a"),
+        "variant_title_s": to_solr_single(marc_record, "246", "a"),
         "creator_name_s": _get_creator_name(marc_record),
         "creator_id": creator_id,
         "source_members_sm": _get_source_membership(marc_record),

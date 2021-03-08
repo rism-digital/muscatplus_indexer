@@ -89,31 +89,32 @@ class SourceIndexDocument(TypedDict):
     type: str
     source_id: str
     source_membership_id: str
-    is_item_record_b: bool
     source_membership_title_s: Optional[str]
+    is_item_record_b: bool
     subtype_s: str
     main_title_s: str
-    standardized_title_s: Optional[str]
     source_title_s: Optional[str]
-    additional_title_s: Optional[str]
+    standardized_title_s: Optional[str]
     key_mode_s: Optional[str]
     scoring_summary_sm: Optional[List[str]]
+    additional_title_s: Optional[str]
+    variant_title_s: Optional[str]
     creator_name_s: Optional[str]
     creator_id: Optional[str]
-    opus_numbers_sm: Optional[List[str]]
-    general_notes_sm: Optional[List[str]]
-    binding_notes_sm: Optional[List[str]]
-    description_summary_sm: Optional[List[str]]
-    source_type_sm: Optional[List[str]]
     source_members_sm: Optional[List[str]]
     related_people_sm: Optional[List[str]]
     related_people_ids: Optional[List[str]]
     institutions_sm: Optional[List[str]]
     institutions_ids: Optional[List[str]]
-    subject_ids: Optional[List[str]]
+    opus_numbers_sm: Optional[List[str]]
+    general_notes_sm: Optional[List[str]]
+    binding_notes_sm: Optional[List[str]]
+    description_summary_sm: Optional[List[str]]
+    source_type_sm: Optional[List[str]]
     rism_series_sm: Optional[List[str]]
     rism_series_ids: Optional[List[str]]
     rism_series_statement_smni: Optional[List[str]]
+    subject_ids: Optional[List[str]]
     num_holdings_i: Optional[int]
     date_statements_sm: Optional[List[str]]
     country_code_s: Optional[str]
@@ -121,6 +122,7 @@ class SourceIndexDocument(TypedDict):
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
     holding_institution_ids: Optional[List[str]]
+    holding_institution_sm: Optional[List[str]]
     created: datetime
     updated: datetime
 

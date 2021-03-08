@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import TypedDict, Optional, List, Dict, Pattern
 
 import pymarc
+import ujson
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID, country_code_from_siglum
 from indexer.helpers.marc import create_marc

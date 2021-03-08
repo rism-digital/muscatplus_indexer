@@ -18,6 +18,7 @@ log = logging.getLogger("muscat_indexer")
 MARC_HOLDING_ID_REGEX: Pattern = re.compile(r'^=852\s{2}.*\$x(?P<id>[\d]+).*$', re.MULTILINE)
 MARC_HOLDING_NAME_REGEX: Pattern = re.compile(r'^=852\s{2}.*\$e(?P<name>.*)\$.*$', re.MULTILINE)
 
+
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed
 # contain the expected fields of the expected types, and serve as a point of reference to know
 # what fields are on what type of record in Solr.
@@ -64,8 +65,8 @@ class IncipitIndexDocument(TypedDict):
     id: str
     type: str
     source_id: str
-    incipit_num_s: str
-    work_num_i: int
+    incipit_num_i: int
+    work_num_s: str
     music_incipit_s: Optional[str]
     text_incipit_s: Optional[str]
     role_s: Optional[str]
@@ -635,11 +636,11 @@ def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocu
         "id": f"{source_id}_incipit_{num}",
         "type": "source_incipit",
         "source_id": source_id,
+        "incipit_num_i": num,
         "music_incipit_s": field['p'],
         "text_incipit_s": field['t'],
         "title_s": field['d'],
         "role_s": field['e'],
-        "incipit_num_i": num,
         "work_num_s": work_number,
         "key_mode_s": field['r'],
         "key_s": field['n'],

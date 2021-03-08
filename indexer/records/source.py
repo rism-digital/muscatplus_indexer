@@ -616,11 +616,11 @@ def _get_material_groups(record: pymarc.Record, source_id: str) -> Optional[List
                 field_group[sf].update(sv)
 
         # Cast the sets to a list so that they can be serialized by the JSON encoder.
-        cast_to_list: Dict = {k: list(v) for k, v in field_group.items()}
+        values_list: Dict = {k: list(v) for k, v in field_group.items()}
 
         # Join the field group to the base group, and then append the combined dict
         # to the list of results to be indexed.
-        base_group.update(cast_to_list)
+        base_group.update(values_list)
         res.append(base_group)
 
     return res

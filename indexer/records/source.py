@@ -64,7 +64,7 @@ class IncipitIndexDocument(TypedDict):
     type: str
     source_id: str
     incipit_num_s: str
-    work_num_s: str
+    work_num_i: int
     music_incipit_s: Optional[str]
     text_incipit_s: Optional[str]
     role_s: Optional[str]

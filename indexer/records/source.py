@@ -471,25 +471,67 @@ def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
+    person: Dict = {}
+    if n := field["a"]:
+        person["name"] = n
+
+    if i := field['0']:
+        person["id"] = f"person_{normalize_id(i)}"
+
+    if r := field["4"]:
+        person["role"] = r
+
+    if q := field["j"]:
+        person["qualifier"] = q
+
     res: MaterialGroupFields = {
-        "people_sm": field.get_subfields('a'),
-        "people_ids": [f"person_{normalize_id(f)}" for f in field.get_subfields('0') if f]
+        "people_json": [ujson.dumps(person)]
     }
 
     return res
 
 
 def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
+    institution: Dict = {}
+
+    if n := field['a']:
+        institution["name"] = n
+
+    if d := field['b']:
+        institution["department"] = d
+
+    if i := field['0']:
+        institution["id"] = f"institution_{normalize_id(i)}"
+
+    if q := field['j']:
+        institution["qualifier"] = q
+
+    if r := field['4']:
+        institution["role"] = r
+
     res: MaterialGroupFields = {
-        "institutions_sm": field.get_subfields("a"),
-        "institutions_ids": [f"institution_{normalize_id(f)}" for f in field.get_subfields("0") if f]
+        "institutions_json": [ujson.dumps(institution)]
     }
 
     return res
 
 
 def __mg_external(field: pymarc.Field) -> MaterialGroupFields:
-    pass
+    external_link: Dict[str, str] = {}
+
+    if u := field['u']:
+        external_link["url"] = u
+
+    if n := field['z']:
+        external_link["note"] = n
+
+    if k := field['x']:
+        external_link['link_type'] = k
+
+    res: MaterialGroupFields = {
+        "external_links_json": [ujson.dumps(external_link)]
+    }
+    return res
 
 
 def _get_material_groups(record: pymarc.Record, source_id: str) -> Optional[List[MaterialGroupIndexDocument]]:

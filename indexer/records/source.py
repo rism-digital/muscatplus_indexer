@@ -637,7 +637,7 @@ def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocu
         "text_incipit_s": field['t'],
         "title_s": field['d'],
         "role_s": field['e'],
-        "incipit_num_s": str(num),
+        "incipit_num_i": num,
         "work_num_s": work_number,
         "key_mode_s": field['r'],
         "key_s": field['n'],

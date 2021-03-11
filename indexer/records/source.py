@@ -10,13 +10,11 @@ import ujson
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID, country_code_from_siglum
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi, normalize_id
-from indexer.records.holding import HoldingIndexDocument
+from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi, normalize_id, \
+    external_link_json, ExternalLinkDocument
+from indexer.records.holding import HoldingIndexDocument, holding_index_document
 
 log = logging.getLogger("muscat_indexer")
-
-MARC_HOLDING_ID_REGEX: Pattern = re.compile(r'^=852\s{2}.*\$x(?P<id>[\d]+).*$', re.MULTILINE)
-MARC_HOLDING_NAME_REGEX: Pattern = re.compile(r'^=852\s{2}.*\$e(?P<name>.*)\$.*$', re.MULTILINE)
 
 
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed
@@ -54,11 +52,11 @@ class MaterialGroupIndexDocument(TypedDict, total=False):
     id: str
     type: str
     source_id: str
-    group_num_s: str
-    parts_held_sm: Optional[List[str]]
-    extent_sm: Optional[List[str]]
-    source_type_sm: Optional[List[str]]
-    plate_numbers_sm: Optional[List[str]]
+    group_num: str
+    parts_held: Optional[List[str]]
+    extent: Optional[List[str]]
+    source_type: Optional[List[str]]
+    plate_numbers: Optional[List[str]]
 
 
 class IncipitIndexDocument(TypedDict):
@@ -92,6 +90,7 @@ class SourceIndexDocument(TypedDict):
     source_id: str
     source_membership_id: str
     source_membership_title_s: Optional[str]
+    source_membership_json: Optional[str]
     is_item_record_b: bool
     subtype_s: str
     main_title_s: str
@@ -113,18 +112,18 @@ class SourceIndexDocument(TypedDict):
     binding_notes_sm: Optional[List[str]]
     description_summary_sm: Optional[List[str]]
     source_type_sm: Optional[List[str]]
-    rism_series_sm: Optional[List[str]]
-    rism_series_ids: Optional[List[str]]
-    rism_series_statement_smni: Optional[List[str]]
-    subject_ids: Optional[List[str]]
+    subjects_sm: Optional[List[str]]
     num_holdings_i: Optional[int]
     date_statements_sm: Optional[List[str]]
     country_code_s: Optional[str]
     siglum_s: Optional[str]
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
-    holding_institution_ids: Optional[List[str]]
-    holding_institution_sm: Optional[List[str]]
+    material_groups_json: Optional[str]
+    subjects_json: Optional[str]
+    rism_series_json: Optional[str]
+    relationships_json: Optional[str]
+    creator_json: Optional[str]
     created: datetime
     updated: datetime
 
@@ -148,19 +147,23 @@ def create_source_index_documents(record: Dict) -> List:
     institution_marc_ids: List = to_solr_multi(marc_record, "710", "0") or []
     institution_ids: List = [f"institution_{i}" for i in institution_marc_ids]
 
-    subject_marc_ids: List = to_solr_multi(marc_record, "650", "0") or []
-    subject_ids: List = [f"subject_{i}" for i in subject_marc_ids]
-
-    rism_series_values: List = to_solr_multi(marc_record, "596", "a") or []
-    rism_series_unique: Optional[List] = list(set(rism_series_values)) or None
-
-    rism_series_ids_values: List = to_solr_multi(marc_record, "596", "b") or []
-    rism_series_unique_ids: Optional[List] = list(set(rism_series_ids_values)) or []
-
     num_holdings: int = record.get("holdings_count")
 
     main_title: str = _get_main_title(marc_record)
     source_title: str = to_solr_single_required(marc_record, "245", "a")
+
+    people_relationships: List = _get_people_relationships(marc_record, source_id, main_title) or []
+    institution_relationships: List = _get_institution_relationships(marc_record, source_id, main_title) or []
+    all_relationships: List = people_relationships + institution_relationships
+    creator: List = _get_creator(marc_record, source_id, main_title) or []
+
+    parent_record_type_id: Optional[int] = record.get("parent_record_type")
+    source_membership_json: Optional[Dict] = None
+    if parent_record_type_id:
+        source_membership_json = {
+            "source_id": f"source_{membership_id}",
+            "main_title": record.get("parent_title"),
+        }
 
     created: datetime = record["created"].strftime("%Y-%m-%dT%H:%M:%SZ")
     updated: datetime = record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -174,6 +177,7 @@ def create_source_index_documents(record: Dict) -> List:
         # so the treey is always just two members deep.)
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),
+        "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
         # item records have a different id from the 'parent' source; this allows filtering out of 'item' records.
         "is_item_record_b": source_id != f"source_{membership_id}",
         "subtype_s": record_subtype,
@@ -192,41 +196,34 @@ def create_source_index_documents(record: Dict) -> List:
         "institutions_sm": to_solr_multi(marc_record, "710", "a"),
         "institutions_ids": institution_ids,
         "opus_numbers_sm": to_solr_multi(marc_record, "383", "b"),
-        "general_notes_sm": to_solr_multi(marc_record, "500", "a"),
-        "binding_notes_sm": to_solr_multi(marc_record, "563", "a"),
+        "general_notes_sm": to_solr_multi(marc_record, "500", "a", ungrouped=True),
+        "binding_notes_sm": to_solr_multi(marc_record, "563", "a", ungrouped=True),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
-        "source_type_sm": to_solr_multi(marc_record, "593", "a"),  # A list of all types associated with all material groups; Individual material groups also get their own Solr doc
-        "rism_series_sm": rism_series_unique,
-        "rism_series_ids": rism_series_unique_ids,
-        "rism_series_statement_smni": _get_rism_series_statements(marc_record),
-        "subject_ids": subject_ids,
+        "source_type_sm": to_solr_multi(marc_record, "593", "a"),
+        "subjects_sm": to_solr_multi(marc_record, "650", "a"),
         "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
         "date_statements_sm": to_solr_multi(marc_record, "260", "c"),
         "country_code_s": _get_country_code(marc_record),
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
-        "holding_institution_ids": _get_holding_institution_ids(marc_record, record['holdings_marc']),
-        "holding_institution_sm": _get_holding_institution_names(marc_record, record['holdings_marc']),
+        "material_groups_json": ujson.dumps(mg) if (mg := _get_material_groups(marc_record, source_id)) else None,
+        "rism_series_json": ujson.dumps(rs) if (rs := _get_rism_series_json(marc_record)) else None,
+        "subjects_json": ujson.dumps(sb) if (sb := _get_subjects(marc_record)) else None,
+        "relationships_json": ujson.dumps(all_relationships) if all_relationships else None,
+        "creator_json": ujson.dumps(creator) if creator else None,
         "created": created,
         "updated": updated
     }
 
-    people_relationships: List = _get_people_relationships(marc_record, source_id, main_title) or []
-    institution_relationships: List = _get_institution_relationships(marc_record, source_id, main_title) or []
-    creator: List = _get_creator(marc_record, source_id, main_title) or []
     material_groups: List = _get_material_groups(marc_record, source_id) or []
     incipits: List = _get_incipits(marc_record, source_id) or []
-    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title)
+    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
 
     # Create a list of all the Solr records to send off for indexing, and extend with any additional records if there
     # are results. We don't need to check these, since they're guaranteed to be a list (even if they are empty).
     res: List = [d]
 
-    res.extend(creator)
-    res.extend(people_relationships)
-    res.extend(institution_relationships)
-    res.extend(material_groups)
     res.extend(incipits)
     res.extend(manuscript_holdings)
 
@@ -272,33 +269,25 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
     return f"{name}{dates}"
 
 
-def _get_holding_institution_ids(record: pymarc.Record, holdings_marc: Optional[str]) -> Optional[List[str]]:
-    holding_ids: List = []
+def _get_subjects(record: pymarc.Record) -> Optional[List[Dict]]:
+    if '650' not in record:
+        return None
 
-    if holdings_marc:
-        holding_ids = re.findall(MARC_HOLDING_ID_REGEX, holdings_marc)
+    subject_fields: List[pymarc.Field] = record.get_fields("650")
+    ret: List = []
+    for field in subject_fields:
+        d = {
+            "id": f"subject_{field['0']}",
+            "subject": field["a"]
+        }
+        # Ensure we remove any None values
+        ret.append({k: v for k, v in d.items() if v})
 
-    # Get any holding ids from the source record itself
-    source_holdings: List = to_solr_multi(record, "852", "x") or []
-    all_ids: List = list({f"institution_{i}" for i in holding_ids + source_holdings if i})
-
-    return all_ids
-
-
-def _get_holding_institution_names(record: pymarc.Record, holdings_marc: Optional[str]) -> Optional[List[str]]:
-    holding_names: List = []
-
-    if holdings_marc:
-        holding_names: List = re.findall(MARC_HOLDING_NAME_REGEX, holdings_marc)
-
-    # Get any holding ids from the source record itself
-    source_names: List = to_solr_multi(record, "852", "e") or []
-
-    return list({f"{i}" for i in holding_names + source_names if i})
+    return ret
 
 
 def _get_creator(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List[PersonRelationshipIndexDocument]]:
-    creator: pymarc.Field = record['100']
+    creator: Optional[pymarc.Field] = record['100']
     if not creator:
         return None
 
@@ -330,12 +319,12 @@ def __person_relationship(field: pymarc.Field, source_id: str, source_title: str
         "id": f"{source_id}_relationship_{relationship_id}",
         "source_id": source_id,
         "type": "source_person_relationship",
-        "name_s": field["a"] or None,
+        "name_s": field["a"],
         "main_title_s": source_title,
-        "qualifier_s": field["j"] or None,
-        "date_statement_s": field["d"] or None,
+        "qualifier_s": field["j"],
+        "date_statement_s": field["d"],
         "person_id": f"person_{field['0']}",
-        "relationship_s": field["4"] or None,
+        "relationship_s": field["4"],
         "relationship_id": relationship_id
     }
 
@@ -401,7 +390,7 @@ def _get_source_membership(record: pymarc.Record) -> Optional[List]:
 
 def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "plate_numbers_sm": field.get_subfields('a')
+        "plate_numbers": field.get_subfields('a')
     }
 
     return res
@@ -409,9 +398,9 @@ def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_pub(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "place_publication_sm": field.get_subfields("a"),
-        "name_publisher_sm": field.get_subfields("b"),
-        "date_statements_sm": field.get_subfields("c")
+        "place_publication": field.get_subfields("a"),
+        "name_publisher": field.get_subfields("b"),
+        "date_statements": field.get_subfields("c")
     }
 
     return res
@@ -419,7 +408,7 @@ def __mg_pub(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "physical_extent_sm": field.get_subfields("a")
+        "physical_extent": field.get_subfields("a")
     }
 
     return res
@@ -427,8 +416,8 @@ def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "printing_techniques_sm": field.get_subfields("d"),
-        "book_formats_sm": field.get_subfields("m")
+        "printing_techniques": field.get_subfields("d"),
+        "book_formats": field.get_subfields("m")
     }
 
     return res
@@ -436,7 +425,7 @@ def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "general_notes_sm": field.get_subfields("a")
+        "general_notes": field.get_subfields("a")
     }
 
     return res
@@ -444,7 +433,7 @@ def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "binding_notes_sm": field.get_subfields("a")
+        "binding_notes": field.get_subfields("a")
     }
 
     return res
@@ -452,22 +441,22 @@ def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "parts_held_sm": field.get_subfields('a'),
-        "parts_extent_sm": e if (e := field.get_subfields('b')) else []
+        "parts_held": field.get_subfields('a'),
+        "parts_extent": e if (e := field.get_subfields('b')) else []
     }
     return res
 
 
 def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "watermark_notes_sm": field.get_subfields("a")
+        "watermark_notes": field.get_subfields("a")
     }
     return res
 
 
 def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "source_type_sm": field.get_subfields('a')
+        "source_type": field.get_subfields('a')
     }
 
     return res
@@ -488,7 +477,7 @@ def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
         person["qualifier"] = q
 
     res: MaterialGroupFields = {
-        "people_json": [ujson.dumps(person)]
+        "people": [person]
     }
 
     return res
@@ -513,26 +502,15 @@ def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
         institution["role"] = r
 
     res: MaterialGroupFields = {
-        "institutions_json": [ujson.dumps(institution)]
+        "institutions": [institution]
     }
 
     return res
 
 
 def __mg_external(field: pymarc.Field) -> MaterialGroupFields:
-    external_link: Dict[str, str] = {}
-
-    if u := field['u']:
-        external_link["url"] = u
-
-    if n := field['z']:
-        external_link["note"] = n
-
-    if k := field['x']:
-        external_link['link_type'] = k
-
     res: MaterialGroupFields = {
-        "external_links_json": [ujson.dumps(external_link)]
+        "external_links": [external_link_json(field)]
     }
     return res
 
@@ -599,15 +577,13 @@ def _get_material_groups(record: pymarc.Record, source_id: str) -> Optional[List
         # The field group will be all multivalued fields, and the base group
         # will be single-valued fields. These will be merged later to form
         # the whole group. We use a defaultdict here so that we can just assume
-        # that the fields will always be a set, and we don't have to check whether
-        # it exists before adding new values to it. This also has the effect of removing
-        # any duplicate values.
-        field_group = defaultdict(set)
+        # that the fields will always be a list, and we don't have to check whether
+        # it exists before adding new values to it.
+        field_group = defaultdict(list)
         base_group: MaterialGroupIndexDocument = {
-            "id": f"{source_id}_materialgroup_{gpnum}",
-            "source_id": source_id,
-            "type": "source_materialgroup",
-            "group_num_s": f"{gpnum}"
+            "id": f"mg_{gpnum}",
+            "group_num": f"{gpnum}",
+            "source_id": source_id
         }
 
         for field in fields:
@@ -615,15 +591,18 @@ def _get_material_groups(record: pymarc.Record, source_id: str) -> Optional[List
             if not field_res:
                 continue
 
-            for sf, sv in field_res.items():
-                field_group[sf].update(sv)
+            for subf, subv in field_res.items():
+                # Filter out any empty values
+                if not subv:
+                    continue
+                field_group[subf].extend(subv)
 
         # Cast the sets to a list so that they can be serialized by the JSON encoder.
-        values_list: Dict = {k: list(v) for k, v in field_group.items()}
+        # values_list: Dict = {k: list(v) for k, v in field_group.items()}
 
         # Join the field group to the base group, and then append the combined dict
         # to the list of results to be indexed.
-        base_group.update(values_list)
+        base_group.update(field_group)
         res.append(base_group)
 
     return res
@@ -667,47 +646,37 @@ def _get_country_code(record: pymarc.Record) -> Optional[str]:
     return country_code_from_siglum(siglum)
 
 
-def _get_rism_series_statements(record: pymarc.Record) -> Optional[List[str]]:
+def _get_rism_series_json(record: pymarc.Record) -> Optional[List[Dict]]:
     fields: List[pymarc.Field] = record.get_fields("596")
     if not fields:
         return None
 
-    return [f"{field['a']} {field['b']}" for field in fields if field['a'] and field['b']]
+    ret: List = []
+    for field in fields:
+        d = {
+            "reference": field['a'],
+            "series_id": field['b']
+        }
+        ret.append({k: v for k, v in d.items() if v})
+
+    return ret
 
 
-def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str) -> List[HoldingIndexDocument]:
+def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str) -> Optional[List[HoldingIndexDocument]]:
     """
-        Create a holding record for sources that do not actually have a holding record.
+        Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
         This is so that we can provide a unified interface for searching all holdings of an institution
         using the holding record mechanism, rather than a mixture of several different record types.
     """
     # First check to see if the record has 852 fields; if it doesn't, skip trying to process any further.
-    has_holdings: bool = record.get_fields("852") != []
-    if not has_holdings:
-        return []
+    if "852" not in record:
+        return None
 
     source_num: str = to_solr_single_required(record, '001')
     holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
     # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
     # should result in a unique identifier for this holding record.
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
-    holding_institution_name: Optional[str] = to_solr_single(record, "852", "e")
-    holding_institution_siglum: Optional[str] = to_solr_single(record, "852", "a")
-    holding_institution_shelfmark: Optional[str] = to_solr_single(record, "852", "c")
+    holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
-    d: HoldingIndexDocument = {
-        "id": holding_id,
-        "type": "holding",
-        "source_id": source_id,
-        "holding_id_sni": f"{holding_institution_ident}-{source_num}",
-        "siglum_s": holding_institution_siglum,
-        "main_title_s": main_title,
-        "country_code_s": country_code_from_siglum(holding_institution_siglum) if holding_institution_siglum else None,
-        "institution_s": holding_institution_name,
-        "institution_id": f"institution_{holding_institution_ident}",
-        "shelfmark_s": holding_institution_shelfmark,
-        "former_shelfmarks_sm": to_solr_multi(record, '852', 'd'),
-        "material_held_sm": to_solr_multi(record, "852", "q")
-    }
-
-    return [d]
+    return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title)]

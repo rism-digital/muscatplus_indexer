@@ -17,8 +17,9 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
     curs.execute("""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
                            child.source_id AS source_id, child.marc_source AS marc_source,
                            child.created_at AS created, child.updated_at AS updated, 
-                           child.record_type AS record_type, parent.std_title AS parent_title, 
-                           COUNT(h.id) AS holdings_count, GROUP_CONCAT(h.marc_source SEPARATOR '') AS holdings_marc
+                           child.record_type AS record_type, parent.std_title AS parent_title,
+                           parent.record_type AS parent_record_type, COUNT(h.id) AS holdings_count, 
+                           GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc
                     FROM muscat_development.sources AS child
                     LEFT JOIN muscat_development.sources AS parent ON parent.id = child.source_id
                     LEFT JOIN muscat_development.holdings h on child.id = h.source_id

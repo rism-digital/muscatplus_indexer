@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, List, TypedDict, Optional
 
 import pymarc
+import ujson
 
 from indexer.helpers.marc import create_marc, record_value_lookup, id_field_lookup
 from indexer.helpers.utilities import to_solr_single, to_solr_single_required, to_solr_multi
@@ -21,6 +22,7 @@ class PersonIndexDocument(TypedDict):
     roles_sm: Optional[List]
     external_ids: Optional[List]
     boost: int
+    related_people_json: Optional[List]
 
 
 def create_person_index_documents(record: Dict) -> List:
@@ -37,12 +39,11 @@ def create_person_index_documents(record: Dict) -> List:
         "gender_s": to_solr_single(marc_record, '375', 'a'),
         "roles_sm": to_solr_multi(marc_record, '550', 'a'),
         "external_ids": _get_external_ids(marc_record),
+        "related_people_json": ujson.dumps(_get_related_people(marc_record) or []),
         "boost": record.get("source_count", 0)
     }
 
-    related_people: List = _get_related_people(marc_record) or []
-
-    return [d, *related_people]
+    return [d]
 
 
 def _get_external_ids(record: pymarc.Record) -> Optional[List]:
@@ -65,10 +66,9 @@ def __related_person(field: pymarc.Field, related_id: str) -> Dict:
     """
     return {
         "id": f"{uuid.uuid4()}",
-        "type": "person_person_relationship",
-        "name_s": field['a'],
-        "relationship_s": field['i'],
-        "person_id": f"person_{field['0']}",
+        "name": field['a'],
+        "relationship": field['i'],
+        "other_person_id": f"person_{field['0']}",
         "related_id": related_id
     }
 

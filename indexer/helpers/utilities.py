@@ -4,7 +4,7 @@ import timeit
 import concurrent.futures
 from collections import OrderedDict
 from functools import wraps
-from typing import List, Any, Iterable, Optional, Dict
+from typing import List, Any, Iterable, Optional, Dict, TypedDict
 
 from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
 import pymarc
@@ -96,7 +96,7 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
     return ret
 
 
-def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None) -> Optional[List[str]]:
+def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = False) -> Optional[List[str]]:
     """
     Returns all the values for a given field and subfield. Extracting this data from the
     field is done by creating an OrderedDict from the keys, and then casting it back to a list. This removes
@@ -106,6 +106,8 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     :param field: A string indicating the tag that should be extracted
     :param subfield: An optional subfield. If this is not provided, the full value of the field will be returned
         as a MARC string (e.g., "$aFoo$bBar).
+    :param ungrouped: If this is True, this function will only return fields that do not have a $8 value. The default is
+        False, indicating all fields, regardless of whether they are grouped or not, will be returned.
     :return: A list of strings, or None if not found.
     """
     fields: List[pymarc.Field] = record.get_fields(field)
@@ -113,10 +115,14 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
         return None
 
     if subfield is None:
-        return list(OrderedDict.fromkeys(f.value() for f in fields if f))
+        return list(OrderedDict.fromkeys(f.value() for f in fields if (f and '8' in field is ungrouped)))
 
-    # Treat the subfields as a list of lists, and flatten their values
-    return list(OrderedDict.fromkeys(val for field in fields for val in field.get_subfields(subfield)))
+    # Treat the subfields as a list of lists, and flatten their values. `get_subfields` returns a list,
+    # and we are dealing with a list of fields, so we iterate twice here: Once over the fields, and then
+    # over the values in each field.
+    if ungrouped:
+        return list({val for field in fields for val in field.get_subfields(subfield) if '8' not in field})
+    return list({val for field in fields for val in field.get_subfields(subfield)})
 
 
 def normalize_id(identifier: str) -> str:
@@ -141,3 +147,31 @@ def clean_multivalued(fields: Dict, field_name: str) -> Optional[List[str]]:
         return None
 
     return [t for t in fields.get(field_name).splitlines() if t.strip()]
+
+
+class ExternalLinkDocument(TypedDict, total=False):
+    url: Optional[str]
+    note: Optional[str]
+    link_type: Optional[str]
+
+
+def external_link_json(field: pymarc.Field) -> Optional[ExternalLinkDocument]:
+    """
+    Takes an 856 field and attempts to format a dictionary containing
+    the data. Used for adding external links to various places in the indexed records (source, material groups,
+    holdings, etc.)
+    :param field: A pymarc.Field. Will return None if the tag is not 856.
+    :return: A dictionary of values matching the fields in the 856
+    """
+    external_link: ExternalLinkDocument = {}
+
+    if u := field['u']:
+        external_link["url"] = u
+
+    if n := field['z']:
+        external_link["note"] = n
+
+    if k := field['x']:
+        external_link['link_type'] = k
+
+    return external_link

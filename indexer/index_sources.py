@@ -1,6 +1,7 @@
 import logging
 from typing import Generator, List, Dict
 
+from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
@@ -47,7 +48,11 @@ def index_source_groups(sources: List) -> bool:
     records_to_index: List = []
 
     for record in sources:
-        docs = create_source_index_documents(record)
+        try:
+            docs = create_source_index_documents(record)
+        except RequiredFieldException:
+            log.critical("Could not index source %s", record["id"])
+            continue
         log.debug("Appending source document")
         records_to_index.extend(docs)
 

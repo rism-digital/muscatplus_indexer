@@ -24,6 +24,7 @@ class PersonIndexDocument(TypedDict):
     related_people_sm: Optional[List]
     related_institutions_sm: Optional[List]
     general_notes_sm: Optional[List]
+    additional_biography_sm: Optional[List]
     gender_s: Optional[str]
     roles_sm: Optional[List]
     external_ids: Optional[List]
@@ -51,6 +52,7 @@ def create_person_index_documents(record: Dict) -> List:
         "related_people_sm": to_solr_multi(marc_record, "500", "a"),
         "related_institutions_sm": to_solr_multi(marc_record, "510", "a"),
         "general_notes_sm": to_solr_multi(marc_record, "680", "a"),
+        "additional_biography_sm": to_solr_multi(marc_record, "678", "a"),
         "gender_s": to_solr_single(marc_record, '375', 'a'),
         "roles_sm": to_solr_multi(marc_record, '550', 'a'),
         "external_ids": _get_external_ids(marc_record),

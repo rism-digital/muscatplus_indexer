@@ -160,6 +160,10 @@ def external_link_json(field: pymarc.Field) -> Optional[ExternalLinkDocument]:
     Takes an 856 field and attempts to format a dictionary containing
     the data. Used for adding external links to various places in the indexed records (source, material groups,
     holdings, etc.)
+
+    Due to a misconfiguration, for people the 'Notes' are held in $y at the time of this writing, so we use both fields
+    for the notes. See https://github.com/rism-digital/muscat/issues/1081
+
     :param field: A pymarc.Field. Will return None if the tag is not 856.
     :return: A dictionary of values matching the fields in the 856
     """
@@ -168,7 +172,7 @@ def external_link_json(field: pymarc.Field) -> Optional[ExternalLinkDocument]:
     if u := field['u']:
         external_link["url"] = u
 
-    if n := field['z']:
+    if (n := field['z']) or (n := field['y']):
         external_link["note"] = n
 
     if k := field['x']:

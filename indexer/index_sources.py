@@ -20,7 +20,8 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
                            child.created_at AS created, child.updated_at AS updated, 
                            child.record_type AS record_type, parent.std_title AS parent_title,
                            parent.record_type AS parent_record_type, COUNT(h.id) AS holdings_count, 
-                           GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc
+                           GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc,
+                           GROUP_CONCAT(h.lib_siglum SEPARATOR '\n') AS holdings_org
                     FROM muscat_development.sources AS child
                     LEFT JOIN muscat_development.sources AS parent ON parent.id = child.source_id
                     LEFT JOIN muscat_development.holdings h on child.id = h.source_id

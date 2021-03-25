@@ -114,6 +114,7 @@ class SourceIndexDocument(TypedDict):
     source_type_sm: Optional[List[str]]
     subjects_sm: Optional[List[str]]
     num_holdings_i: Optional[int]
+    holding_institutions_sm: Optional[List]
     date_statements_sm: Optional[List[str]]
     country_code_s: Optional[str]
     siglum_s: Optional[str]
@@ -165,6 +166,9 @@ def create_source_index_documents(record: Dict) -> List:
             "main_title": record.get("parent_title"),
         }
 
+    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
+    holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org")) or []
+
     created: datetime = record["created"].strftime("%Y-%m-%dT%H:%M:%SZ")
     updated: datetime = record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -202,6 +206,7 @@ def create_source_index_documents(record: Dict) -> List:
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),
         "subjects_sm": to_solr_multi(marc_record, "650", "a"),
         "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
+        "holding_institutions_sm": holding_orgs,
         "date_statements_sm": to_solr_multi(marc_record, "260", "c"),
         "country_code_s": _get_country_code(marc_record),
         "siglum_s": to_solr_single(marc_record, "852", "a"),
@@ -218,7 +223,6 @@ def create_source_index_documents(record: Dict) -> List:
 
     material_groups: List = _get_material_groups(marc_record, source_id) or []
     incipits: List = _get_incipits(marc_record, source_id) or []
-    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
 
     # Create a list of all the Solr records to send off for indexing, and extend with any additional records if there
     # are results. We don't need to check these, since they're guaranteed to be a list (even if they are empty).
@@ -680,3 +684,24 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
     return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title)]
+
+
+def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None) -> Optional[List[str]]:
+    # Coalesces both print and mss holdings into a multivalued field so that we can filter sources by their holding
+    # library
+    # If there are any holding records for MSS, get the siglum. Use a set to ignore any duplicates
+    sig: set[str] = set()
+
+    for mss in mss_holdings:
+        siglum = mss.get("siglum_s")
+        if siglum:
+            sig.add(siglum)
+
+    if print_holdings:
+        holdings_arr: List = print_holdings.split("\n")
+        for lib in holdings_arr:
+            siglum = lib.strip()
+            if siglum:
+                sig.add(siglum)
+
+    return list(sig)

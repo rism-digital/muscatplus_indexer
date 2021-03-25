@@ -120,9 +120,10 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     # Treat the subfields as a list of lists, and flatten their values. `get_subfields` returns a list,
     # and we are dealing with a list of fields, so we iterate twice here: Once over the fields, and then
     # over the values in each field.
+    # Only return the fields that are not empty.
     if ungrouped:
-        return list({val for field in fields for val in field.get_subfields(subfield) if '8' not in field})
-    return list({val for field in fields for val in field.get_subfields(subfield)})
+        return list({val for field in fields for val in field.get_subfields(subfield) if '8' not in field and val})
+    return list({val for field in fields for val in field.get_subfields(subfield) if val})
 
 
 def normalize_id(identifier: str) -> str:

@@ -120,11 +120,14 @@ class SourceIndexDocument(TypedDict):
     siglum_s: Optional[str]
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
+    has_digitization_b: bool
+    has_iiif_manifest_b: bool
     material_groups_json: Optional[str]
     subjects_json: Optional[str]
     rism_series_json: Optional[str]
     relationships_json: Optional[str]
     creator_json: Optional[str]
+    external_links_json: Optional[str]
     created: datetime
     updated: datetime
 
@@ -212,11 +215,14 @@ def create_source_index_documents(record: Dict) -> List:
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
+        "has_digitization_b": _get_has_digitization(marc_record),
+        "has_iiif_manifest_b": _get_has_iiif_manifest(marc_record),
         "material_groups_json": ujson.dumps(mg) if (mg := _get_material_groups(marc_record, source_id)) else None,
         "rism_series_json": ujson.dumps(rs) if (rs := _get_rism_series_json(marc_record)) else None,
         "subjects_json": ujson.dumps(sb) if (sb := _get_subjects(marc_record)) else None,
         "relationships_json": ujson.dumps(all_relationships) if all_relationships else None,
         "creator_json": ujson.dumps(creator) if creator else None,
+        "external_links_json": ujson.dumps(f) if (f := _get_external_links(marc_record)) else None,
         "created": created,
         "updated": updated
     }
@@ -705,3 +711,29 @@ def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: 
                 sig.add(siglum)
 
     return list(sig)
+
+
+def _get_external_links(record: pymarc.Record) -> Optional[List[ExternalLinkDocument]]:
+    """
+    Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
+    material group descriptions -- those are handled in the material group indexing section above.
+    :param record: A pymarc record
+    :return: A list of external links. This will be serialized to a string for storage in Solr.
+    """
+    ungrouped_ext_links: List[ExternalLinkDocument] = [external_link_json(f) for f in record.get_fields("856") if f and '8' not in f]
+    if not ungrouped_ext_links:
+        return None
+
+    return ungrouped_ext_links
+
+
+def _get_has_digitization(record: pymarc.Record) -> bool:
+    digitization_links: List = [f for f in record.get_fields("856") if 'x' in f and f['x'] == "Digitalization"]
+
+    return len(digitization_links) > 0
+
+
+def _get_has_iiif_manifest(record: pymarc.Record) -> bool:
+    iiif_manifests: List = [f for f in record.get_fields("856") if 'x' in f and f['x'] == "IIIF"]
+
+    return len(iiif_manifests) > 0

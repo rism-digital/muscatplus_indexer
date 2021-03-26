@@ -623,7 +623,7 @@ def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocu
 
     return {
         "id": f"{source_id}_incipit_{num}",
-        "type": "source_incipit",
+        "type": "incipit",
         "source_id": source_id,
         "incipit_num_i": num,
         "music_incipit_s": field['p'],

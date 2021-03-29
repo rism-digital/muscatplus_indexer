@@ -1,5 +1,5 @@
 import logging
-import uuid
+import operator
 from collections import defaultdict
 from typing import Dict, List, TypedDict, Optional
 
@@ -105,7 +105,7 @@ def _get_related_people(record: pymarc.Record) -> Optional[List[Dict]]:
     related_id: str = f"person_{to_solr_single_required(record, '001')}"
 
     # NB: enumeration starts at 1
-    return [__related_person(p, related_id, i) for i, p in enumerate(people, 1) if p]
+    return sorted([__related_person(p, related_id, i) for i, p in enumerate(people, 1) if p], key=operator.itemgetter("name"))
 
 
 def __related_place(field: pymarc.Field, person_id: str, relationship_number: int) -> Dict:
@@ -130,7 +130,7 @@ def _get_related_places(record: pymarc.Record) -> Optional[List[Dict]]:
 
     person_id: str = f"person_{to_solr_single_required(record, '001')}"
 
-    return [__related_place(p, person_id, i) for i, p in enumerate(places, 1) if p]
+    return sorted([__related_place(p, person_id, i) for i, p in enumerate(places, 1) if p], key=operator.itemgetter("name"))
 
 
 def __related_institution(field: pymarc.Field, person_id: str, relationship_number: int) -> Dict:
@@ -148,10 +148,10 @@ def _get_related_institutions(record: pymarc.Record) -> Optional[List[Dict]]:
 
     person_id: str = f"person_{to_solr_single_required(record, '001')}"
 
-    return [__related_institution(p, person_id, i) for i, p in enumerate(institutions, 1) if p]
+    return sorted([__related_institution(p, person_id, i) for i, p in enumerate(institutions, 1) if p], key=operator.itemgetter("name"))
 
 
-def _get_name_variants(record: pymarc.Record) -> Optional[Dict]:
+def _get_name_variants(record: pymarc.Record) -> Optional[List]:
     name_variants = record.get_fields("400")
     if not name_variants:
         return None
@@ -165,7 +165,7 @@ def _get_name_variants(record: pymarc.Record) -> Optional[Dict]:
         category: str = subf["j"] or "xx"
         names[category].append(n)
 
-    # Sort the variants alphabetically
-    name_variants = {k: sorted(v) for k, v in names.items()}
+    # Sort the variants alphabetically and format as list
+    name_variants: List = [{"type": k, "variants": sorted(v)} for k, v in names.items()]
 
     return name_variants

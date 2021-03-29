@@ -6,7 +6,7 @@ import ujson
 
 from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import to_solr_single, to_solr_multi, external_link_json
+from indexer.helpers.utilities import to_solr_single, to_solr_multi, external_resource_json
 
 log = logging.getLogger("muscat_indexer")
 
@@ -25,7 +25,7 @@ class HoldingIndexDocument(TypedDict):
     former_shelfmarks_sm: Optional[List[str]]
     material_held_sm: Optional[List[str]]
     local_numbers_sm: Optional[List[str]]
-    external_links_json: Optional[str]
+    external_resources_json: Optional[str]
 
 
 def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
@@ -53,7 +53,7 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
         "former_shelfmarks_sm": to_solr_multi(marc_record, '852', 'd'),
         "material_held_sm": to_solr_multi(marc_record, '852', 'q'),
         "local_numbers_sm": to_solr_multi(marc_record, "035", "a"),
-        "external_links_json": ujson.dumps(l) if (l := [external_link_json(f) for f in marc_record.get_fields("856")]) else None
+        "external_resources_json": ujson.dumps(l) if (l := [external_resource_json(f) for f in marc_record.get_fields("856")]) else None
     }
 
     return d

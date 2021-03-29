@@ -6,8 +6,8 @@ from typing import Dict, List, TypedDict, Optional
 import pymarc
 import ujson
 
-from indexer.helpers.marc import create_marc, record_value_lookup, id_field_lookup
-from indexer.helpers.utilities import to_solr_single, to_solr_single_required, to_solr_multi, external_link_json
+from indexer.helpers.marc import create_marc
+from indexer.helpers.utilities import to_solr_single, to_solr_single_required, to_solr_multi, external_resource_json
 
 log = logging.getLogger("muscat_indexer")
 
@@ -33,7 +33,7 @@ class PersonIndexDocument(TypedDict):
     related_places_json: Optional[str]
     related_institutions_json: Optional[str]
     name_variants_json: Optional[str]
-    external_links_json: Optional[str]
+    external_resources_json: Optional[str]
 
 
 def create_person_index_documents(record: Dict) -> List:
@@ -60,7 +60,7 @@ def create_person_index_documents(record: Dict) -> List:
         "related_places_json": ujson.dumps(p) if (p := _get_related_places(marc_record)) else None,
         "related_institutions_json": ujson.dumps(p) if (p := _get_related_institutions(marc_record)) else None,
         "name_variants_json": ujson.dumps(n) if (n := _get_name_variants(marc_record)) else None,
-        "external_links_json": ujson.dumps(l) if (l := [external_link_json(f) for f in marc_record.get_fields("856")]) else None,
+        "external_resources_json": ujson.dumps(l) if (l := [external_resource_json(f) for f in marc_record.get_fields("856")]) else None,
         "boost": record.get("source_count", 0)
     }
 

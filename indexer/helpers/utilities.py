@@ -150,13 +150,13 @@ def clean_multivalued(fields: Dict, field_name: str) -> Optional[List[str]]:
     return [t for t in fields.get(field_name).splitlines() if t.strip()]
 
 
-class ExternalLinkDocument(TypedDict, total=False):
+class ExternalResourceDocument(TypedDict, total=False):
     url: Optional[str]
     note: Optional[str]
     link_type: Optional[str]
 
 
-def external_link_json(field: pymarc.Field) -> Optional[ExternalLinkDocument]:
+def external_resource_json(field: pymarc.Field) -> Optional[ExternalResourceDocument]:
     """
     Takes an 856 field and attempts to format a dictionary containing
     the data. Used for adding external links to various places in the indexed records (source, material groups,
@@ -168,15 +168,15 @@ def external_link_json(field: pymarc.Field) -> Optional[ExternalLinkDocument]:
     :param field: A pymarc.Field. Will return None if the tag is not 856.
     :return: A dictionary of values matching the fields in the 856
     """
-    external_link: ExternalLinkDocument = {}
+    external_resource: ExternalResourceDocument = {}
 
     if u := field['u']:
-        external_link["url"] = u
+        external_resource["url"] = u
 
     if (n := field['z']) or (n := field['y']):
-        external_link["note"] = n
+        external_resource["note"] = n
 
     if k := field['x']:
-        external_link['link_type'] = k
+        external_resource['link_type'] = k
 
-    return external_link
+    return external_resource

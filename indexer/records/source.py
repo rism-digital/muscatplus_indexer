@@ -1,17 +1,22 @@
-import logging
 import itertools
-import re
-from datetime import datetime
+import logging
 from collections import defaultdict
-from typing import TypedDict, Optional, List, Dict, Pattern
+from datetime import datetime
+from typing import TypedDict, Optional, List, Dict
 
 import pymarc
 import ujson
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID, country_code_from_siglum
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import to_solr_single_required, to_solr_single, to_solr_multi, normalize_id, \
-    external_link_json, ExternalLinkDocument
+from indexer.helpers.utilities import (
+    to_solr_single_required,
+    to_solr_single,
+    to_solr_multi,
+    normalize_id,
+    external_resource_json,
+    ExternalResourceDocument
+)
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 
 log = logging.getLogger("muscat_indexer")
@@ -127,7 +132,7 @@ class SourceIndexDocument(TypedDict):
     rism_series_json: Optional[str]
     relationships_json: Optional[str]
     creator_json: Optional[str]
-    external_links_json: Optional[str]
+    external_resources_json: Optional[str]
     created: datetime
     updated: datetime
 
@@ -222,7 +227,7 @@ def create_source_index_documents(record: Dict) -> List:
         "subjects_json": ujson.dumps(sb) if (sb := _get_subjects(marc_record)) else None,
         "relationships_json": ujson.dumps(all_relationships) if all_relationships else None,
         "creator_json": ujson.dumps(creator) if creator else None,
-        "external_links_json": ujson.dumps(f) if (f := _get_external_links(marc_record)) else None,
+        "external_resources_json": ujson.dumps(f) if (f := _get_external_resources(marc_record)) else None,
         "created": created,
         "updated": updated
     }
@@ -520,7 +525,7 @@ def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_external(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
-        "external_links": [external_link_json(field)]
+        "external_resources": [external_resource_json(field)]
     }
     return res
 
@@ -713,14 +718,14 @@ def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: 
     return list(sig)
 
 
-def _get_external_links(record: pymarc.Record) -> Optional[List[ExternalLinkDocument]]:
+def _get_external_resources(record: pymarc.Record) -> Optional[List[ExternalResourceDocument]]:
     """
     Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
     material group descriptions -- those are handled in the material group indexing section above.
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ungrouped_ext_links: List[ExternalLinkDocument] = [external_link_json(f) for f in record.get_fields("856") if f and '8' not in f]
+    ungrouped_ext_links: List[ExternalResourceDocument] = [external_resource_json(f) for f in record.get_fields("856") if f and '8' not in f]
     if not ungrouped_ext_links:
         return None
 

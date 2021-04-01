@@ -280,7 +280,7 @@ def __related_institution(field: pymarc.Field, this_id: str, this_type: str, rel
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("500", "700")) -> Optional[List[Dict]]:
+def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("510", "710")) -> Optional[List[Dict]]:
     # Due to inconsistencies in authority records, these relationships are held in both these fields.
     institutions: List = record.get_fields(*fields)
     if not institutions:

@@ -15,7 +15,7 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
 
     curs.execute("""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count
                     FROM muscat_development.people AS p
-                    JOIN muscat_development.sources_to_people AS s ON p.id = s.person_id
+                    LEFT JOIN muscat_development.sources_to_people AS s ON p.id = s.person_id
                     WHERE wf_stage = 1
                     GROUP BY p.id;""")
 

@@ -183,77 +183,96 @@ def external_resource_json(field: pymarc.Field) -> Optional[ExternalResourceDocu
     return external_resource
 
 
-def __related_person(field: pymarc.Field, related_id: str, relationship_number: int) -> Dict:
+def __related_person(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> Dict:
     """
     Generate a related person record. The target of the relationship is given in the person_id field,
     while the source of the relationship is given in the related_id field.
 
+    Empty values and keys will be removed from the response.
+
     :param field: The pymarc field for the relationship
-    :param related_id: The ID of the source person for the relationship
+    :param this_id: The ID of the source record for the relationship
+    :param this_id: The type of the source record (institution, person). Enables ID lookups based on type
     :param relationship_number: An integer corresponding to the position of this relationship in the list of all
         relationships for this person. This is because two people can be related in two different ways, so this
         lets us give a unique number to each enumerated relationship.
     :return: A Solr record for the person relationship
     """
-    return {
+    d = {
         "id": f"{relationship_number}",
         "name": field['a'],
         "relationship": field['i'],
         "other_person_id": f"person_{field['0']}",
-        "this_person_id": related_id
+        "this_id": this_id,
+        "this_type": this_type
     }
 
+    return {k: v for k, v in d.items() if v}
 
-def get_related_people(record: pymarc.Record) -> Optional[List[Dict]]:
-    people: List = record.get_fields('500')
+
+def get_related_people(record: pymarc.Record, record_id: str, record_type: str) -> Optional[List[Dict]]:
+    people_500: List = record.get_fields('500')
+    people_700: List = record.get_fields("700")
+
+    people: List = people_700 + people_500
     if not people:
         return None
 
-    related_id: str = f"person_{to_solr_single_required(record, '001')}"
-
     # NB: enumeration starts at 1
-    return sorted([__related_person(p, related_id, i) for i, p in enumerate(people, 1) if p], key=operator.itemgetter("name"))
+    return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p]
 
 
-def __related_place(field: pymarc.Field, person_id: str, relationship_number: int) -> Dict:
+def __related_place(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> Dict:
     # Note that as of this writing the places are not controlled by the place authorities,
     # so we don't have a place authority ID to store here.
 
     # TODO: Fix this to point to the place authority once the IDs are stored in MARC. See
     #   https://github.com/rism-digital/muscat/issues/1080
 
-    return {
+    d = {
         "id": f"{relationship_number}",
         "name": field["a"],
         "relationship": field["i"],
-        "this_person_id": person_id
+        "place_id": field["0"],
+        "this_id": this_id,
+        "this_type": this_type
     }
 
+    # strip any null values from the response so that we can do simple checks for available data by looking for the key.
+    return {k: v for k, v in d.items() if v}
 
-def get_related_places(record: pymarc.Record) -> Optional[List[Dict]]:
-    places: List = record.get_fields("551")
+
+def get_related_places(record: pymarc.Record, record_id: str, record_type: str) -> Optional[List[Dict]]:
+    places_551: List = record.get_fields("551")
+    places_751: List = record.get_fields("751")
+
+    places: List = places_551 + places_751
     if not places:
         return None
 
-    person_id: str = f"person_{to_solr_single_required(record, '001')}"
-
-    return sorted([__related_place(p, person_id, i) for i, p in enumerate(places, 1) if p], key=operator.itemgetter("name"))
+    return [__related_place(p, record_id, record_type, i) for i, p in enumerate(places, 1) if p]
 
 
-def __related_institution(field: pymarc.Field, person_id: str, relationship_number: int) -> Dict:
-    return {
+def __related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> Dict:
+    d = {
         "id": f"{relationship_number}",
         "name": field["a"],
-        "institution_id": f"institution_{field['0']}"
+        "institution_id": f"institution_{field['0']}",
+        "this_id": this_id,
+        "this_type": this_type
     }
 
+    return {k: v for k, v in d.items() if v}
 
-def get_related_institutions(record: pymarc.Record) -> Optional[List[Dict]]:
-    institutions: List = record.get_fields("510")
+
+def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str) -> Optional[List[Dict]]:
+    # Due to inconsistencies in authority records, these relationships are held in both these fields.
+    institutions_510: List = record.get_fields("510")
+    institutions_710: List = record.get_fields("710")
+
+    institutions: List = institutions_710 + institutions_510
     if not institutions:
         return None
 
-    person_id: str = f"person_{to_solr_single_required(record, '001')}"
-
-    return sorted([__related_institution(p, person_id, i) for i, p in enumerate(institutions, 1) if p], key=operator.itemgetter("name"))
+    return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
 

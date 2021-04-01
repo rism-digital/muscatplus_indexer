@@ -425,7 +425,7 @@ def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
         person["id"] = f"person_{normalize_id(i)}"
 
     if r := field["4"]:
-        person["role"] = r
+        person["relationship"] = r
 
     if q := field["j"]:
         person["qualifier"] = q
@@ -453,7 +453,7 @@ def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
         institution["qualifier"] = q
 
     if r := field['4']:
-        institution["role"] = r
+        institution["relationship"] = r
 
     res: MaterialGroupFields = {
         "institutions": [institution]

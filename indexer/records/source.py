@@ -15,7 +15,7 @@ from indexer.helpers.utilities import (
     to_solr_multi,
     normalize_id,
     external_resource_json,
-    ExternalResourceDocument
+    ExternalResourceDocument, get_related_people, get_related_places, get_related_institutions
 )
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 
@@ -130,7 +130,8 @@ class SourceIndexDocument(TypedDict):
     material_groups_json: Optional[str]
     subjects_json: Optional[str]
     rism_series_json: Optional[str]
-    relationships_json: Optional[str]
+    related_people_json: Optional[str]
+    related_institutions_json: Optional[str]
     creator_json: Optional[str]
     external_resources_json: Optional[str]
     created: datetime
@@ -160,10 +161,6 @@ def create_source_index_documents(record: Dict) -> List:
 
     main_title: str = _get_main_title(marc_record)
     source_title: str = to_solr_single_required(marc_record, "245", "a")
-
-    people_relationships: List = _get_people_relationships(marc_record, source_id, main_title) or []
-    institution_relationships: List = _get_institution_relationships(marc_record, source_id, main_title) or []
-    all_relationships: List = people_relationships + institution_relationships
     creator: List = _get_creator(marc_record, source_id, main_title) or []
 
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
@@ -176,6 +173,9 @@ def create_source_index_documents(record: Dict) -> List:
 
     manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
     holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org")) or []
+
+    related_people: Optional[List] = get_related_people(marc_record, source_id, "source", fields=("700",))
+    related_institutions: Optional[List] = get_related_institutions(marc_record, source_id, "source", fields=("710",))
 
     created: datetime = record["created"].strftime("%Y-%m-%dT%H:%M:%SZ")
     updated: datetime = record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -225,14 +225,15 @@ def create_source_index_documents(record: Dict) -> List:
         "material_groups_json": ujson.dumps(mg) if (mg := _get_material_groups(marc_record, source_id)) else None,
         "rism_series_json": ujson.dumps(rs) if (rs := _get_rism_series_json(marc_record)) else None,
         "subjects_json": ujson.dumps(sb) if (sb := _get_subjects(marc_record)) else None,
-        "relationships_json": ujson.dumps(all_relationships) if all_relationships else None,
+        "related_people_json": ujson.dumps(related_people) if related_people else None,
+        "related_institutions_json": ujson.dumps(related_institutions) if related_institutions else None,
         "creator_json": ujson.dumps(creator) if creator else None,
         "external_resources_json": ujson.dumps(f) if (f := _get_external_resources(marc_record)) else None,
         "created": created,
         "updated": updated
     }
 
-    material_groups: List = _get_material_groups(marc_record, source_id) or []
+    # material_groups: List = _get_material_groups(marc_record, source_id) or []
     incipits: List = _get_incipits(marc_record, source_id) or []
 
     # Create a list of all the Solr records to send off for indexing, and extend with any additional records if there
@@ -318,68 +319,6 @@ def _get_creator(record: pymarc.Record, source_id: str, source_title: str) -> Op
         "relationship_s": "cre",
         "relationship_id": "creator"
     }]
-
-
-def __person_relationship(field: pymarc.Field, source_id: str, source_title: str, num: int) -> PersonRelationshipIndexDocument:
-    """
-    Constructs a document that defines a person's relationship to this source, with enough
-    information to provide links to this person, and to filter on their relationship.
-
-    :param field: a pymarc.Field instance
-    :return: a Dictionary representing a PersonRelationshipindexDocument.
-    """
-    relationship_id: str = f"person-{num}"
-
-    return {
-        "id": f"{source_id}_relationship_{relationship_id}",
-        "source_id": source_id,
-        "type": "source_person_relationship",
-        "name_s": field["a"],
-        "main_title_s": source_title,
-        "qualifier_s": field["j"],
-        "date_statement_s": field["d"],
-        "person_id": f"person_{field['0']}",
-        "relationship_s": field["4"],
-        "relationship_id": relationship_id
-    }
-
-
-def _get_people_relationships(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List[PersonRelationshipIndexDocument]]:
-    """
-    Returns a list of people as a child record on this source.
-
-    :param record: a pymarc.Record instance
-    :return:
-    """
-    people: List[pymarc.Field] = record.get_fields("700")
-    if not people:
-        return None
-
-    return [__person_relationship(p, source_id, source_title, num) for num, p in enumerate(people, 1)]
-
-
-def __institution_relationship(field: pymarc.Field, source_id: str, source_title: str, num: int) -> InstitutionRelationshipIndexDocument:
-    relationship_id: str = f"institution-{num}"
-
-    return {
-        "id": f"{source_id}_relationship_{relationship_id}",
-        "type": "source_institution_relationship",
-        "source_id": source_id,
-        "name_s": field["a"] or None,
-        "main_title_s": source_title,
-        "qualifier_s": field["g"] or None,
-        "institution_id": f"institution_{field['0']}",
-        "relationship_s": field["4"] or None,
-        "relationship_id": relationship_id
-    }
-
-
-def _get_institution_relationships(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List[InstitutionRelationshipIndexDocument]]:
-    institutions: [pymarc.Field] = record.get_fields("710")
-    if not institutions:
-        return None
-
-    return [__institution_relationship(i, source_id, source_title, num) for num, i in enumerate(institutions, 1)]
 
 
 def _get_source_membership(record: pymarc.Record) -> Optional[List]:

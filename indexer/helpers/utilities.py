@@ -1,14 +1,14 @@
+import concurrent.futures
 import logging
-import operator
 import re
 import timeit
-import concurrent.futures
 from collections import OrderedDict
 from functools import wraps
-from typing import List, Any, Iterable, Optional, Dict, TypedDict
+from typing import List, Any, Iterable, Optional, Dict, TypedDict, Tuple
+
+import pymarc
 
 from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
-import pymarc
 
 log = logging.getLogger("muscat_indexer")
 
@@ -198,10 +198,13 @@ def __related_person(field: pymarc.Field, this_id: str, this_type: str, relation
         lets us give a unique number to each enumerated relationship.
     :return: A Solr record for the person relationship
     """
+
     d = {
         "id": f"{relationship_number}",
         "name": field['a'],
-        "relationship": field['i'],
+        # sources use $4 for relationship info; others use $i.
+        "relationship": field['4'] if '4' in field else field['i'],
+        "qualifier": field['j'],
         "other_person_id": f"person_{field['0']}",
         "this_id": this_id,
         "this_type": this_type
@@ -210,11 +213,21 @@ def __related_person(field: pymarc.Field, this_id: str, this_type: str, relation
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_people(record: pymarc.Record, record_id: str, record_type: str) -> Optional[List[Dict]]:
-    people_500: List = record.get_fields('500')
-    people_700: List = record.get_fields("700")
+def get_related_people(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("500", "700")) -> Optional[List[Dict]]:
+    """
+    In some cases you will want to restrict the fields that are used for this lookup. By default it will look at 500
+    and 700 fields, since that is where they are kept in the authority records; however, source records use 500 for
+    notes. So for sources (and other types, if needed) we can pass in a custom set of fields to look for people
+    relationships.
 
-    people: List = people_700 + people_500
+    :param record: a PyMarc record
+    :param record_id: The ID of the parent record
+    :param record_type: The type of the parent record
+    :param fields: An optional Tuple of fields corresponding to the MARC fields where we want to gather this data from.
+        Defaults to ("500", "700").
+    :return: A list of person relationships, or None if not applicable.
+    """
+    people: List = record.get_fields(*fields)
     if not people:
         return None
 
@@ -257,6 +270,8 @@ def __related_institution(field: pymarc.Field, this_id: str, this_type: str, rel
     d = {
         "id": f"{relationship_number}",
         "name": field["a"],
+        "relationship": field['4'] if '4' in field else field['i'],
+        "qualifier": field['j'],
         "institution_id": f"institution_{field['0']}",
         "this_id": this_id,
         "this_type": this_type
@@ -265,12 +280,9 @@ def __related_institution(field: pymarc.Field, this_id: str, this_type: str, rel
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str) -> Optional[List[Dict]]:
+def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("500", "700")) -> Optional[List[Dict]]:
     # Due to inconsistencies in authority records, these relationships are held in both these fields.
-    institutions_510: List = record.get_fields("510")
-    institutions_710: List = record.get_fields("710")
-
-    institutions: List = institutions_710 + institutions_510
+    institutions: List = record.get_fields(*fields)
     if not institutions:
         return None
 

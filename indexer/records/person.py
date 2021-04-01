@@ -46,12 +46,12 @@ class PersonIndexDocument(TypedDict):
 
 def create_person_index_documents(record: Dict) -> List:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
-    pid: str = f"person_{to_solr_single_required(marc_record, '001')}"
+    person_id: str = f"person_{to_solr_single_required(marc_record, '001')}"
 
     d: PersonIndexDocument = {
         "type": "person",
-        "id": pid,
-        "person_id": pid,
+        "id": person_id,
+        "person_id": person_id,
         "name_s": to_solr_single(marc_record, '100', 'a'),
         "date_statement_s": to_solr_single(marc_record, '100', 'd'),
         "other_dates_s": to_solr_single(marc_record, '100', 'y'),
@@ -64,9 +64,9 @@ def create_person_index_documents(record: Dict) -> List:
         "gender_s": to_solr_single(marc_record, '375', 'a'),
         "roles_sm": to_solr_multi(marc_record, '550', 'a'),
         "external_ids": _get_external_ids(marc_record),
-        "related_people_json": ujson.dumps(p) if (p := get_related_people(marc_record)) else None,
-        "related_places_json": ujson.dumps(p) if (p := get_related_places(marc_record)) else None,
-        "related_institutions_json": ujson.dumps(p) if (p := get_related_institutions(marc_record)) else None,
+        "related_people_json": ujson.dumps(p) if (p := get_related_people(marc_record, person_id, "person")) else None,
+        "related_places_json": ujson.dumps(p) if (p := get_related_places(marc_record, person_id, "person")) else None,
+        "related_institutions_json": ujson.dumps(p) if (p := get_related_institutions(marc_record, person_id, "person")) else None,
         "name_variants_json": ujson.dumps(n) if (n := _get_name_variants(marc_record)) else None,
         "external_resources_json": ujson.dumps(l) if (l := [external_resource_json(f) for f in marc_record.get_fields("856")]) else None,
         "boost": record.get("source_count", 0)

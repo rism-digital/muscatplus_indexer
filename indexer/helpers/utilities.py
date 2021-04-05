@@ -116,14 +116,14 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
         return None
 
     if subfield is None:
-        return list(OrderedDict.fromkeys(f.value() for f in fields if (f and '8' in field is ungrouped)))
+        return list(OrderedDict.fromkeys(f.value() for f in fields if (f and '8' in f is ungrouped)))
 
     # Treat the subfields as a list of lists, and flatten their values. `get_subfields` returns a list,
     # and we are dealing with a list of fields, so we iterate twice here: Once over the fields, and then
     # over the values in each field.
-    # Only return the fields that are not empty.
+    # Only return the fields that are not empty and match the ungrouped option.
     if ungrouped:
-        return list({val for field in fields for val in field.get_subfields(subfield) if '8' not in field and val})
+        return list({val for field in fields for val in field.get_subfields(subfield) if val and '8' not in field})
     return list({val for field in fields for val in field.get_subfields(subfield) if val})
 
 
@@ -183,28 +183,41 @@ def external_resource_json(field: pymarc.Field) -> Optional[ExternalResourceDocu
     return external_resource
 
 
-def __related_person(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> Dict:
+class PersonRelationshipIndexDocument(TypedDict):
+    id: str
+    name: str
+    relationship: str
+    qualifier: str
+    date_statement: str
+    other_person_id: str
+    this_id: str
+    this_type: str
+
+
+def __related_person(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> PersonRelationshipIndexDocument:
     """
-    Generate a related person record. The target of the relationship is given in the person_id field,
-    while the source of the relationship is given in the related_id field.
+    Generate a related person record. The target of the relationship is given in the other_person_id field,
+    while the source of the relationship is given in the this_id field. Since Sources, Institutions, and People
+    can all be related to other people, this_type gives the type of record that we're pointing from.
 
     Empty values and keys will be removed from the response.
 
     :param field: The pymarc field for the relationship
     :param this_id: The ID of the source record for the relationship
-    :param this_id: The type of the source record (institution, person). Enables ID lookups based on type
+    :param this_type: The type of the source record (institution, person). Enables ID lookups based on type
     :param relationship_number: An integer corresponding to the position of this relationship in the list of all
         relationships for this person. This is because two people can be related in two different ways, so this
         lets us give a unique number to each enumerated relationship.
     :return: A Solr record for the person relationship
     """
 
-    d = {
+    d: PersonRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "name": field['a'],
-        # sources use $4 for relationship info; others use $i.
+        # sources use $4 for relationship info; others use $i. Will ultimately return None if neither are found.
         "relationship": field['4'] if '4' in field else field['i'],
         "qualifier": field['j'],
+        "date_statement": field['d'],
         "other_person_id": f"person_{field['0']}",
         "this_id": this_id,
         "this_type": this_type
@@ -213,7 +226,7 @@ def __related_person(field: pymarc.Field, this_id: str, this_type: str, relation
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_people(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("500", "700")) -> Optional[List[Dict]]:
+def get_related_people(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("500", "700"), ungrouped: bool = False) -> Optional[List[PersonRelationshipIndexDocument]]:
     """
     In some cases you will want to restrict the fields that are used for this lookup. By default it will look at 500
     and 700 fields, since that is where they are kept in the authority records; however, source records use 500 for
@@ -225,6 +238,9 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
     :param record_type: The type of the parent record
     :param fields: An optional Tuple of fields corresponding to the MARC fields where we want to gather this data from.
         Defaults to ("500", "700").
+    :param ungrouped: If this is True, this function will only return fields that do not have a $8 value. The default is
+        False, indicating all fields, regardless of whether they are grouped or not, will be returned.
+
     :return: A list of person relationships, or None if not applicable.
     """
     people: List = record.get_fields(*fields)
@@ -232,17 +248,28 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
         return None
 
     # NB: enumeration starts at 1
+    if ungrouped:
+        return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p and '8' not in p]
     return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p]
 
 
-def __related_place(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> Dict:
+class PlaceRelationshipIndexDocument(TypedDict):
+    id: str
+    name: str
+    relationship: str
+    place_id: str
+    this_id: str
+    this_type: str
+
+
+def __related_place(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> PlaceRelationshipIndexDocument:
     # Note that as of this writing the places are not controlled by the place authorities,
     # so we don't have a place authority ID to store here.
 
     # TODO: Fix this to point to the place authority once the IDs are stored in MARC. See
     #   https://github.com/rism-digital/muscat/issues/1080
 
-    d = {
+    d: PlaceRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "name": field["a"],
         "relationship": field["i"],
@@ -255,21 +282,30 @@ def __related_place(field: pymarc.Field, this_id: str, this_type: str, relations
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_places(record: pymarc.Record, record_id: str, record_type: str) -> Optional[List[Dict]]:
-    places_551: List = record.get_fields("551")
-    places_751: List = record.get_fields("751")
-
-    places: List = places_551 + places_751
+def get_related_places(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("551", "751")) -> Optional[List[PlaceRelationshipIndexDocument]]:
+    places: List = record.get_fields(*fields)
     if not places:
         return None
 
     return [__related_place(p, record_id, record_type, i) for i, p in enumerate(places, 1) if p]
 
 
-def __related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> Dict:
-    d = {
+class InstitutionRelationshipIndexDocument(TypedDict):
+    id: str
+    this_id: str
+    this_type: str
+    name: Optional[str]
+    department: Optional[str]
+    institution_id: Optional[str]
+    relationship: Optional[str]
+    qualifier: Optional[str]
+
+
+def __related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> InstitutionRelationshipIndexDocument:
+    d: InstitutionRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "name": field["a"],
+        "department": field["d"],
         "relationship": field['4'] if '4' in field else field['i'],
         "qualifier": field['j'],
         "institution_id": f"institution_{field['0']}",
@@ -280,11 +316,13 @@ def __related_institution(field: pymarc.Field, this_id: str, this_type: str, rel
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("510", "710")) -> Optional[List[Dict]]:
-    # Due to inconsistencies in authority records, these relationships are held in both these fields.
+def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("510", "710"), ungrouped: bool = False) -> Optional[List[InstitutionRelationshipIndexDocument]]:
+    # Due to inconsistencies in authority records, these relationships are held in both 510 and 710 fields.
     institutions: List = record.get_fields(*fields)
     if not institutions:
         return None
 
+    if ungrouped:
+        return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and '8' not in p]
     return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
 

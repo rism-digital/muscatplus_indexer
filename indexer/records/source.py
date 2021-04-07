@@ -92,6 +92,7 @@ class SourceIndexDocument(TypedDict):
     opus_numbers_sm: Optional[List[str]]
     general_notes_sm: Optional[List[str]]
     binding_notes_sm: Optional[List[str]]
+    contents_notes_sm: Optional[List[str]]
     description_summary_sm: Optional[List[str]]
     source_type_sm: Optional[List[str]]
     subjects_sm: Optional[List[str]]
@@ -103,6 +104,9 @@ class SourceIndexDocument(TypedDict):
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
     liturgical_festivals_sm: Optional[List[str]]
+    language_text_sm: Optional[List[str]]
+    language_libretto_sm: Optional[List[str]]
+    language_original_sm: Optional[List[str]]
     has_digitization_b: bool
     has_iiif_manifest_b: bool
     material_groups_json: Optional[str]
@@ -193,6 +197,7 @@ def create_source_index_documents(record: Dict) -> List:
         "opus_numbers_sm": to_solr_multi(marc_record, "383", "b"),
         "general_notes_sm": to_solr_multi(marc_record, "500", "a", ungrouped=True),
         "binding_notes_sm": to_solr_multi(marc_record, "563", "a", ungrouped=True),
+        "contents_notes_sm": to_solr_multi(marc_record, "505", "a", ungrouped=True),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),
         "subjects_sm": to_solr_multi(marc_record, "650", "a"),
@@ -204,6 +209,9 @@ def create_source_index_documents(record: Dict) -> List:
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
         "liturgical_festivals_sm": to_solr_multi(marc_record, "657", "a"),
+        "language_text_sm": to_solr_multi(marc_record, "041", "a"),
+        "language_libretto_sm": to_solr_multi(marc_record, "041", "e"),
+        "language_original_sm": to_solr_multi(marc_record, "041", "h"),
         "has_digitization_b": _get_has_digitization(marc_record),
         "has_iiif_manifest_b": _get_has_iiif_manifest(marc_record),
         "material_groups_json": ujson.dumps(mg) if (mg := _get_material_groups(marc_record, source_id)) else None,

@@ -8,6 +8,7 @@ from indexer.helpers.utilities import elapsedtime
 from indexer.helpers.solr import solr_idx_conn, swap_cores,empty_solr_core
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
+from indexer.index_liturgical_festivals import index_liturgical_festivals
 from indexer.index_people import index_people
 from indexer.index_places import index_places
 from indexer.index_sources import index_sources
@@ -40,12 +41,14 @@ def main(args) -> bool:
         hld = index_holdings(idx_config)
     if args.idx_subjects:
         sub = index_subjects(idx_config)
+    if args.idx_festivals:
+        fst = index_liturgical_festivals(idx_config)
 
     log.info("Performing Solr Commit")
     solr_idx_conn.commit()
 
     # If all the previous statuses are True, then indexing was successful.
-    idx_success: bool = empt and src and ppl and plc and ins and hld and sub
+    idx_success: bool = empt and src and ppl and plc and ins and hld and sub and fst
 
     if idx_success and args.swap_cores:
         swap: bool = swap_cores(idx_config['solr']['server'],
@@ -69,6 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-institutions", dest="idx_institutions", action="store_false", help="Do not index institutions (default is true)")
     parser.add_argument("--no-holdings", dest="idx_holdings", action="store_false", help="Do not index holdings (default is true)")
     parser.add_argument("--no-subjects", dest="idx_subjects", action="store_false", help="Do not index subjects (default is true)")
+    parser.add_argument("--no-festivals", dest="idx_festivals", action="store_false", help="Do not index liturgical festivals (default is true)")
 
     interval_group = parser.add_mutually_exclusive_group()
     interval_group.add_argument("-d", "--daily", action="store_true",

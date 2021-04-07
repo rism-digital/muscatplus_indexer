@@ -102,6 +102,7 @@ class SourceIndexDocument(TypedDict):
     siglum_s: Optional[str]
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
+    liturgical_festivals_sm: Optional[List[str]]
     has_digitization_b: bool
     has_iiif_manifest_b: bool
     material_groups_json: Optional[str]
@@ -111,6 +112,7 @@ class SourceIndexDocument(TypedDict):
     related_institutions_json: Optional[str]
     creator_json: Optional[str]
     external_resources_json: Optional[str]
+    liturgical_festivals_json: Optional[str]
     created: datetime
     updated: datetime
 
@@ -201,6 +203,7 @@ def create_source_index_documents(record: Dict) -> List:
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
         "former_shelfmarks_sm": to_solr_multi(marc_record, "852", "d"),
+        "liturgical_festivals_sm": to_solr_multi(marc_record, "657", "a"),
         "has_digitization_b": _get_has_digitization(marc_record),
         "has_iiif_manifest_b": _get_has_iiif_manifest(marc_record),
         "material_groups_json": ujson.dumps(mg) if (mg := _get_material_groups(marc_record, source_id)) else None,
@@ -210,6 +213,7 @@ def create_source_index_documents(record: Dict) -> List:
         "related_people_json": ujson.dumps(related_people) if related_people else None,
         "related_institutions_json": ujson.dumps(related_institutions) if related_institutions else None,
         "external_resources_json": ujson.dumps(f) if (f := _get_external_resources(marc_record)) else None,
+        "liturgical_festivals_json": ujson.dumps(f) if (f := _get_liturgical_festivals(marc_record)) else None,
         "created": created,
         "updated": updated
     }
@@ -644,3 +648,18 @@ def _get_has_iiif_manifest(record: pymarc.Record) -> bool:
     iiif_manifests: List = [f for f in record.get_fields("856") if 'x' in f and f['x'] == "IIIF"]
 
     return len(iiif_manifests) > 0
+
+
+def __liturgical_festival(field: pymarc.Field) -> Dict:
+    return {
+        "id": f"festival_{field['0']}",
+        "name": f"{field['a']}"
+    }
+
+
+def _get_liturgical_festivals(record: pymarc.Record) -> Optional[List[Dict]]:
+    fields: List = record.get_fields("657")
+    if not fields:
+        return None
+
+    return [__liturgical_festival(f) for f in fields]

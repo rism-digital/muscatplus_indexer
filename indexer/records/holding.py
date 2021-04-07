@@ -25,6 +25,12 @@ class HoldingIndexDocument(TypedDict):
     former_shelfmarks_sm: Optional[List[str]]
     material_held_sm: Optional[List[str]]
     local_numbers_sm: Optional[List[str]]
+    acquisition_notes_sm: Optional[List[str]]
+    acquisition_date_s: Optional[str]
+    acquisition_method_s: Optional[str]
+    accession_number_s: Optional[str]
+    access_restrictions_sm: Optional[List[str]]
+    provenance_notes_sm: Optional[List[str]]
     external_resources_json: Optional[str]
 
 
@@ -39,6 +45,17 @@ def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
 
 
 def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_id: str, membership_id: str, main_title: str) -> HoldingIndexDocument:
+    """
+    The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
+    way we can ensure that the structure of the index is the same for both of these types of holdings.
+
+    :param marc_record: A pymarc record instance
+    :param holding_id: The holding record ID. In the case of MSS this is composed of the institution and source ids.
+    :param record_id: The id of the source record
+    :param membership_id: The id of the parent record; if no parent record, this is the same as the record_id.
+    :param main_title: The main title of the source record. Used primarily for link text, etc.
+    :return: A holding index document.
+    """
     d: HoldingIndexDocument = {
         "id": holding_id,
         "type": "holding",
@@ -51,8 +68,14 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
         "institution_id": f"institution_{to_solr_single(marc_record, '852', 'x')}",
         "shelfmark_s": to_solr_single(marc_record, '852', 'c'),
         "former_shelfmarks_sm": to_solr_multi(marc_record, '852', 'd'),
-        "material_held_sm": to_solr_multi(marc_record, '852', 'q'),
         "local_numbers_sm": to_solr_multi(marc_record, "035", "a"),
+        "material_held_sm": to_solr_multi(marc_record, '852', 'q'),
+        "acquisition_notes_sm": to_solr_multi(marc_record, "541", "a", ungrouped=True),
+        "acquisition_date_s": to_solr_single(marc_record, "541", "d"),
+        "acquisition_method_s": to_solr_single(marc_record, "541", "c"),
+        "accession_number_s": to_solr_single(marc_record, "541", "e"),
+        "access_restrictions_sm": to_solr_multi(marc_record, "506", "f"),
+        "provenance_notes_sm": to_solr_multi(marc_record, "561", "a"),
         "external_resources_json": ujson.dumps(l) if (l := [external_resource_json(f) for f in marc_record.get_fields("856")]) else None
     }
 

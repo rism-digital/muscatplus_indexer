@@ -58,7 +58,8 @@ def create_institution_index_document(institution: str) -> InstitutionIndexDocum
 
 def _get_location(record: pymarc.Record) -> Optional[str]:
     if record['034'] and (lon := record['034']['d']) and (lat := record['034']['f']):
-        return f"{lat},{lon}"
+        if lon.isdigit() and lat.isdigit():
+            return f"{lat},{lon}"
 
     return None
 

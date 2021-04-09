@@ -23,7 +23,7 @@ log = logging.getLogger("muscat_indexer")
 
 @elapsedtime
 def main(args) -> bool:
-    empt = src = ppl = plc = ins = hld = sub = True
+    empt = src = ppl = plc = ins = hld = sub = fst = True
 
     if args.empty:
         log.info("Emptying Solr indexing core")

@@ -659,10 +659,11 @@ def _get_has_iiif_manifest(record: pymarc.Record) -> bool:
 
 
 def __liturgical_festival(field: pymarc.Field) -> Dict:
-    return {
+    d = {
         "id": f"festival_{field['0']}",
         "name": f"{field['a']}"
     }
+    return {k: v for k, v in d.items() if v}
 
 
 def _get_liturgical_festivals(record: pymarc.Record) -> Optional[List[Dict]]:

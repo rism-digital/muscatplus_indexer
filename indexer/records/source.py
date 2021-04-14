@@ -662,7 +662,12 @@ def _get_holding_orgs_ids(mss_holdings: List[HoldingIndexDocument], print_holdin
         all_marc_records += parent_holdings.split("\n")
 
     for rec in all_marc_records:
-        m: pymarc.Record = create_marc(rec)
+        try:
+            m: pymarc.Record = create_marc(rec.strip())
+        except AttributeError as e:
+            log.error("Could not process MARC record %s", rec)
+            continue
+
         if inst := to_solr_single(m, "852", "x"):
             ids.add(f"institution_{inst}")
 

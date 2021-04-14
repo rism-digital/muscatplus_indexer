@@ -2,11 +2,12 @@ import itertools
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import TypedDict, Optional, List, Dict
+from typing import TypedDict, Optional, List, Dict, Tuple
 
 import pymarc
 import ujson
 
+from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.utilities import (
@@ -95,10 +96,13 @@ class SourceIndexDocument(TypedDict):
     contents_notes_sm: Optional[List[str]]
     description_summary_sm: Optional[List[str]]
     source_type_sm: Optional[List[str]]
+    instrumentation_sm: Optional[List[str]]
     subjects_sm: Optional[List[str]]
     num_holdings_i: Optional[int]
-    holding_institutions_sm: Optional[List]
+    holding_institutions_sm: Optional[List[str]]
+    holding_institutions_ids: Optional[List[str]]
     date_statements_sm: Optional[List[str]]
+    date_ranges_im: Optional[List[int]]
     country_code_s: Optional[str]
     siglum_s: Optional[str]
     shelfmark_s: Optional[str]
@@ -117,6 +121,7 @@ class SourceIndexDocument(TypedDict):
     creator_json: Optional[str]
     external_resources_json: Optional[str]
     liturgical_festivals_json: Optional[str]
+    instrumentation_json: Optional[str]
     created: datetime
     updated: datetime
 
@@ -154,7 +159,8 @@ def create_source_index_documents(record: Dict) -> List:
         }
 
     manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
-    holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org")) or []
+    holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
+    holding_orgs_ids: List = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
 
     related_people: Optional[List] = get_related_people(marc_record, source_id, "source", fields=("700",), ungrouped=True)
     related_institutions: Optional[List] = get_related_institutions(marc_record, source_id, "source", fields=("710",))
@@ -200,10 +206,13 @@ def create_source_index_documents(record: Dict) -> List:
         "contents_notes_sm": to_solr_multi(marc_record, "505", "a", ungrouped=True),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
         "source_type_sm": to_solr_multi(marc_record, "593", "a"),
+        "instrumentation_sm": to_solr_multi(marc_record, "594", "b"),
         "subjects_sm": to_solr_multi(marc_record, "650", "a"),
         "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
         "holding_institutions_sm": holding_orgs,
+        "holding_institutions_ids": holding_orgs_ids,
         "date_statements_sm": to_solr_multi(marc_record, "260", "c"),
+        "date_ranges_im": _get_earliest_latest_dates(marc_record),
         "country_code_s": _get_country_code(marc_record),
         "siglum_s": to_solr_single(marc_record, "852", "a"),
         "shelfmark_s": to_solr_single(marc_record, "852", "c"),
@@ -222,6 +231,7 @@ def create_source_index_documents(record: Dict) -> List:
         "related_institutions_json": ujson.dumps(related_institutions) if related_institutions else None,
         "external_resources_json": ujson.dumps(f) if (f := _get_external_resources(marc_record)) else None,
         "liturgical_festivals_json": ujson.dumps(f) if (f := _get_liturgical_festivals(marc_record)) else None,
+        "instrumentation_json": ujson.dumps(inst) if (inst := _get_instrumentation(marc_record)) else None,
         "created": created,
         "updated": updated
     }
@@ -611,25 +621,52 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title)]
 
 
-def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None) -> Optional[List[str]]:
+def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[List[str]]:
     # Coalesces both print and mss holdings into a multivalued field so that we can filter sources by their holding
     # library
     # If there are any holding records for MSS, get the siglum. Use a set to ignore any duplicates
-    sig: set[str] = set()
+    sigs: set[str] = set()
 
     for mss in mss_holdings:
-        siglum = mss.get("siglum_s")
-        if siglum:
-            sig.add(siglum)
+        if siglum := mss.get("siglum_s"):
+            sigs.add(siglum)
+
+    all_holdings: List = []
 
     if print_holdings:
-        holdings_arr: List = print_holdings.split("\n")
-        for lib in holdings_arr:
-            siglum = lib.strip()
-            if siglum:
-                sig.add(siglum)
+        all_holdings += print_holdings.split("\n")
 
-    return list(sig)
+    if parent_holdings:
+        all_holdings += parent_holdings.split("\n")
+
+    for lib in all_holdings:
+        if siglum := lib.strip():
+            sigs.add(siglum)
+
+    return list(sigs)
+
+
+def _get_holding_orgs_ids(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> List[str]:
+    ids: set[str] = set()
+
+    for mss in mss_holdings:
+        if inst_id := mss.get("institution_id"):
+            ids.add(inst_id)
+
+    all_marc_records: List = []
+
+    if print_holdings:
+        all_marc_records += print_holdings.split("\n")
+
+    if parent_holdings:
+        all_marc_records += parent_holdings.split("\n")
+
+    for rec in all_marc_records:
+        m: pymarc.Record = create_marc(rec)
+        if inst := to_solr_single(m, "852", "x"):
+            ids.add(f"institution_{inst}")
+
+    return list(ids)
 
 
 def _get_external_resources(record: pymarc.Record) -> Optional[List[ExternalResourceDocument]]:
@@ -672,3 +709,56 @@ def _get_liturgical_festivals(record: pymarc.Record) -> Optional[List[Dict]]:
         return None
 
     return [__liturgical_festival(f) for f in fields]
+
+
+def __instrumentation(field: pymarc.Field) -> Dict:
+    d = {
+        "voice_instrument": field["b"],
+        "number": field["c"]
+    }
+
+    return {k: v for k, v in d.items() if v}
+
+
+def _get_instrumentation(record: pymarc.Record) -> Optional[List[Dict]]:
+    fields: List = record.get_fields("594")
+    if not fields:
+        return None
+
+    return [__instrumentation(i) for i in fields]
+
+
+def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
+    earliest_dates: List[int] = []
+    latest_dates: List[int] = []
+    date_statements: Optional[List] = to_solr_multi(record, "260", "c")
+
+    # if no date statement, return an empty dictionary. This allows us to keep a consistent return type
+    # since a call to `.update()` with an empty dictionary won't do anything.
+    if not date_statements:
+        return None
+
+    for statement in date_statements:
+        try:
+            earliest, latest = parse_date_statement(statement)
+        except Exception as e:  # noqa
+            # The breadth of errors mean we could spend all day catching things, so in this case we use
+            # a blanket exception catch and then log the statement to be fixed so that we might fix it later.
+            log.error("Error parsing date statement %s: %s", statement, e)
+            raise
+
+        if earliest:
+            earliest_dates.append(earliest)
+
+        if latest:
+            latest_dates.append(latest)
+
+    earliest_date: int = min(earliest_dates) if earliest_dates else -9999
+    latest_date: int = max(latest_dates) if latest_dates else 9999
+
+    # If neither date was parseable, don't pretend we have a date.
+    if earliest_date == -9999 and latest_date == 9999:
+        return None
+
+    return [earliest_date, latest_date]
+

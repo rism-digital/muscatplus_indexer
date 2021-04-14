@@ -55,6 +55,29 @@ optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*"
 
 [[package]]
+name = "edtf"
+version = "4.0.1.post2+g86b9451"
+description = "Python implementation of Library of Congress EDTF (Extended Date Time Format) specification"
+category = "main"
+optional = false
+python-versions = "*"
+develop = false
+
+[package.dependencies]
+python-dateutil = "*"
+pyparsing = "*"
+six = "*"
+
+[package.extras]
+test = ["django", "nose", "tox"]
+
+[package.source]
+type = "git"
+url = "https://github.com/rism-digital/python-edtf.git"
+reference = "performance-enhancements"
+resolved_reference = "86b94517f1df7d705564d5a93e0d0c431ccd9120"
+
+[[package]]
 name = "h11"
 version = "0.9.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
@@ -113,27 +136,27 @@ optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-appnope = {version = "*", markers = "sys_platform == \"darwin\""}
 backcall = "*"
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-decorator = "*"
-jedi = ">=0.10"
+appnope = {version = "*", markers = "sys_platform == \"darwin\""}
 pexpect = {version = ">4.3", markers = "sys_platform != \"win32\""}
-pickleshare = "*"
-prompt-toolkit = ">=2.0.0,<3.0.0 || >3.0.0,<3.0.1 || >3.0.1,<3.1.0"
-pygments = "*"
 traitlets = ">=4.2"
+jedi = ">=0.10"
+pygments = "*"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
+prompt-toolkit = ">=2.0.0,<3.0.0 || >3.0.0,<3.0.1 || >3.0.1,<3.1.0"
+pickleshare = "*"
+decorator = "*"
 
 [package.extras]
-all = ["Sphinx (>=1.3)", "ipykernel", "ipyparallel", "ipywidgets", "nbconvert", "nbformat", "nose (>=0.10.1)", "notebook", "numpy (>=1.14)", "pygments", "qtconsole", "requests", "testpath"]
-doc = ["Sphinx (>=1.3)"]
-kernel = ["ipykernel"]
-nbconvert = ["nbconvert"]
 nbformat = ["nbformat"]
+all = ["Sphinx (>=1.3)", "ipykernel", "ipyparallel", "ipywidgets", "nbconvert", "nbformat", "nose (>=0.10.1)", "notebook", "numpy (>=1.14)", "pygments", "qtconsole", "requests", "testpath"]
+kernel = ["ipykernel"]
+doc = ["Sphinx (>=1.3)"]
 notebook = ["notebook", "ipywidgets"]
-parallel = ["ipyparallel"]
+nbconvert = ["nbconvert"]
 qtconsole = ["qtconsole"]
 test = ["nose (>=0.10.1)", "requests", "testpath", "pygments", "nbformat", "ipykernel", "numpy (>=1.14)"]
+parallel = ["ipyparallel"]
 
 [[package]]
 name = "ipython-genutils"
@@ -232,8 +255,16 @@ optional = false
 python-versions = ">=3.6.*"
 
 [[package]]
+name = "pyparsing"
+version = "2.4.7"
+description = "Python parsing module"
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+
+[[package]]
 name = "pysolr"
-version = "3.9.1.dev52+g5bd07ea"
+version = "3.9.1.dev54+g3a663d5"
 description = "Lightweight Python client for Apache Solr"
 category = "main"
 optional = false
@@ -250,7 +281,18 @@ solrcloud = ["kazoo (>=2.5.0)"]
 type = "git"
 url = "https://github.com/django-haystack/pysolr"
 reference = "master"
-resolved_reference = "5bd07eaed3fab110c9c41e05a765f9d95ac731b2"
+resolved_reference = "3a663d514c057e82c92fe0631e9645dd9aeeefb8"
+
+[[package]]
+name = "python-dateutil"
+version = "2.8.1"
+description = "Extensions to the standard Python datetime module"
+category = "main"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+
+[package.dependencies]
+six = ">=1.5"
 
 [[package]]
 name = "pyyaml"
@@ -269,9 +311,9 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.dependencies]
+idna = ">=2.5,<3"
 certifi = ">=2017.4.17"
 chardet = ">=3.0.2,<4"
-idna = ">=2.5,<3"
 urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
@@ -291,6 +333,14 @@ idna = {version = "*", optional = true, markers = "extra == \"idna2008\""}
 
 [package.extras]
 idna2008 = ["idna"]
+
+[[package]]
+name = "six"
+version = "1.15.0"
+description = "Python 2 and 3 compatibility utilities"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "sniffio"
@@ -344,14 +394,6 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "verovio"
-version = "3.2.0"
-description = "A library and toolkit for engraving MEI music notation into SVG"
-category = "main"
-optional = false
-python-versions = ">=2.7"
-
-[[package]]
 name = "wcwidth"
 version = "0.2.5"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -361,8 +403,8 @@ python-versions = "*"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.8"
-content-hash = "108fc8d38da82ae5086fa0a8e4c877ac47b3561217bf45da232f7e619d961d66"
+python-versions = "^3.9"
+content-hash = "20f62786f9471858db75ff6f394f0091a0cd0a0782db10d718e73dd0068706e1"
 
 [metadata.files]
 appnope = [
@@ -392,6 +434,7 @@ decorator = [
     {file = "decorator-4.4.2-py2.py3-none-any.whl", hash = "sha256:41fa54c2a0cc4ba648be4fd43cff00aedf5b9465c9bf18d64325bc225f08f760"},
     {file = "decorator-4.4.2.tar.gz", hash = "sha256:e3a62f0520172440ca0dcc823749319382e377f37f140a0b99ef45fecb84bfe7"},
 ]
+edtf = []
 h11 = [
     {file = "h11-0.9.0-py2.py3-none-any.whl", hash = "sha256:4bc6d6a1238b7615b266ada57e0618568066f57dd6fa967d1290ec9309b2f2f1"},
     {file = "h11-0.9.0.tar.gz", hash = "sha256:33d4bca7be0fa039f4e84d50ab00531047e53d6ee8ffbc83501ea602c169cae1"},
@@ -453,7 +496,15 @@ pygments = [
 pymarc = [
     {file = "pymarc-4.0.0.tar.gz", hash = "sha256:e5abe4d9243babd89811ddb3b841e3dbc18ae5dc6c062813e102bf42e0b09067"},
 ]
+pyparsing = [
+    {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
+    {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
+]
 pysolr = []
+python-dateutil = [
+    {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
+    {file = "python_dateutil-2.8.1-py2.py3-none-any.whl", hash = "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"},
+]
 pyyaml = [
     {file = "PyYAML-5.3.1-cp27-cp27m-win32.whl", hash = "sha256:74809a57b329d6cc0fdccee6318f44b9b8649961fa73144a98735b0aaf029f1f"},
     {file = "PyYAML-5.3.1-cp27-cp27m-win_amd64.whl", hash = "sha256:240097ff019d7c70a4922b6869d8a86407758333f02203e0fc6ff79c5dcede76"},
@@ -474,6 +525,10 @@ requests = [
 rfc3986 = [
     {file = "rfc3986-1.4.0-py2.py3-none-any.whl", hash = "sha256:af9147e9aceda37c91a05f4deb128d4b4b49d6b199775fd2d2927768abdc8f50"},
     {file = "rfc3986-1.4.0.tar.gz", hash = "sha256:112398da31a3344dc25dbf477d8df6cb34f9278a94fee2625d89e4514be8bb9d"},
+]
+six = [
+    {file = "six-1.15.0-py2.py3-none-any.whl", hash = "sha256:8b74bedcbbbaca38ff6d7491d76f2b06b3592611af620f8426e82dddb04a5ced"},
+    {file = "six-1.15.0.tar.gz", hash = "sha256:30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259"},
 ]
 sniffio = [
     {file = "sniffio-1.2.0-py3-none-any.whl", hash = "sha256:471b71698eac1c2112a40ce2752bb2f4a4814c22a54a3eed3676bc0f5ca9f663"},
@@ -520,25 +575,6 @@ uvloop = [
     {file = "uvloop-0.14.0-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:bcac356d62edd330080aed082e78d4b580ff260a677508718f88016333e2c9c5"},
     {file = "uvloop-0.14.0-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:4315d2ec3ca393dd5bc0b0089d23101276778c304d42faff5dc4579cb6caef09"},
     {file = "uvloop-0.14.0.tar.gz", hash = "sha256:123ac9c0c7dd71464f58f1b4ee0bbd81285d96cdda8bc3519281b8973e3a461e"},
-]
-verovio = [
-    {file = "verovio-3.2.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:6851863e2314917481e3507d06faf43030a0411687de64ec1e773517725b265a"},
-    {file = "verovio-3.2.0-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:79ad90a5cb6f9da59b0908bdad43f9a7d7589df47829c885c42db612ca25f17f"},
-    {file = "verovio-3.2.0-cp36-cp36m-win32.whl", hash = "sha256:c74bab97bb2438779dd1616a54831c9a6e81ad8fbaed2f36d8489ed7c1cea70c"},
-    {file = "verovio-3.2.0-cp36-cp36m-win_amd64.whl", hash = "sha256:a4173284894a86b1a8e37cdd27c14edb3646aac9ebe342b852f2b716d1cd6448"},
-    {file = "verovio-3.2.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:09ae6ea4fb8af43f88915d3541680370fac789b74eb9c2ada238903c3d94b30b"},
-    {file = "verovio-3.2.0-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:9799322ba5f013f914a1fb8bed65d378e0a5868d904d054e020a19f40aff6cf8"},
-    {file = "verovio-3.2.0-cp37-cp37m-win32.whl", hash = "sha256:2e5adb093e97203dad046850bf224c596e7c3c82ba5c61ce49d024e77c2b9c61"},
-    {file = "verovio-3.2.0-cp37-cp37m-win_amd64.whl", hash = "sha256:4b14257bd2f073522b17aa2f2cbae7b8d9c72a164c0e7639af71259112156d62"},
-    {file = "verovio-3.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:58dd2690191fb84a3344b628367e96e5572ef16e41454ff24e2c45ee2fbf2601"},
-    {file = "verovio-3.2.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:1b53de5395e272ff1e7369cd72d3c81fdeb537ee5af09b64120d667807a5dfa7"},
-    {file = "verovio-3.2.0-cp38-cp38-win32.whl", hash = "sha256:a205f2cba677a247d6417189819eadd05eb4701e2be5fba2d5a4656bdb280f1b"},
-    {file = "verovio-3.2.0-cp38-cp38-win_amd64.whl", hash = "sha256:e5b9f538893e6ee5340b0f35e0a4ccd860ad1a6fef8c9118383ef3d7aa043c4e"},
-    {file = "verovio-3.2.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:d5a6881311f346bee03c89d8674108d83c181be26793397efaf1d68addd26223"},
-    {file = "verovio-3.2.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:f051bb35fba4041f9b9cae5c5f95ba1f0fb397b5baf799ee4d4110d73e2e9dab"},
-    {file = "verovio-3.2.0-cp39-cp39-win32.whl", hash = "sha256:44213c64ebe910d2cb521896420f4ef33a1e3b8b828ba6e4f0ea8b994545ddd8"},
-    {file = "verovio-3.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:adc4a6e1033adf30cbaee8d440d63edaa157fd02af85153d59d9c27ef60ba135"},
-    {file = "verovio-3.2.0.tar.gz", hash = "sha256:c52605eda8ace47008f1182fdfa59302729fe4371d4dd3841664054a06ee9a83"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},

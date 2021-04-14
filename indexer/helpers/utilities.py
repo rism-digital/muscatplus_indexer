@@ -123,8 +123,8 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     # over the values in each field.
     # Only return the fields that are not empty and match the ungrouped option.
     if ungrouped:
-        return list({val for field in fields for val in field.get_subfields(subfield) if val and '8' not in field})
-    return list({val for field in fields for val in field.get_subfields(subfield) if val})
+        return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip() and '8' not in field})
+    return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip()})
 
 
 def normalize_id(identifier: str) -> str:

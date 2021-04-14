@@ -20,6 +20,8 @@ class MarcField(TypedDict):
 
 def _parse_field(line: str) -> MarcField:
     match = re.search(MARC_LINE_REGEX, line)
+    if not match:
+        log.error("Could not parse MARC line %s", line)
     tag_value: str = match.group('tag') or match.group('idtag')
     ind_value: str = match.group('indicators')
     sub_value: str = match.group('subfields') or match.group('ident')

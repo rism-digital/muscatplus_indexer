@@ -190,7 +190,7 @@ def create_source_index_documents(record: Dict) -> List:
         "source_title_s": source_title,
         "standardized_title_s": record.get("std_title"),  # uses the std_title column in the Muscat database
         "key_mode_s": k.strip() if (k := to_solr_single(marc_record, "240", "r")) else k,
-        "scoring_summary_sm": to_solr_multi(marc_record, "240", "m"),
+        "scoring_summary_sm": _get_scoring_summary(marc_record),
         "additional_title_s": to_solr_single(marc_record, "730", "a"),
         "variant_title_s": to_solr_single(marc_record, "246", "a"),
         "creator_name_s": _get_creator_name(marc_record),
@@ -761,4 +761,22 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
         return None
 
     return [earliest_date, latest_date]
+
+
+def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
+    """Takes a list of instrument fields and ensures that they are split into a multi-valued representation. So a
+       value of:
+       ["V, orch", "B, guit"]
+
+       Would result in an instrument list of:
+
+       ["V", "orch", "B", "guit"]
+       """
+    fields: Optional[List] = to_solr_multi(record, "240", "m")
+    if not fields:
+        return None
+
+    all_instruments: List = list({val.strip() for field in fields for val in field.split(",") if val and val.strip()})
+    return all_instruments
+
 

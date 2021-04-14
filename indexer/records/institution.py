@@ -58,8 +58,15 @@ def create_institution_index_document(institution: str) -> InstitutionIndexDocum
 
 def _get_location(record: pymarc.Record) -> Optional[str]:
     if record['034'] and (lon := record['034']['d']) and (lat := record['034']['f']):
-        if lon.isdigit() and lat.isdigit():
-            return f"{lat},{lon}"
+        # Check the values of the lat/lon
+        try:
+            _ = float(lon)
+            _ = float(lat)
+        except ValueError:
+            log.error("Problem with the following values lat,lon %s,%s: %s", lat, lon, to_solr_single_required(record, "001"))
+            return None
+
+        return f"{lat},{lon}"
 
     return None
 

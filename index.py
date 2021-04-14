@@ -56,8 +56,10 @@ def main(args) -> bool:
                                 idx_config['solr']['live_core'])
         return swap and idx_success
 
-    # If we are here, then the idx_success is false and something went wrong.
-    log.error("Indexing failed.")
+    if not idx_success:
+        log.error("Indexing failed.")
+    else:
+        log.info("Indexing successful.")
     return idx_success
 
 

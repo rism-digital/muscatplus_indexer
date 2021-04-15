@@ -160,10 +160,7 @@ def create_source_index_documents(record: Dict) -> List:
 
     manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
     holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
-    try:
-        holding_orgs_ids: List = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
-    except:
-        log.error("Problem parsing holdings for record %s", source_id)
+    holding_orgs_ids: List = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
 
     related_people: Optional[List] = get_related_people(marc_record, source_id, "source", fields=("700",), ungrouped=True)
     related_institutions: Optional[List] = get_related_institutions(marc_record, source_id, "source", fields=("710",))
@@ -666,11 +663,7 @@ def _get_holding_orgs_ids(mss_holdings: List[HoldingIndexDocument], print_holdin
 
     for rec in all_marc_records:
         rec = rec.strip()
-        try:
-            m: pymarc.Record = create_marc(rec)
-        except AttributeError as e:
-            log.error("Could not process MARC record %s", rec)
-            raise
+        m: pymarc.Record = create_marc(rec)
 
         if inst := to_solr_single(m, "852", "x"):
             ids.add(f"institution_{inst}")

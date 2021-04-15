@@ -71,6 +71,7 @@ class SourceIndexDocument(TypedDict):
     id: str
     type: str
     source_id: str
+    rism_id: str
     source_membership_id: str
     source_membership_title_s: Optional[str]
     source_membership_json: Optional[str]
@@ -136,7 +137,8 @@ def create_source_index_documents(record: Dict) -> List:
     record_subtype: str = RECORD_TYPES_BY_ID.get(record_type_id)
     marc_record: pymarc.Record = create_marc(source)
 
-    source_id: str = f"source_{normalize_id(to_solr_single_required(marc_record, '001'))}"
+    rism_id: str = normalize_id(to_solr_single_required(marc_record, '001'))
+    source_id: str = f"source_{rism_id}"
     people_marc_ids: List = to_solr_multi(marc_record, "700", "0") or []
     people_ids: List = [f"person_{p}" for p in people_marc_ids]
 
@@ -185,6 +187,7 @@ def create_source_index_documents(record: Dict) -> List:
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
         # item records have a different id from the 'parent' source; this allows filtering out of 'item' records.
         "is_item_record_b": source_id != f"source_{membership_id}",
+        "rism_id": rism_id,
         "subtype_s": record_subtype,
         "main_title_s": main_title,  # matches the display title form in the OPAC
         "source_title_s": source_title,

@@ -18,7 +18,7 @@ from indexer.helpers.utilities import (
     external_resource_json,
     ExternalResourceDocument,
     get_related_people,
-    get_related_institutions
+    get_related_institutions, format_notes_field
 )
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 
@@ -204,7 +204,7 @@ def create_source_index_documents(record: Dict) -> List:
         "institutions_sm": to_solr_multi(marc_record, "710", "a"),
         "institutions_ids": institution_ids,
         "opus_numbers_sm": to_solr_multi(marc_record, "383", "b"),
-        "general_notes_sm": to_solr_multi(marc_record, "500", "a", ungrouped=True),
+        "general_notes_sm": _get_general_notes(marc_record),
         "binding_notes_sm": to_solr_multi(marc_record, "563", "a", ungrouped=True),
         "contents_notes_sm": to_solr_multi(marc_record, "505", "a", ungrouped=True),
         "description_summary_sm": to_solr_multi(marc_record, "520", "a"),
@@ -785,3 +785,25 @@ def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
     return all_instruments
 
 
+def _get_general_notes(record: pymarc.Record) -> Optional[List[str]]:
+    """
+    Some records have multiple 500$a notes fields. Some records also have `{{brk}}` in a notes
+    field to indicate there are multiple note paragraphs.
+
+    This attempts to normalize this by fetching all the 500$a fields, and then passing the notes
+    through the format function, which splits it on `{{brk}}`. For this reason, the format_notes_field
+    function always returns a list (even if there is no `{{brk}}` value).
+
+    The return value is then iterated over, and both the individual 500$a AND the split {{brk}} fields
+    are returned as individual entries in the multivalued field.
+
+    :param record: a pymarc record
+    :return: a list of strings representing notes.
+    """
+    notes = to_solr_multi(record, "500", "a", ungrouped=True)
+    if not notes:
+        return None
+
+    notes = [n for note in notes for n in format_notes_field(note) if n]
+
+    return notes

@@ -4,7 +4,7 @@ import re
 import timeit
 from collections import OrderedDict
 from functools import wraps
-from typing import List, Any, Iterable, Optional, Dict, TypedDict, Tuple
+from typing import List, Any, Iterable, Optional, Dict, TypedDict, Tuple, Pattern
 
 import pymarc
 
@@ -326,3 +326,22 @@ def get_related_institutions(record: pymarc.Record, record_id: str, record_type:
         return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and '8' not in p]
     return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
 
+
+BREAK_CONVERT: Pattern = re.compile(r"({{brk}})")
+URL_MATCH: Pattern = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)", re.MULTILINE|re.UNICODE)
+
+
+def format_notes_field(note: str) -> List[str]:
+    """
+    Does some general formatting of a notes field that replaces certain characters and creates links in the text.
+    :param note: The raw MARC string
+    :return: A formatted string.
+    """
+    # If the note already contains a single anchor tag, assume that all links are anchored and skip them. This
+    # avoids double-encoding anchor tags.
+    if "<a href" not in note:
+        note = URL_MATCH.sub("<a href=\"\1\" _target=\"blank\">\1</a>", note)
+
+    notelist: List[str] = note.split("{{brk}}")
+
+    return notelist

@@ -1,0 +1,343 @@
+---
+# Structure and options
+# If a processor is given then all responsibility for the values is delegated
+# to that function. We will only check that the value returned from that function
+# is not `None` if the `required` parameter is set.
+#
+#
+# solr_field_name:
+#    value: "foo"  # a fixed value.
+#    -- or --
+#    field: "XXX" (required; MARC field; must be a string!)
+#    subfield: "n" (required; MARC subfield; must be a string!)
+#    required: true | false (default; NB: will raise an exception if XXX$n is `None`)
+#    multiple: true | false (default; NB: solr field must allow multiple values!)
+#    value_prefix: foo_  (optional; All values will be prefixed with this)
+#    ungrouped: true | false (default; when true will select only fields that are not part of a material group!)
+#    -- or --
+#    processor: _function_name (string; must exist in the current scope)
+#    required: true | false (default)
+#    json: true | false (default). Run the returned value through ujson.dumps
+#
+# For ease of use fields should be kept in numeric order by MARC tag!
+
+
+# Material Group indexing covers a lot of fields, so this is placed at the beginning.
+# Processes fields linked through a $8 value. The processor function should be consulted
+# if you have any questions about which fields are covered. Some values are indexed
+# on the source directly, so that they may be used to retrieve the source, but
+# the JSON representation is used for display.
+material_groups_json:
+  processor: "_get_material_groups"
+  json: true
+
+
+# $e contains the full fingerprint, so we do not need the other fields.
+source_fingerprint_s:
+  field: "026"
+  subfield: "e"
+
+# 028$a is indexed in material groups.
+# 031 is indexed as separate incipit documents.
+
+local_number_sm:
+  field: "035"
+  subfield: "b"
+  multiple: true
+
+# most fields in 040 are internal.
+cataloguing_language_s:
+  field: "040"
+  subfield: "b"
+
+language_text_sm:
+  field: "041"
+  subfield: "a"
+  multiple: true
+language_libretto_sm:
+  field: "041"
+  subfield: "e"
+  multiple: true
+language_original_sm:
+  field: "041"
+  subfield: "h"
+  multiple: true
+
+# most of the non-search data for the 100 field is indexed in the JSON,
+# e.g., $j.
+creator_id:
+  field: "100"
+  subfield: "0"
+  value_prefix: "person_"
+creator_name_s:  # 100, but with optional dates added ($a and $d)
+  processor: "_get_creator_name"
+creator_json:
+  processor: "_get_creator_data"
+  json: true
+
+standard_title_s:
+  field: "240"
+  subfield: "a"
+excerpts_s:
+  field: "240"
+  subfield: "k"
+scoring_summary_sm:  # $m; split the fields and ensure each instrument is listed separately.
+  processor: "_get_scoring_summary"
+# $n is deprecated and is omitted.
+arrangement_s:
+  field: "240"
+  subfield: "o"
+key_mode_s:
+  field: "240"
+  subfield: "r"
+
+source_title_s:
+  field: "245"
+  subfield: "a"
+  required: true
+# $c is deprecated and is omitted
+
+variant_title_s:
+  field: "246"
+  subfield: "a"
+
+# More complete indexing for display is done by the material groups.
+# We index this data here so that we can provide it to the user for
+# retrieval based on textual queries (e.g., "Scotto Venice")
+publication_place_sm:
+  field: "260"
+  subfield: "a"
+  multiple: true
+publisher_copyist_sm:
+  field: "260"
+  subfield: "b"
+  multiple: true
+date_statements_sm:
+  field: "260"
+  subfield: "c"
+  multiple: true
+date_ranges_im:
+  processor: "_get_earliest_latest_dates"
+printer_location_sm:
+  field: "260"
+  subfield: "e"
+  multiple: true
+printer_name_sm:
+  field: "260"
+  subfield: "f"
+  multiple: true
+
+# 300 is indexed in material groups and does not align well with fulltext search.
+# 340 is indexed in material groups and does not align well with fulltext search.
+
+opus_numbers_sm:
+  field: "383"
+  subfield: "b"
+  multiple: true
+
+# 500 is also indexed in material groups for display.
+# $p is deprecated and not included.
+general_notes_sm:
+  field: "500"
+  subfield: "a"
+  multiple: true
+
+contents_notes_sm:
+  field: "505"
+  subfield: "a"
+  multiple: true
+
+access_restrictions_sm:
+  field: "506"
+  subfield: "a"
+  multiple: true
+
+# 510 seems to be mostly duplicated by 596, so it is skipped.
+
+performance_note_sm:
+  field: "518"
+  subfield: "a"
+  multiple: true
+
+description_summary_sm:
+  field: "520"
+  subfield: "a"
+  multiple: true
+
+supplementary_material_sm:
+  field: "525"
+  subfield: "a"
+  multiple: true
+
+# 541 is indexed in the holding document, since it deals with the provenance of the
+# source and how it was acquired by the institution. Remember that all sources
+# have at least one holding document, so we will always have this data for every source,
+# it's just in a different spot!
+
+language_notes_sm:
+  field: "546"
+  subfield: "a"
+  multiple: true
+
+# 561 is indexed in the holding document
+
+binding_notes_sm:
+  field: "563"
+  subfield: "a"
+  multiple: true
+# $u is deprecated and will not be indexed.
+
+source_of_description_notes_sm:
+  field: "588"
+  subfield: "a"
+  multiple: true
+
+# 590 is indexed in the material groups.
+
+other_shelfmarks_sm:
+  field: "591"
+  subfield: "a"
+  multiple: true
+
+# 592 is also indexed in material groups, but can be useful for supporting fulltext queries
+# for watermark identification on sources.
+watermark_notes_sm:
+  field: "592"
+  subfield: "a"
+  multiple: true
+
+# different types in material groups will produce a list of all source types
+# associated with this source. So a source with mixed MS and print contents
+# would have both types. Useful for filtering / faceting.
+source_type_sm:
+  field: "593"
+  subfield: "a"
+  multiple: true
+
+instrumentation_sm:
+  field: "594"
+  subfield: "b"
+  multiple: true
+instrumentation_json:  # $c (number) is included in the json data.
+  processor: "_get_instrumentation_data"
+  json: true
+
+standardized_dramatic_roles_sm:
+  field: "595"
+  subfield: "a"
+  multiple: true
+dramatic_roles_json:
+  processor: "_get_dramatic_roles_data"
+  json: true
+
+rism_series_json:  # 596
+  processor: "_get_rism_series_data"
+  json: true
+
+colophon_notes_sm:
+  field: "597"
+  subfield: "a"
+  multiple: true
+
+# 598 is deprecated and will not be indexed.
+# 599 is an internal note and will not be indexed.
+
+subjects_sm:
+  field: "650"
+  subfield: "a"
+  multiple: true
+subjects_json:
+  processor: "_get_subjects"
+  json: true
+
+location_of_performance_json:  # 651 is linked to the places list
+  processor: "_get_location_performance_data"
+  json: true
+
+liturgical_festivals_sm:
+  field: "657"
+  subfield: "a"
+  multiple: true
+liturgical_festivals_json:
+  processor: "_get_liturgical_festival_data"
+  json: true
+# $2 is deprecated and will not be indexed.
+
+# TODO: Figure out how to handle 690, since it is linked to the secondary literature table.
+# TODO: Also how to handle 691, since it is linked to the secondary literature table.
+
+related_people_ids:
+  field: "700"
+  subfield: "0"
+  multiple: true
+  value_prefix: "person_"
+related_people_sm:
+  field: "700"
+  subfield: "a"
+  multiple: true
+related_people_json:
+  processor: "_get_related_people_data"
+  json: true
+
+related_institutions_ids:
+  field: "710"
+  subfield: "0"
+  multiple: true
+  value_prefix: "institution_"
+related_institutions_sm:
+  field: "710"
+  subfield: "a"
+  multiple: true
+related_institutions_json:
+  processor: "_get_related_institutions_data"
+  json: true
+
+additional_titles_sm:
+  field: "730"
+  subfield: "a"
+additional_titles_json:
+  processor: "_get_additional_titles_data"
+  json: true
+
+# 773 is used internally for linking; we do not need to index it.
+
+source_members_sm:  # 774
+  processor: "_get_source_membership"
+
+# 775 is a strange beast. Not really sure what to do with it, but we
+# can index it here and figure that bit out later.
+initial_entry_s:
+  field: "775"
+  subfield: "w"
+  value_prefix: "source_"
+
+# 787 is in flux; skipping indexing (for now)
+
+# For 852 most of the field is indexed in the holdings record(s) attached
+# to this source.
+siglum_s:
+  field: "852"
+  subfield: "a"
+shelfmark_s:
+  field: "852"
+  subfield: "c"
+former_shelfmarks_sm:
+  field: "852"
+  subfield: "d"
+  multiple: true
+country_code_s:  # segments the country code from the siglum.
+  processor: "_get_country_code"
+minimal_mss_holding_json:
+  processor: "_get_minimal_manuscript_holding_data"
+  json: true
+
+has_digitization_b: # 856
+  processor: "_get_has_digitization"
+has_iiif_manifest_b: # 856
+  processor: "_get_has_iiif_manifest"
+external_resources_json:
+  processor: "_get_external_resources_data"
+  json: true
+
+# 930 is works, but this is in flux so we won't index them (yet)
+# 980 is an internal note, so it is not indexed.

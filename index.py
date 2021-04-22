@@ -5,7 +5,7 @@ import argparse
 import yaml
 
 from indexer.helpers.utilities import elapsedtime
-from indexer.helpers.solr import solr_idx_conn, swap_cores,empty_solr_core
+from indexer.helpers.solr import solr_idx_conn, swap_cores, empty_solr_core
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
 from indexer.index_liturgical_festivals import index_liturgical_festivals

@@ -197,11 +197,11 @@ def external_resource_json(field: pymarc.Field) -> Optional[ExternalResourceDocu
     if u := field['u']:
         external_resource["url"] = u
 
-    if (n := field['z']) or (n := field['y']):
-        external_resource["note"] = n
-
     if k := field['x']:
         external_resource['link_type'] = k
+
+    if (n := field['z']) or (n := field['y']):
+        external_resource["note"] = n
 
     return external_resource
 
@@ -363,8 +363,9 @@ def format_notes_field(note: str) -> List[str]:
     # If the note already contains a single anchor tag, assume that all links are anchored and skip them. This
     # avoids double-encoding anchor tags.
     if "<a href" not in note:
-        note = URL_MATCH.sub("<a href=\"\1\" _target=\"blank\">\1</a>", note)
+        note = URL_MATCH.sub(r"<a href=\"\1\" _target=\"blank\">\1</a>", note)
 
     notelist: List[str] = note.split("{{brk}}")
 
     return notelist
+

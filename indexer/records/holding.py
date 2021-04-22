@@ -18,14 +18,16 @@ class HoldingIndexDocument(TypedDict):
     main_title_s: str
     holding_id_sni: str  # Convenience for URL construction; should not be used for lookups.
     siglum_s: Optional[str]
+    department_s: Optional[str]
     country_code_s: Optional[str]
     institution_s: Optional[str]
     institution_id: Optional[str]
+    provenance_sm: Optional[List[str]]
     shelfmark_s: Optional[str]
     former_shelfmarks_sm: Optional[List[str]]
     material_held_sm: Optional[List[str]]
     local_numbers_sm: Optional[List[str]]
-    acquisition_notes_sm: Optional[List[str]]
+    acquisition_note_s: Optional[str]
     acquisition_date_s: Optional[str]
     acquisition_method_s: Optional[str]
     accession_number_s: Optional[str]
@@ -63,14 +65,16 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
         "main_title_s": main_title,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
         "siglum_s": to_solr_single(marc_record, "852", "a"),
-        "country_code_s": _get_country_code(marc_record),
-        "institution_s": to_solr_single(marc_record, '852', 'e'),
-        "institution_id": f"institution_{to_solr_single(marc_record, '852', 'x')}",
+        "department_s": to_solr_single(marc_record, "852", "b"),
         "shelfmark_s": to_solr_single(marc_record, '852', 'c'),
         "former_shelfmarks_sm": to_solr_multi(marc_record, '852', 'd'),
-        "local_numbers_sm": to_solr_multi(marc_record, "035", "a"),
+        "institution_s": to_solr_single(marc_record, '852', 'e'),
         "material_held_sm": to_solr_multi(marc_record, '852', 'q'),
-        "acquisition_notes_sm": to_solr_multi(marc_record, "541", "a", ungrouped=True),
+        "institution_id": f"institution_{to_solr_single(marc_record, '852', 'x')}",
+        "provenance_sm": to_solr_multi(marc_record, '852', 'z'),
+        "country_code_s": _get_country_code(marc_record),
+        "local_numbers_sm": to_solr_multi(marc_record, "035", "a"),
+        "acquisition_note_s": to_solr_single(marc_record, "541", "a"),
         "acquisition_date_s": to_solr_single(marc_record, "541", "d"),
         "acquisition_method_s": to_solr_single(marc_record, "541", "c"),
         "accession_number_s": to_solr_single(marc_record, "541", "e"),

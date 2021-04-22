@@ -1,0 +1,61 @@
+---
+# If you are unsure of how this file should be structured, read the
+# comment on the top of the 'sources.yml' profile.
+external_ids:  # 024
+  processor: "_get_external_ids"
+
+location_loc:  # 034
+  processor: "_get_location"
+
+name_s:
+  field: "110"
+  subfield: "a"
+
+city_s:
+  field: "110"
+  subfield: "c"
+
+siglum_s:
+  field: "110"
+  subfield: "g"
+
+institution_types_sm:  # 368
+  processor: "_get_institution_types"
+
+website_s:
+  field: "371"
+  subfield: "u"
+
+alternate_names_sm:
+  field: "410"
+  subfield: "a"
+  multiple: true
+
+parallel_names_sm:
+  field: "510"
+  subfield: "a"
+  multiple: true
+
+# TODO: Figure out what to do with 670, linked to secondary literature
+
+institution_history_sm:
+  field: "678"
+  subfield: "a"
+  multiple: true
+
+general_notes_sm:
+  field: "680"
+  subfield: "a"
+  multiple: true
+
+related_people_json:  # 700
+  processor: "_get_related_people_data"
+  json: true
+
+related_places_json: # 551 or 751?
+  processor: "_get_related_places_data"
+  json: true
+
+related_institutions_json: # 710
+  processor: "_get_related_institutions_data"
+  json: true

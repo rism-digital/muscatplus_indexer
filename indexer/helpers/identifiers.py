@@ -1,5 +1,3 @@
-from typing import Optional
-
 RECORD_TYPES = {
     "unspecified": 0,
     "collection": 1,
@@ -28,3 +26,22 @@ def country_code_from_siglum(siglum: str) -> str:
         return siglum
 
     return country
+
+
+# Until the data is cleaned up in Muscat, we can map these letters to
+# their appropriate values. This data comes from the old Kalliope database,
+# and the letters were used to indicate the following values:
+# K = Körperschaft
+# B = Bibliothek
+# V = Verleger
+# C = Kongress
+# F = Forschungsinstitut
+#
+# These then map to the "accepted" muscat values as follows.
+KALLIOPE_MAPPING = {
+    "K": "Institution",
+    "B": "Library",
+    "V": "Publisher",
+    "C": "Congress",
+    "F": "Research institute",
+}

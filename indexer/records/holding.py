@@ -2,13 +2,13 @@ import logging
 from typing import TypedDict, Optional, List, Dict
 
 import pymarc
-import ujson
+import yaml
 
-from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import to_solr_single, to_solr_multi, external_resource_json
+from indexer.helpers.profiles import process_marc_profile
 
 log = logging.getLogger("muscat_indexer")
+holding_profile: Dict = yaml.full_load(open('profiles/holdings.yml', 'r'))
 
 
 class HoldingIndexDocument(TypedDict):
@@ -58,37 +58,16 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
     :param main_title: The main title of the source record. Used primarily for link text, etc.
     :return: A holding index document.
     """
-    d: HoldingIndexDocument = {
+    holding_core: Dict = {
         "id": holding_id,
         "type": "holding",
         "source_id": f"{membership_id}",
         "main_title_s": main_title,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
-        "siglum_s": to_solr_single(marc_record, "852", "a"),
-        "department_s": to_solr_single(marc_record, "852", "b"),
-        "shelfmark_s": to_solr_single(marc_record, '852', 'c'),
-        "former_shelfmarks_sm": to_solr_multi(marc_record, '852', 'd'),
-        "institution_s": to_solr_single(marc_record, '852', 'e'),
-        "material_held_sm": to_solr_multi(marc_record, '852', 'q'),
-        "institution_id": f"institution_{to_solr_single(marc_record, '852', 'x')}",
-        "provenance_sm": to_solr_multi(marc_record, '852', 'z'),
-        "country_code_s": _get_country_code(marc_record),
-        "local_numbers_sm": to_solr_multi(marc_record, "035", "a"),
-        "acquisition_note_s": to_solr_single(marc_record, "541", "a"),
-        "acquisition_date_s": to_solr_single(marc_record, "541", "d"),
-        "acquisition_method_s": to_solr_single(marc_record, "541", "c"),
-        "accession_number_s": to_solr_single(marc_record, "541", "e"),
-        "access_restrictions_sm": to_solr_multi(marc_record, "506", "f"),
-        "provenance_notes_sm": to_solr_multi(marc_record, "561", "a"),
-        "external_resources_json": ujson.dumps(l) if (l := [external_resource_json(f) for f in marc_record.get_fields("856")]) else None
     }
 
-    return d
+    additional_fields: Dict = process_marc_profile(holding_profile, holding_id, marc_record)
+    holding_core.update(additional_fields)
 
+    return holding_core
 
-def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
-    siglum: Optional[str] = to_solr_single(marc_record, "852", "a")
-    if not siglum:
-        return None
-
-    return country_code_from_siglum(siglum)

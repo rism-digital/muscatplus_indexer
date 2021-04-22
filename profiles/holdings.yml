@@ -1,0 +1,64 @@
+---
+# If you are unsure of how this file should be structured, read the
+# comment on the top of the 'sources.yml' profile.
+local_numbers_sm:
+  field: "035"
+  subfield: "a"
+
+access_restrictions_sm:
+  field: "506"
+  subfield: "f"
+
+acquisition_note_s:
+  field: "541"
+  subfield: "a"
+acquisition_method_s:
+  field: "541"
+  subfield: "c"
+acquisition_date_s:
+  field: "541"
+  subfield: "d"
+accession_number_s:
+  field: "541"
+  subfield: "e"
+
+provenance_notes_sm:
+  field: "561"
+  subfield: "a"
+  multiple: true
+
+siglum_s:
+  field: "852"
+  subfield: "a"
+department_s:
+  field: "852"
+  subfield: "b"
+shelfmark_s:
+  field: "852"
+  subfield: "c"
+former_shelfmarks_sm:
+  field: "852"
+  subfield: "d"
+  multiple: true
+institution_s:
+  field: "852"
+  subfield: "e"
+material_held_sm:
+  field: "852"
+  subfield: "q"
+  multiple: true
+institution_id:
+  field: "852"
+  subfield: "x"
+  value_prefix: "institution_"
+provenance_sm:
+  field: "852"
+  subfield: "z"
+  multiple: true
+
+country_code_s:
+  processor: "_get_country_code"
+
+external_resources_json:
+  processor: "_get_external_resources_data"
+  json: true

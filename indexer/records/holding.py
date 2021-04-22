@@ -6,6 +6,7 @@ import yaml
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
+from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
 holding_profile: Dict = yaml.full_load(open('profiles/holdings.yml', 'r'))
@@ -66,7 +67,7 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
     }
 
-    additional_fields: Dict = process_marc_profile(holding_profile, holding_id, marc_record)
+    additional_fields: Dict = process_marc_profile(holding_profile, holding_id, marc_record, holding_processor)
     holding_core.update(additional_fields)
 
     return holding_core

@@ -56,7 +56,7 @@ def parallelise(records: Iterable, func: Any, *args, **kwargs) -> None:
             f.result()
 
 
-def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = None) -> Optional[str]:
+def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = False) -> Optional[str]:
     """
     Extracts a single value from the MARC record. Always takes the first instance of the
     tag, and the first instance of the subfield within that tag.
@@ -64,10 +64,17 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
     :param record: A pymarc.Record instance
     :param field: A string indicating the tag that should be extracted.
     :param subfield: An optional subfield. If this is None, then the full value of the field will be returned.
+    :param ungrouped: If this is True, this function will only return fields that do not have a $8 value. The default is
+        False, indicating all fields, regardless of whether they are grouped or not, will be returned.
     :return: A string value, or None if not found.
     """
     fields: List[pymarc.Field] = record.get_fields(field)
     if not fields:
+        return None
+
+    # If we only want ungrouped fields, and this one is grouped ("$8") then return None.
+    # Make sure we don't count $80
+    if ungrouped and ('8' in fields[0] or fields[0]['8'] != '0'):
         return None
 
     # If the subfield argument is None, return the whole field value.
@@ -77,7 +84,7 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
     return fields[0][subfield]
 
 
-def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optional[str] = None) -> str:
+def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = False) -> str:
     """
     Same operations as the to_solr_single, but raises an exception if the value returned
     is None. This is used for indicating an error in the MARC record where there should
@@ -86,12 +93,14 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
     :param record: A pymarc.Record instance
     :param field: A string indicating the tag that should be extracted.
     :param subfield: An optional subfield. If this is None, then the full value of the field will be returned.
+    :param ungrouped: If this is True, this function will only return fields that do not have a $8 value. The default is
+        False, indicating all fields, regardless of whether they are grouped or not, will be returned.
     :return: A string. A RequiredFieldException will be raised if the field is not found.
     """
-    ret: Optional[str] = to_solr_single(record, field, subfield)
+    ret: Optional[str] = to_solr_single(record, field, subfield, ungrouped)
     if ret is None:
         record_id: str = record['001']
-        log.error(f"%s requires a value, but one was not found for %s.", field, record_id)
+        log.error("%s requires a value, but one was not found for %s.", field, record_id)
         raise RequiredFieldException(f"{field} requires a value, but one was not found for {record_id}.")
 
     return ret
@@ -123,8 +132,22 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     # over the values in each field.
     # Only return the fields that are not empty and match the ungrouped option.
     if ungrouped:
-        return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip() and '8' not in field})
+        return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip() and ('8' not in field or field['8'] != '0')})
     return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip()})
+
+
+def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = False) -> List[str]:
+    """
+    The same operation as to_solr_multi, except this function must return at least one value, otherwise it
+    will raise an exception.
+    """
+    ret: Optional[List[str]] = to_solr_multi(record, field, subfield, ungrouped)
+    if ret is None:
+        record_id: str = record['001']
+        log.error("%s, %s requires a value, but one was not found for %s", field, subfield, record_id)
+        raise RequiredFieldException(f"{field}, {subfield} requires a value, but one was not found for {record_id}.")
+
+    return ret
 
 
 def normalize_id(identifier: str) -> str:

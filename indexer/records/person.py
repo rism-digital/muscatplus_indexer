@@ -1,23 +1,19 @@
 import logging
-import operator
 from collections import defaultdict
 from typing import Dict, List, TypedDict, Optional
 
 import pymarc
-import ujson
+import yaml
 
 from indexer.helpers.marc import create_marc
+from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    to_solr_single,
-    to_solr_single_required,
-    to_solr_multi,
-    external_resource_json,
-    get_related_places,
-    get_related_people,
-    get_related_institutions
+    to_solr_single_required
 )
+from indexer.processors import person as person_processor
 
 log = logging.getLogger("muscat_indexer")
+person_profile: Dict = yaml.full_load(open('profiles/people.yml', 'r'))
 
 
 class PersonIndexDocument(TypedDict):
@@ -44,61 +40,21 @@ class PersonIndexDocument(TypedDict):
     external_resources_json: Optional[str]
 
 
-def create_person_index_documents(record: Dict) -> List:
+def create_person_index_document(record: Dict) -> Dict:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
-    person_id: str = f"person_{to_solr_single_required(marc_record, '001')}"
+    rism_id: str = to_solr_single_required(marc_record, '001')
+    person_id: str = f"person_{rism_id}"
 
-    d: PersonIndexDocument = {
+    core_person: Dict = {
         "type": "person",
         "id": person_id,
         "person_id": person_id,
-        "name_s": to_solr_single(marc_record, '100', 'a'),
-        "date_statement_s": to_solr_single(marc_record, '100', 'd'),
-        "other_dates_s": to_solr_single(marc_record, '100', 'y'),
-        "name_variants_sm": to_solr_multi(marc_record, '400', 'a'),
-        "related_places_sm": to_solr_multi(marc_record, "551", "a"),
-        "related_people_sm": to_solr_multi(marc_record, "500", "a"),
-        "related_institutions_sm": to_solr_multi(marc_record, "510", "a"),
-        "general_notes_sm": to_solr_multi(marc_record, "680", "a"),
-        "additional_biography_sm": to_solr_multi(marc_record, "678", "a"),
-        "gender_s": to_solr_single(marc_record, '375', 'a'),
-        "roles_sm": to_solr_multi(marc_record, '550', 'a'),
-        "external_ids": _get_external_ids(marc_record),
-        "related_people_json": ujson.dumps(p) if (p := get_related_people(marc_record, person_id, "person")) else None,
-        "related_places_json": ujson.dumps(p) if (p := get_related_places(marc_record, person_id, "person")) else None,
-        "related_institutions_json": ujson.dumps(p) if (p := get_related_institutions(marc_record, person_id, "person")) else None,
-        "name_variants_json": ujson.dumps(n) if (n := _get_name_variants(marc_record)) else None,
-        "external_resources_json": ujson.dumps(l) if (l := [external_resource_json(f) for f in marc_record.get_fields("856")]) else None,
-        "boost": record.get("source_count", 0)
+        "rism_id": rism_id,
+        "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
 
-    return [d]
+    additional_fields: Dict = process_marc_profile(person_profile, person_id, marc_record, person_processor)
+    core_person.update(additional_fields)
 
-
-def _get_external_ids(record: pymarc.Record) -> Optional[List]:
-    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later. """
-    ids: List = record.get_fields('024')
-    if not ids:
-        return None
-
-    return [f"{idf['2'].lower()}:{idf['a']}" for idf in ids if (idf and idf['2'])]
-
-
-def _get_name_variants(record: pymarc.Record) -> Optional[List]:
-    name_variants = record.get_fields("400")
-    if not name_variants:
-        return None
-
-    names = defaultdict(list)
-    for subf in name_variants:
-        if not (n := subf["a"]):
-            continue
-        # If no $j, then use the "xx" code which will represent "unknown".
-        # NB: Some records have "xx" for $j as well, even though it's not an 'official' code.
-        category: str = subf["j"] or "xx"
-        names[category].append(n)
-
-    # Sort the variants alphabetically and format as list
-    name_variants: List = [{"type": k, "variants": sorted(v)} for k, v in names.items()]
-
-    return name_variants
+    return core_person

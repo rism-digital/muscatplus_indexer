@@ -1,0 +1,61 @@
+---
+# If you are unsure of how this file should be structured, read the
+# comment on the top of the 'sources.yml' profile.
+external_ids:  # 024
+  processor: "_get_external_ids"
+
+name_s:
+  field: "100"
+  subfield: "a"
+
+gender_s:
+  field: "375"
+  subfield: "a"
+
+date_statement_s:
+  field: "100"
+  subfield: "d"
+date_ranges_im:  # process $d into earliest and latest years.
+  processor: "_get_earliest_latest_dates"
+other_dates_s:
+  field: "100"
+  subfield: "y"
+
+name_variants_sm:
+  field: "400"
+  subfield: "a"
+  multiple: true
+name_variants_json:
+  processor: "_get_name_variants"
+  json: true
+
+roles_sm:
+  field: "550"
+  subfield: "a"
+  multiple: true
+
+additional_biography_sm:
+  field: "678"
+  subfield: "a"
+  multiple: true
+
+general_notes_sm:
+  field: "680"
+  subfield: "a"
+  multiple: true
+
+related_people_json:
+  processor: "_get_related_people_data"
+  json: true
+
+related_institutions_json:
+  processor: "_get_related_institutions_data"
+  json: true
+
+related_places_json:
+  processor: "_get_related_places_data"
+  json: true
+
+external_resources_json:
+  processor: "_get_external_resources_data"
+  json: true

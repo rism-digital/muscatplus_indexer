@@ -180,7 +180,7 @@ class ExternalResourceDocument(TypedDict, total=False):
     link_type: Optional[str]
 
 
-def external_resource_json(field: pymarc.Field) -> Optional[ExternalResourceDocument]:
+def external_resource_data(field: pymarc.Field) -> Optional[ExternalResourceDocument]:
     """
     Takes an 856 field and attempts to format a dictionary containing
     the data. Used for adding external links to various places in the indexed records (source, material groups,
@@ -272,7 +272,7 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
 
     # NB: enumeration starts at 1
     if ungrouped:
-        return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p and '8' not in p]
+        return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p and ('8' not in p or p['8'] != 0)]
     return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p]
 
 
@@ -346,7 +346,7 @@ def get_related_institutions(record: pymarc.Record, record_id: str, record_type:
         return None
 
     if ungrouped:
-        return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and '8' not in p]
+        return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and ('8' not in p or p['8'] != 0)]
     return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
 
 

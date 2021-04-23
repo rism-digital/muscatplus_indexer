@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 from typing import Dict, Tuple, Generator, List
 
 from indexer.exceptions import RequiredFieldException
@@ -14,7 +15,10 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT id, marc_source FROM muscat_development.institutions WHERE wf_stage = 1;""")
+    curs.execute("""SELECT i.id, i.marc_source,
+                    i.created_at AS created, i.updated_at AS updated 
+                    FROM muscat_development.institutions AS i
+                    WHERE wf_stage = 1;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows
@@ -32,19 +36,18 @@ def index_institutions(cfg: Dict) -> bool:
 
 def index_institution_groups(institutions: List) -> bool:
     log.info("Indexing Institutions")
-    records_to_index: List = []
+    records_to_index: deque = deque()
 
     for record in institutions:
-        m_source = record['marc_source']
         try:
-            doc: InstitutionIndexDocument = create_institution_index_document(m_source)
+            doc: InstitutionIndexDocument = create_institution_index_document(record)
         except RequiredFieldException:
             log.error("A required field was not found, so this document was not indexed.")
             continue
 
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(records_to_index)
+    check: bool = submit_to_solr(list(records_to_index))
 
     if not check:
         log.error("There was an error submitting institutions to Solr")

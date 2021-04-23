@@ -1,10 +1,11 @@
 import logging
+from collections import deque
 from typing import List, Generator, Dict
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.person import create_person_index_documents
+from indexer.records.person import create_person_index_document
 
 log = logging.getLogger("muscat_indexer")
 
@@ -13,7 +14,8 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count
+    curs.execute("""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count,
+                    p.created_at AS created, p.updated_at AS updated
                     FROM muscat_development.people AS p
                     LEFT JOIN muscat_development.sources_to_people AS s ON p.id = s.person_id
                     WHERE wf_stage = 1
@@ -35,13 +37,13 @@ def index_people(cfg: Dict) -> bool:
 
 def index_people_groups(people: List) -> bool:
     log.info("Indexing People")
-    records_to_index: List = []
 
+    records_to_index: deque = deque()
     for record in people:
-        docs = create_person_index_documents(record)
-        records_to_index.extend(docs)
+        doc = create_person_index_document(record)
+        records_to_index.append(doc)
 
-    check: bool = submit_to_solr(records_to_index)
+    check: bool = submit_to_solr(list(records_to_index))
 
     if not check:
         log.error("There was an error submitting to Solr")

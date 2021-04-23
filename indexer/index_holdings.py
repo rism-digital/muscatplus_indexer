@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 from typing import Dict, Generator, List
 
 from indexer.helpers.db import mysql_pool
@@ -35,13 +36,13 @@ def index_holdings(cfg: Dict) -> bool:
 
 def index_holdings_groups(holdings: List) -> bool:
     log.info("Indexing holdings")
-    records_to_index: List = []
+    records_to_index: deque = deque()
 
     for record in holdings:
         doc: HoldingIndexDocument = create_holding_index_document(record)
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(records_to_index)
+    check: bool = submit_to_solr(list(records_to_index))
 
     if not check:
         log.error("There was an error submitting holdings to Solr")

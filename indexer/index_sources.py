@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 from typing import Generator, List, Dict
 
 from indexer.exceptions import RequiredFieldException
@@ -49,7 +50,7 @@ def index_sources(cfg: Dict) -> bool:
 
 def index_source_groups(sources: List) -> bool:
     log.info("Index source group")
-    records_to_index: List = []
+    records_to_index: deque = deque()
 
     for record in sources:
         try:
@@ -60,7 +61,7 @@ def index_source_groups(sources: List) -> bool:
         log.debug("Appending source document")
         records_to_index.extend(docs)
 
-    check: bool = submit_to_solr(records_to_index)
+    check: bool = submit_to_solr(list(records_to_index))
 
     if not check:
         log.error("There was an error submitting to Solr!")

@@ -154,7 +154,7 @@ access_restrictions_sm:
 
 # 510 seems to be mostly duplicated by 596, so it is skipped.
 
-performance_note_sm:
+performance_notes_sm:
   field: "518"
   subfield: "a"
   multiple: true

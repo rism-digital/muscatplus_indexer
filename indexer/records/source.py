@@ -1,3 +1,4 @@
+import re
 from typing import List, Dict, Optional, TypedDict
 
 import pymarc as pymarc
@@ -5,6 +6,7 @@ import ujson
 import yaml
 
 import logging
+from simhash import fingerprint, fnvhash
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID
 from indexer.helpers.marc import create_marc
@@ -12,6 +14,7 @@ from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_
 from indexer.helpers.profiles import process_marc_profile
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
+
 
 log = logging.getLogger("muscat_indexer")
 source_profile: Dict = yaml.full_load(open('profiles/sources.yml', 'r'))
@@ -171,10 +174,41 @@ class IncipitIndexDocument(TypedDict):
     scoring_sm: Optional[List[str]]
 
 
+def _incipit_to_pae(incipit: Dict) -> str:
+    """
+    :param incipit: A Dict result object for an incipit.
+    :return: A string formatted as Plaine and Easie code
+    """
+    pae_code: List = ["@start:pae-file"]
+
+    if clef := incipit.get("clef_s"):
+        pae_code.append(f"@clef:{clef}")
+    if timesig := incipit.get("timesig_s"):
+        pae_code.append(f"@timesig:{timesig}")
+    if key_or_mode := incipit.get("key_mode_s"):
+        pae_code.append(f"@key:{key_or_mode}")
+    if keysig := incipit.get("key_s"):
+        pae_code.append(f"@keysig:{keysig}")
+    if incip := incipit.get("music_incipit_s"):
+        pae_code.append(f"@data:{incip}")
+
+    pae_code.append("@end:pae-file")
+
+    return "\n".join(pae_code)
+
+
+UPPERCASE_PITCH_REGEX = re.compile(r"([\dA-Gxbn]+)")
+
+
 def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocument:
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
+    fp: Optional[int] = None
+    if field['p']:
+        all_pitches_matches = re.findall(UPPERCASE_PITCH_REGEX, field['p']) or []
+        all_pitches: str = "".join(all_pitches_matches)
+        fp = fingerprint(list(map(hash, all_pitches)))
 
-    return {
+    d: Dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
@@ -189,8 +223,13 @@ def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocu
         "timesig_s": field['o'],
         "clef_s": field['g'],
         "general_notes_sm": field.get_subfields('q'),
-        "scoring_sm": field.get_subfields('z')
+        "scoring_sm": field.get_subfields('z'),
+        "fingerprint_lp": fp
     }
+    pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
+    d["pae_code_sni"] = pae_code
+
+    return d
 
 
 def _get_incipits(record: pymarc.Record, source_id: str) -> Optional[List]:

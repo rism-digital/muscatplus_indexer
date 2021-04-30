@@ -75,10 +75,10 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
 
             if 'value_prefix' in field_config:
                 if isinstance(field_result, list):
-                    prefixed_res_list = [f"{field_config['value_prefix']}_{v}" for v in field_result]
+                    prefixed_res_list = [f"{field_config['value_prefix']}{v}" for v in field_result]
                     solr_document[solr_field] = prefixed_res_list
                 elif isinstance(field_result, str):
-                    prefixed_value = f"{field_config['value_prefix']}_{field_result}"
+                    prefixed_value = f"{field_config['value_prefix']}{field_result}"
                     solr_document[solr_field] = prefixed_value
                 else:
                     value_type = type(field_result)

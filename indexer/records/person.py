@@ -45,11 +45,14 @@ def create_person_index_document(record: Dict) -> Dict:
     rism_id: str = to_solr_single_required(marc_record, '001')
     person_id: str = f"person_{rism_id}"
 
+    # For the source count we take the literal count *except* for the Anonymous user,
+    # since that throws everything off.
     core_person: Dict = {
         "type": "person",
         "id": person_id,
         "person_id": person_id,
         "rism_id": rism_id,
+        "source_count_i": record['source_count'] if rism_id != "30004985" else 0,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

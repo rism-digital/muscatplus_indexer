@@ -1,16 +1,25 @@
 import itertools
 import logging
 from collections import defaultdict
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, Optional
 
-import pymarc as pymarc
+import pymarc
 
 from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.utilities import to_solr_single, normalize_id, to_solr_multi, external_resource_data, \
-    to_solr_single_required, get_related_people, get_related_institutions, get_related_places
+    to_solr_single_required, get_related_people, get_related_institutions, get_related_places, get_titles, \
+    related_person, related_institution
 
 log = logging.getLogger("muscat_indexer")
+
+
+def _get_has_incipits(record: pymarc.Record) -> bool:
+    return '031' in record
+
+
+def _get_num_incipits(record: pymarc.Record) -> int:
+    return len(record.get_fields("031"))
 
 
 def _get_creator_name(record: pymarc.Record) -> Optional[str]:
@@ -51,6 +60,10 @@ def _get_subjects(record: pymarc.Record) -> Optional[List[Dict]]:
     return ret
 
 
+def _get_standard_titles_data(record: pymarc.Record) -> Optional[List]:
+    return get_titles(record, "240")
+
+
 def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
     """Takes a list of instrument fields and ensures that they are split into a multi-valued representation. So a
        value of:
@@ -69,14 +82,12 @@ def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
-    earliest_dates: List[int] = []
-    latest_dates: List[int] = []
     date_statements: Optional[List] = to_solr_multi(record, "260", "c")
-
-    # if no date statement, return an empty dictionary. This allows us to keep a consistent return type
-    # since a call to `.update()` with an empty dictionary won't do anything.
     if not date_statements:
         return None
+
+    earliest_dates: List[int] = []
+    latest_dates: List[int] = []
 
     for statement in date_statements:
         try:
@@ -85,7 +96,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
             # The breadth of errors mean we could spend all day catching things, so in this case we use
             # a blanket exception catch and then log the statement to be fixed so that we might fix it later.
             log.error("Error parsing date statement %s: %s", statement, e)
-            raise
+            return None
 
         if earliest:
             earliest_dates.append(earliest)
@@ -100,7 +111,14 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     if earliest_date == -9999 and latest_date == 9999:
         return None
 
+    # If we don't have one but we do have the other, these will still be valid (but
+    # ridiculous) integer values.
     return [earliest_date, latest_date]
+
+
+def _get_source_notes_data(record: pymarc.Record) -> Optional[List[Dict]]:
+    # Get all notes fields that we're interested in.
+    fields: List[pymarc.Field] = record.get_fields("500", "505", "518", "520", "561", "")
 
 
 def __instrumentation(field: pymarc.Field) -> Dict:
@@ -196,23 +214,7 @@ def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_additional_titles_data(record: pymarc.Record) -> Optional[List]:
-    fields: List = record.get_fields("730")
-    if not fields:
-        return None
-
-    ret: List = []
-    for field in fields:
-        d = {
-            "additional_title": field['a'],
-            "subheading": field['k'],
-            "arrangement": field['o'],
-            "key_mode": field['r'],
-            "catalogue_number": field['n'],
-            "scoring_summary": field['m']
-        }
-        ret.append({k: v for k, v in d.items() if v})
-
-    return ret
+    return get_titles(record, "730")
 
 
 def _get_source_membership(record: pymarc.Record) -> Optional[List]:
@@ -305,18 +307,8 @@ def _get_has_iiif_manifest(record: pymarc.Record) -> bool:
 MaterialGroupFields = Dict[str, List]
 
 
-class MaterialGroupIndexDocument(TypedDict, total=False):
-    id: str
-    type: str
-    source_id: str
-    group_num: str
-    parts_held: Optional[List[str]]
-    extent: Optional[List[str]]
-    source_type: Optional[List[str]]
-    plate_numbers: Optional[List[str]]
-
-
 def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
+    # 028
     res: MaterialGroupFields = {
         "plate_numbers": field.get_subfields('a')
     }
@@ -325,34 +317,44 @@ def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_pub(field: pymarc.Field) -> MaterialGroupFields:
+    # 260
     res: MaterialGroupFields = {
-        "place_publication": field.get_subfields("a"),
-        "name_publisher": field.get_subfields("b"),
-        "date_statements": field.get_subfields("c")
+        "publication_place": field.get_subfields("a"),
+        "publisher_copyist": field.get_subfields("b"),
+        "date_statements": field.get_subfields("c"),
+        "printer_location": field.get_subfields("e"),
+        "printer_name": field.get_subfields("f")
     }
 
     return res
 
 
 def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
+    # 300
     res: MaterialGroupFields = {
-        "physical_extent": field.get_subfields("a")
+        "physical_extent": field.get_subfields("a"),
+        "physical_details": field.get_subfields("b"),
+        "physical_dimensions": field.get_subfields("c")
     }
 
     return res
 
 
 def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
+    # 340
+    # 340$a is deprecated, but at this time most data is in that
+    # subfield, so we get values from both fields.
+    # TODO: Remove $a when this is fixed in muscat.
     res: MaterialGroupFields = {
-        "printing_techniques": field.get_subfields("d"),
+        "printing_techniques": field.get_subfields("a", "d"),
         "book_formats": field.get_subfields("m")
     }
-    # 340$a is deprecated and will not appear in the results.
 
     return res
 
 
 def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
+    # 500
     res: MaterialGroupFields = {
         "general_notes": field.get_subfields("a")
     }
@@ -361,6 +363,7 @@ def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
+    # 563
     res: MaterialGroupFields = {
         "binding_notes": field.get_subfields("a")
     }
@@ -369,6 +372,7 @@ def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
+    # 590
     res: MaterialGroupFields = {
         "parts_held": field.get_subfields('a'),
         "parts_extent": e if (e := field.get_subfields('b')) else []
@@ -377,6 +381,7 @@ def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
+    # 592
     res: MaterialGroupFields = {
         "watermark_notes": field.get_subfields("a")
     }
@@ -384,6 +389,7 @@ def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
+    # 593
     res: MaterialGroupFields = {
         "source_type": field.get_subfields('a')
     }
@@ -392,60 +398,40 @@ def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
 
 
 def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
-    person: Dict = {}
+    # 700
+    # We pass some dummy values to the related_person function
+    # so that we can keep the structure of the data consistent.
+    person = related_person(field, "", "material_group", 0)
 
-    if n := field["a"]:
-        person["name"] = n
-
-    if i := field['0']:
-        person["other_person_id"] = f"person_{normalize_id(i)}"
-
-    if r := field["4"]:
-        person["relationship"] = r
-
-    if q := field["j"]:
-        person["qualifier"] = q
-
+    # Use the same key in the output so that we can use the
+    # same relationship serializer as we do for the full object.
     res: MaterialGroupFields = {
-        "people": [person]
+        "related_people_json": [person]
     }
 
     return res
 
 
 def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
-    institution: Dict = {}
-
-    if n := field['a']:
-        institution["name"] = n
-
-    if d := field['b']:
-        institution["department"] = d
-
-    if i := field['0']:
-        institution["institution_id"] = f"institution_{normalize_id(i)}"
-
-    if q := field['j']:
-        institution["qualifier"] = q
-
-    if r := field['4']:
-        institution["relationship"] = r
+    # 710
+    institution = related_institution(field, "", "material_group", 0)
 
     res: MaterialGroupFields = {
-        "institutions": [institution]
+        "related_institutions_json": [institution]
     }
 
     return res
 
 
 def __mg_external(field: pymarc.Field) -> MaterialGroupFields:
+    # 856
     res: MaterialGroupFields = {
         "external_resources": [external_resource_data(field)]
     }
     return res
 
 
-def _get_material_groups(record: pymarc.Record) -> Optional[List[MaterialGroupIndexDocument]]:
+def _get_material_groups(record: pymarc.Record) -> Optional[List[Dict]]:
     """
     To get all the material groups we must first find all the members of each group, and then
     process the individual fields belonging to that group. Every source should always have a group
@@ -489,7 +475,7 @@ def _get_material_groups(record: pymarc.Record) -> Optional[List[MaterialGroupIn
     # Filter any field instances that do not declare themselves part of a group ($8). This is
     # important especially for the fields that can occur on both the main record and in the
     # material group records, e.g., 700, 710, 856.
-    field_instances: List[pymarc.Field] = [f for f in record.get_fields(*member_fields.keys()) if f['8']]
+    field_instances: List[pymarc.Field] = [f for f in record.get_fields(*member_fields.keys()) if '8' in f]
 
     if not field_instances:
         return None
@@ -511,7 +497,7 @@ def _get_material_groups(record: pymarc.Record) -> Optional[List[MaterialGroupIn
         # that the fields will always be a list, and we don't have to check whether
         # it exists before adding new values to it.
         field_group = defaultdict(list)
-        base_group: MaterialGroupIndexDocument = {
+        base_group: Dict = {
             "id": f"mg_{gpnum}",
             "group_num": f"{gpnum}",
             "source_id": source_id
@@ -526,13 +512,11 @@ def _get_material_groups(record: pymarc.Record) -> Optional[List[MaterialGroupIn
                 # Filter out any empty values
                 if not subv:
                     continue
+                # Extend any previous values with the new values
                 field_group[subf].extend(subv)
 
-        # Cast the sets to a list so that they can be serialized by the JSON encoder.
-        # values_list: Dict = {k: list(v) for k, v in field_group.items()}
-
         # Join the field group to the base group, and then append the combined dict
-        # to the list of results to be indexed.
+        # to the list of results to be indexed. The set
         base_group.update(field_group)
         res.append(base_group)
 

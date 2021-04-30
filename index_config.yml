@@ -4,6 +4,9 @@ solr:
   indexing_core: muscatplus_indexing
   live_core: muscatplus_live
 
+indexing:
+  extended_incipits: false
+
 mysql:
   server: localhost
   username: muscat

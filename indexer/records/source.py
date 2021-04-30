@@ -1,8 +1,9 @@
 import re
-from typing import List, Dict, Optional, TypedDict
+from typing import List, Dict, Optional, TypedDict, Tuple
 
-import pymarc as pymarc
+import pymarc
 import ujson
+import verovio
 import yaml
 
 import logging
@@ -17,7 +18,17 @@ from indexer.records.holding import HoldingIndexDocument, holding_index_document
 
 
 log = logging.getLogger("muscat_indexer")
+index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
+
 source_profile: Dict = yaml.full_load(open('profiles/sources.yml', 'r'))
+vrv_tk = verovio.toolkit()
+verovio.enableLog(False)
+vrv_tk.setInputFrom(verovio.PAE)
+vrv_tk.setOptions(ujson.dumps({
+    "footer": 'none',
+    "header": 'none',
+    "breaks": 'none',
+}))
 
 
 def create_source_index_documents(record: Dict) -> List:
@@ -77,7 +88,8 @@ def create_source_index_documents(record: Dict) -> List:
     additional_fields: Dict = process_marc_profile(source_profile, source_id, marc_record, source_processor)
     source_core.update(additional_fields)
 
-    incipits: List = _get_incipits(marc_record, source_id) or []
+    extended_incipits: bool = index_config['indexing']['extended_incipits']
+    incipits: List = _get_incipits(marc_record, source_id, main_title, extended_incipits) or []
 
     res: List = [source_core]
     res.extend(incipits)
@@ -197,21 +209,28 @@ def _incipit_to_pae(incipit: Dict) -> str:
     return "\n".join(pae_code)
 
 
+def normalized_pae(pae_code: str) -> str:
+    try:
+        vrv_tk.loadData(pae_code)
+        pae = vrv_tk.renderToPAE()
+    except Exception as e:
+        pae = f"Error with pae conversion: {e}"
+
+    return pae
+
+
 UPPERCASE_PITCH_REGEX = re.compile(r"([\dA-Gxbn]+)")
+DATA_FIELD_REGEX = re.compile(r"^@data:(.*)$", re.MULTILINE)
 
 
-def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocument:
+def __incipit(field: pymarc.Field, source_id: str, source_title: str, num: int, extended_indexing: bool) -> IncipitIndexDocument:
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
-    fp: Optional[int] = None
-    if field['p']:
-        all_pitches_matches = re.findall(UPPERCASE_PITCH_REGEX, field['p']) or []
-        all_pitches: str = "".join(all_pitches_matches)
-        fp = fingerprint(list(map(hash, all_pitches)))
 
     d: Dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
+        "source_title_s": source_title,
         "incipit_num_i": num,
         "music_incipit_s": field['p'],
         "text_incipit_s": field['t'],
@@ -224,18 +243,27 @@ def __incipit(field: pymarc.Field, source_id: str, num: int) -> IncipitIndexDocu
         "clef_s": field['g'],
         "general_notes_sm": field.get_subfields('q'),
         "scoring_sm": field.get_subfields('z'),
-        "fingerprint_lp": fp
     }
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
-    d["pae_code_sni"] = pae_code
+    d["original_pae_sni"] = pae_code
+
+    # If extended indexing is enabled, run the PAE through Verovio and calculate
+    # the various fingerprints. (This is currently WIP and slows things down quite
+    # a bit, so we needed a way to disable it when we're not actively working on
+    # incipit searching.)
+    if pae_code and extended_indexing:
+        d["original_fingerprint_lp"] = fingerprint(list(map(fnvhash, pae_code)))
+        norm_pae: str = normalized_pae(pae_code)
+        d["normalized_fingerprint_lp"] = fingerprint(list(map(fnvhash, norm_pae)))
+        d["normalized_pae_sni"] = norm_pae
 
     return d
 
 
-def _get_incipits(record: pymarc.Record, source_id: str) -> Optional[List]:
+def _get_incipits(record: pymarc.Record, source_id: str, source_title: str, extended_indexing: bool) -> Optional[List]:
     incipits: List = record.get_fields("031")
     if not incipits:
         return None
 
-    return [__incipit(f, source_id, num) for num, f in enumerate(incipits)]
+    return [__incipit(f, source_id, source_title, num, extended_indexing) for num, f in enumerate(incipits)]
 

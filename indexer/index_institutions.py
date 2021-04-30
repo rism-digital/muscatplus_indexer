@@ -15,10 +15,12 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
 
-    curs.execute("""SELECT i.id, i.marc_source,
+    curs.execute("""SELECT i.id, i.marc_source, COUNT(s.source_id) AS source_count,
                     i.created_at AS created, i.updated_at AS updated 
                     FROM muscat_development.institutions AS i
-                    WHERE wf_stage = 1;""")
+                    LEFT JOIN muscat_development.sources_to_institutions AS s ON i.id = s.institution_id
+                    WHERE wf_stage = 1
+                    GROUP BY i.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows

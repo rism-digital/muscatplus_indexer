@@ -1,8 +1,5 @@
 ---
 # Structure and options
-# If a processor is given then all responsibility for the values is delegated
-# to that function. We will only check that the value returned from that function
-# is not `None` if the `required` parameter is set.
 #
 #
 # solr_field_name:
@@ -10,14 +7,29 @@
 #    -- or --
 #    field: "XXX" (required; MARC field; must be a string!)
 #    subfield: "n" (required; MARC subfield; must be a string!)
-#    required: true | false (default; NB: will raise an exception if XXX$n is `None`)
+#    required: true | false (default; i.e.: will raise an exception if XXX$n is `None`)
 #    multiple: true | false (default; NB: solr field must allow multiple values!)
-#    value_prefix: foo_  (optional; All values will be prefixed with this)
+#    value_prefix: foo_  (optional; All values will be prefixed with this string.)
 #    ungrouped: true | false (default; when true will select only fields that are not part of a material group!)
 #    -- or --
-#    processor: _function_name (string; must exist in the current scope)
+#    processor: _function_name (string; must exist in the corresponding processor module)
 #    required: true | false (default)
 #    json: true | false (default). Run the returned value through ujson.dumps
+#
+#   Processor functions should be defined in the `processors/[record type].py` file.
+#   Functions take a single argument, the pymarc Record, and return data appropriate
+#   to the Solr field you're storing it in. So if you have a definition like:
+#
+#   sources.yml
+#
+#   foo_field_sm:
+#     processor: "_get_foos"
+#
+#  Then there should be a function `def _get_foos(record: pymarc.Record) -> Optional[List]`
+#  in processors/source.py.
+#  If a processor is given then all responsibility for the values is delegated
+#  to that function. We will only check that the value returned from that function
+#  is not `None` if the `required` parameter is set.
 #
 # For ease of use fields should be kept in numeric order by MARC tag!
 
@@ -38,7 +50,13 @@ source_fingerprint_s:
   subfield: "e"
 
 # 028$a is indexed in material groups.
-# 031 is indexed as separate incipit documents.
+# 031 is indexed as separate incipit documents, but we can save an extra
+# lookup for sources that don't have incipits by indicating whether this
+# source has any 031 fields attached.
+has_incipits_b:
+  processor: "_get_has_incipits"
+num_incipits_i:
+  processor: "_get_num_incipits"
 
 local_number_sm:
   field: "035"
@@ -78,7 +96,7 @@ creator_json:
 standard_title_s:
   field: "240"
   subfield: "a"
-excerpts_s:
+subheading_s:
   field: "240"
   subfield: "k"
 scoring_summary_sm:  # $m; split the fields and ensure each instrument is listed separately.
@@ -90,6 +108,9 @@ arrangement_s:
 key_mode_s:
   field: "240"
   subfield: "r"
+standard_titles_json:
+  processor: "_get_standard_titles_data"
+  json: true
 
 source_title_s:
   field: "245"
@@ -128,19 +149,37 @@ printer_name_sm:
   multiple: true
 
 # 300 is indexed in material groups and does not align well with fulltext search.
-# 340 is indexed in material groups and does not align well with fulltext search.
+
+# 340 is also indexed in material groups, but we index it on the source so
+# we can filter on techniques and formats, if we want.
+printing_techniques_sm:
+  field: "340"
+  subfield: "d"
+  multiple: true
+book_formats_sm:
+  field: "340"
+  subfield: "m"
+  multiple: true
 
 opus_numbers_sm:
   field: "383"
   subfield: "b"
   multiple: true
 
-# 500 is also indexed in material groups for display.
+# 500 is also indexed in material groups.
 # $p is deprecated and not included.
 general_notes_sm:
   field: "500"
   subfield: "a"
   multiple: true
+# For notes directly defined on the source we store them. We do not
+# need to index them since they will be caught in the field above,
+# so we just need a separate field for display.
+source_general_notes_smni:
+  field: "500"
+  subfield: "a"
+  multiple: true
+  ungrouped: true
 
 contents_notes_sm:
   field: "505"
@@ -201,10 +240,12 @@ other_shelfmarks_sm:
 
 # 592 is also indexed in material groups, but can be useful for supporting fulltext queries
 # for watermark identification on sources.
+# Note that unlike General Notes, Watermarks cannot be catalogued on the source directly.
 watermark_notes_sm:
   field: "592"
   subfield: "a"
   multiple: true
+
 
 # different types in material groups will produce a list of all source types
 # associated with this source. So a source with mixed MS and print contents
@@ -335,6 +376,9 @@ has_digitization_b: # 856
   processor: "_get_has_digitization"
 has_iiif_manifest_b: # 856
   processor: "_get_has_iiif_manifest"
+
+# This only contains 856 data that is defined on the source directly. Material
+# groups can have independent 856s.
 external_resources_json:
   processor: "_get_external_resources_data"
   json: true

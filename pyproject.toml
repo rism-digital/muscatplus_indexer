@@ -16,9 +16,15 @@ ujson = "^3.2.0"
 httpx = "^0.14.3"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
 python-simhash = {git = "https://github.com/scrapinghub/python-simhash"}
+verovio = {version = "^3.3.0", allow-prereleases = true, source = "testpypi"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.18.1"
+
+[[tool.poetry.source]]
+name="testpypi"
+url="https://test.pypi.org/simple/"
+secondary=true
 
 [build-system]
 requires = ["poetry>=0.12"]

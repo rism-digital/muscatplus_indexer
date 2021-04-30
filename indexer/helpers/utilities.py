@@ -212,12 +212,12 @@ class PersonRelationshipIndexDocument(TypedDict):
     relationship: str
     qualifier: str
     date_statement: str
-    other_person_id: str
+    person_id: str
     this_id: str
     this_type: str
 
 
-def __related_person(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> PersonRelationshipIndexDocument:
+def related_person(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> PersonRelationshipIndexDocument:
     """
     Generate a related person record. The target of the relationship is given in the other_person_id field,
     while the source of the relationship is given in the this_id field. Since Sources, Institutions, and People
@@ -241,7 +241,7 @@ def __related_person(field: pymarc.Field, this_id: str, this_type: str, relation
         "relationship": field['4'] if '4' in field else field['i'],
         "qualifier": field['j'],
         "date_statement": field['d'],
-        "other_person_id": f"person_{field['0']}",
+        "person_id": f"person_{field['0']}",
         "this_id": this_id,
         "this_type": this_type
     }
@@ -272,8 +272,8 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
 
     # NB: enumeration starts at 1
     if ungrouped:
-        return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p and ('8' not in p or p['8'] != 0)]
-    return [__related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p]
+        return [related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p and '8' not in p]
+    return [related_person(p, record_id, record_type, i) for i, p in enumerate(people, 1) if p]
 
 
 class PlaceRelationshipIndexDocument(TypedDict):
@@ -324,16 +324,16 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     qualifier: Optional[str]
 
 
-def __related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> InstitutionRelationshipIndexDocument:
+def related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> InstitutionRelationshipIndexDocument:
     d: InstitutionRelationshipIndexDocument = {
         "id": f"{relationship_number}",
+        "this_id": this_id,
+        "this_type": this_type,
         "name": field["a"],
         "department": field["d"],
+        "institution_id": f"institution_{field['0']}",
         "relationship": field['4'] if '4' in field else field['i'],
         "qualifier": field['j'],
-        "institution_id": f"institution_{field['0']}",
-        "this_id": this_id,
-        "this_type": this_type
     }
 
     return {k: v for k, v in d.items() if v}
@@ -346,8 +346,8 @@ def get_related_institutions(record: pymarc.Record, record_id: str, record_type:
         return None
 
     if ungrouped:
-        return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and ('8' not in p or p['8'] != 0)]
-    return [__related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
+        return [related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and ('8' not in p)]
+    return [related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
 
 
 BREAK_CONVERT: Pattern = re.compile(r"({{brk}})")
@@ -369,3 +369,51 @@ def format_notes_field(note: str) -> List[str]:
 
     return notelist
 
+
+def __title(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]]) -> Dict:
+    catalogue_numbers: List = []
+
+    if field.tag == "730" and 'n' in field:
+        catalogue_numbers.append(field['n'])
+    elif field.tag == "240" and catalogue_fields:
+        for cfield in catalogue_fields:
+            if cfield.tag == "383" and 'a' in cfield:
+                catalogue_numbers.append(cfield['b'])
+            elif cfield.tag == "690":
+                wv: str = cfield['a'] or ""
+                wvno: str = cfield['n'] or ""
+                wvtitle: str = f"{wv} {wvno}"
+                catalogue_numbers.append(wvtitle.strip())
+
+    d = {
+        "title": field['a'],
+        "subheading": field['k'],
+        "arrangement": field['o'],
+        "key_mode": field['r'],
+        "catalogue_numbers": catalogue_numbers,
+    }
+
+    scoring_summary_f: str = field['m']
+    if scoring_summary_f:
+        d['scoring_summary'] = list({val.strip() for val in scoring_summary_f.split(",") if val and val.strip()})
+
+    return {k: v for k, v in d.items() if v}
+
+
+def get_titles(record: pymarc.Record, field: str) -> Optional[List[Dict]]:
+    """
+    Standardize the title field structure. This is used for both the 240 and 730 fields
+    since they have similar structure.
+    :param record: A pymarc Record
+    :param field: The MARC tag; should either be 240 or 730.
+    :return: A list of title structures suitable for storing as a JSON field.
+    """
+    titles = record.get_fields(field)
+    if not titles:
+        return None
+
+    c: Optional[List[pymarc.Field]] = None
+    if field == "240":
+        c = record.get_fields("383", "690")
+
+    return [__title(t, c) for t in titles if t]

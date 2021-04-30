@@ -41,6 +41,7 @@ def create_institution_index_document(record: Dict) -> InstitutionIndexDocument:
         "type": "institution",
         "institution_id": institution_id,
         "rism_id": rism_id,
+        "source_count_i": record['source_count'],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

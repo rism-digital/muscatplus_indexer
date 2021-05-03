@@ -91,4 +91,3 @@ def _get_related_places_data(record: pymarc.Record) -> Optional[List]:
         return None
 
     return places
-

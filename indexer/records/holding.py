@@ -62,7 +62,7 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
     holding_core: Dict = {
         "id": holding_id,
         "type": "holding",
-        "source_id": f"{membership_id}",
+        "source_id": f"source_{membership_id}",
         "main_title_s": main_title,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
     }

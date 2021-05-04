@@ -195,6 +195,31 @@ def _get_liturgical_festival_data(record: pymarc.Record) -> Optional[List[Dict]]
     return [__liturgical_festival(f) for f in fields]
 
 
+def __secondary_literature_data(field: pymarc.Field) -> Dict:
+    d = {
+        "id": f"literature_{field['0']}",  # not used, but stored for now.
+        "reference": field['a'],
+        "number_page": field['n']
+    }
+    return {k: v for k, v in d.items() if v}
+
+
+def _get_works_catalogue_data(record: pymarc.Record) -> Optional[List[Dict]]:
+    fields: List[pymarc.Field] = record.get_fields("690")
+    if not fields:
+        return None
+
+    return [__secondary_literature_data(f) for f in fields]
+
+
+def _get_bibliographic_reference_data(record: pymarc.Record) -> Optional[List[Dict]]:
+    fields: List[pymarc.Field] = record.get_fields("691")
+    if not fields:
+        return None
+
+    return [__secondary_literature_data(f) for f in fields]
+
+
 def _get_related_people_data(record:pymarc.Record) -> Optional[List]:
     source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
     people = get_related_people(record, source_id, "source", fields=("700",), ungrouped=True)

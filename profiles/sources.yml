@@ -210,7 +210,7 @@ supplementary_material_sm:
 
 # 541 is indexed in the holding document, since it deals with the provenance of the
 # source and how it was acquired by the institution. Remember that all sources
-# have at least one holding document, so we will always have this data for every source,
+# have at least one holding document, even manuscripts, so we will always have this data for every source,
 # it's just in a different spot!
 
 language_notes_sm:
@@ -304,8 +304,13 @@ liturgical_festivals_json:
   json: true
 # $2 is deprecated and will not be indexed.
 
-# TODO: Figure out how to handle 690, since it is linked to the secondary literature table.
-# TODO: Also how to handle 691, since it is linked to the secondary literature table.
+works_catalogue_json:  # 690
+  processor: "_get_works_catalogue_data"
+  json: true
+
+bibliographic_reference_json: # 691
+  processor: "_get_bibliographic_reference_data"
+  json: true
 
 related_people_ids:
   field: "700"

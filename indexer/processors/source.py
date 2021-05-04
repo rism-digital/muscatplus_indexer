@@ -121,7 +121,7 @@ def _get_source_notes_data(record: pymarc.Record) -> Optional[List[Dict]]:
     fields: List[pymarc.Field] = record.get_fields("500", "505", "518", "520", "561", "")
 
 
-def __instrumentation(field: pymarc.Field) -> Dict:
+def __scoring(field: pymarc.Field) -> Dict:
     d = {
         "voice_instrument": field["b"],
         "number": field["c"]
@@ -130,12 +130,12 @@ def __instrumentation(field: pymarc.Field) -> Dict:
     return {k: v for k, v in d.items() if v}
 
 
-def _get_instrumentation_data(record: pymarc.Record) -> Optional[List[Dict]]:
+def _get_scoring_data(record: pymarc.Record) -> Optional[List[Dict]]:
     fields: List = record.get_fields("594")
     if not fields:
         return None
 
-    return [__instrumentation(i) for i in fields]
+    return [__scoring(i) for i in fields]
 
 
 def _get_dramatic_roles_data(record: pymarc.Record) -> Optional[List[Dict]]:

@@ -255,12 +255,12 @@ source_type_sm:
   subfield: "a"
   multiple: true
 
-instrumentation_sm:
+scoring_sm:
   field: "594"
   subfield: "b"
   multiple: true
-instrumentation_json:  # $c (number) is included in the json data.
-  processor: "_get_instrumentation_data"
+scoring_json:  # $c (number) is included in the json data.
+  processor: "_get_scoring_data"
   json: true
 
 standardized_dramatic_roles_sm:

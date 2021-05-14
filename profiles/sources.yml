@@ -105,6 +105,8 @@ scoring_summary_sm:  # $m; split the fields and ensure each instrument is listed
 arrangement_s:
   field: "240"
   subfield: "o"
+is_arrangement_b:
+  processor: "_get_is_arrangement"
 key_mode_s:
   field: "240"
   subfield: "r"

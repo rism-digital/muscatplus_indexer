@@ -1,7 +1,7 @@
 import itertools
 import logging
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pymarc
 
@@ -79,6 +79,18 @@ def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
 
     all_instruments: List = list({val.strip() for field in fields for val in field.split(",") if val and val.strip()})
     return all_instruments
+
+
+def _get_is_arrangement(record: pymarc.Record) -> bool:
+    fields: Optional[List] = record.get_fields("240")
+    if not fields:
+        return False
+    valid_statements: Tuple = ("Arr", "arr", "Arrangement")
+    # if any 240 field has it, we mark the whole record as an arrangement.
+    for field in fields:
+        if 'o' in field and field['o'] in valid_statements:
+            return True
+    return False
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:

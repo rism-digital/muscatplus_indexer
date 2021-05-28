@@ -62,3 +62,22 @@ def swap_cores(server_address: str, index_core: str, live_core: str) -> bool:
               index_core, live_core, admconn.status_code, admconn.text)
 
     return False
+
+
+def reload_core(server_address: str, core_name: str) -> bool:
+    """
+    Performs a core reload. This is a brute-force method of ensuring the core is current, since
+    simply committing it doesn't seem to always work at the end of indexing.
+
+    :param server_address: The Solr server address
+    :param core_name: The name of the core to reload.
+    :return: True if the reload was successful, otherwise False.
+    """
+    admconn = requests.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}")
+
+    if 200 <= admconn.status_code < 400:
+        log.info("Core reload for %s was successful.", core_name)
+        return True
+
+    log.error("Core reload for %s was not successful. Status: %s", core_name, admconn.text)
+    return False

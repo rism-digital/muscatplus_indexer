@@ -69,7 +69,9 @@ def _get_catalogue_numbers(record: pymarc.Record) -> Optional[List]:
     # (383) and 'catalogue of works' (690), where the catalogue and the catalogue
     # entry are held in different subfields. This function consolidates both of those fields,
     # and unites the separate subfields into a single set of identifiers so that we can search on
-    # all of them.
+    # all of them. The 'get_catalogue_numbers' function depends on having access to the
+    # 240 field entry for the correct behaviour, so we also pass this in, even though
+    # it doesn't hold any data for the catalogue numbers directly.
     title_fields: List = record.get_fields("240")
     if not title_fields:
         return None

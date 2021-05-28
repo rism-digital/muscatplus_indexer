@@ -110,6 +110,9 @@ is_arrangement_b:
 key_mode_s:
   field: "240"
   subfield: "r"
+
+# See the note in the processor function about why we index this here, even though
+# it's not technically part of the 240 field.
 catalogue_numbers_sm:
   processor: "_get_catalogue_numbers"
 standard_titles_json:

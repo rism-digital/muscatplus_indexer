@@ -11,7 +11,7 @@ from indexer.records.source import create_source_index_documents
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
+def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
     log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
@@ -42,7 +42,7 @@ def _get_parent_sources(cfg: Dict) -> Generator[Dict, None, None]:
 
 def index_sources(cfg: Dict) -> bool:
     log.info("Indexing sources")
-    source_groups = _get_parent_sources(cfg)
+    source_groups = _get_sources(cfg)
     parallelise(source_groups, index_source_groups)
 
     return True

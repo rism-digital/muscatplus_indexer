@@ -9,7 +9,7 @@ from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.utilities import to_solr_single, normalize_id, to_solr_multi, external_resource_data, \
     to_solr_single_required, get_related_people, get_related_institutions, get_related_places, get_titles, \
-    related_person, related_institution
+    related_person, related_institution, get_catalogue_numbers
 
 log = logging.getLogger("muscat_indexer")
 
@@ -62,6 +62,25 @@ def _get_subjects(record: pymarc.Record) -> Optional[List[Dict]]:
 
 def _get_standard_titles_data(record: pymarc.Record) -> Optional[List]:
     return get_titles(record, "240")
+
+
+def _get_catalogue_numbers(record: pymarc.Record) -> Optional[List]:
+    # Catalogue numbers are spread across a number of fields, including 'opus numbers'
+    # (383) and 'catalogue of works' (690), where the catalogue and the catalogue
+    # entry are held in different subfields. This function consolidates both of those fields,
+    # and unites the separate subfields into a single set of identifiers so that we can search on
+    # all of them.
+    title_fields: List = record.get_fields("240")
+    if not title_fields:
+        return None
+
+    catalogue_record_fields: Optional[List[pymarc.Field]] = record.get_fields("383", "690")
+    if not catalogue_record_fields:
+        return None
+
+    catalogue_nums: List = get_catalogue_numbers(title_fields[0], catalogue_record_fields)
+
+    return catalogue_nums
 
 
 def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:

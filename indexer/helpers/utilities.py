@@ -370,7 +370,7 @@ def format_notes_field(note: str) -> List[str]:
     return notelist
 
 
-def __title(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]]) -> Dict:
+def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]]) -> List:
     catalogue_numbers: List = []
 
     if field.tag == "730" and 'n' in field:
@@ -384,6 +384,12 @@ def __title(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]])
                 wvno: str = cfield['n'] or ""
                 wvtitle: str = f"{wv} {wvno}"
                 catalogue_numbers.append(wvtitle.strip())
+
+    return catalogue_numbers
+
+
+def __title(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]]) -> Dict:
+    catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
         "title": field['a'],

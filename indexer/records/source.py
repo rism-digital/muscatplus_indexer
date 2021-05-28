@@ -71,6 +71,7 @@ def create_source_index_documents(record: Dict) -> List:
         "id": source_id,
         "type": "source",
         "rism_id": rism_id,
+        "source_id": source_id,
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
@@ -88,6 +89,9 @@ def create_source_index_documents(record: Dict) -> List:
     additional_fields: Dict = process_marc_profile(source_profile, source_id, marc_record, source_processor)
     source_core.update(additional_fields)
 
+    # Extended incipits have their fingerprints calculated for similarity matching.
+    # They are configurable because they slow down indexing considerably, so can be disabled
+    # if faster indexing is needed.
     extended_incipits: bool = index_config['indexing']['extended_incipits']
     incipits: List = _get_incipits(marc_record, source_id, main_title, extended_incipits) or []
 

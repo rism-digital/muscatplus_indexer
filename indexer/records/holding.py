@@ -39,7 +39,7 @@ class HoldingIndexDocument(TypedDict):
 
 def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
     record_id: str = f"{record['id']}"
-    membership_id: str = f"{record['source_id']}"
+    membership_id: str = f"source_{record['source_id']}"
     marc_record: pymarc.Record = create_marc(record['marc_source'])
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]

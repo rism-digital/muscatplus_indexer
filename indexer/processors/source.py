@@ -366,9 +366,13 @@ MaterialGroupFields = Dict[str, List]
 
 
 def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
-    # 028
+    # 028 can be either publisher number (30) or plate number (20), depending on the indicators
+    # The default assumption is that it is a plate number, since this was the only value
+    # available until 06/2021.
+    field_name: str = "publisher_numbers" if field.indicator1 == "3" else "plate_numbers"
+
     res: MaterialGroupFields = {
-        "plate_numbers": field.get_subfields('a')
+        field_name: field.get_subfields('a')
     }
 
     return res

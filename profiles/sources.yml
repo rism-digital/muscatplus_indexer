@@ -49,7 +49,16 @@ source_fingerprint_s:
   field: "026"
   subfield: "e"
 
-# 028$a is indexed in material groups.
+# 028$a is also indexed in material groups. They can either be plate
+# or publisher numbers depending on the value of the indicators.
+# For our purposes here, we simply add them as a value since it will
+# only be used in the search, and we use the values in the material
+# groups to actually display them.
+plate_publisher_numbers_sm:
+  field: "028"
+  subfield: "a"
+  multiple: true
+
 # 031 is indexed as separate incipit documents, but we can save an extra
 # lookup for sources that don't have incipits by indicating whether this
 # source has any 031 fields attached.
@@ -315,7 +324,7 @@ works_catalogue_json:  # 690
   processor: "_get_works_catalogue_data"
   json: true
 
-bibliographic_reference_json: # 691
+bibliographic_references_json: # 691
   processor: "_get_bibliographic_reference_data"
   json: true
 

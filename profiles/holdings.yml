@@ -63,4 +63,4 @@ external_resources_json:
   processor: "_get_external_resources_data"
   json: true
 has_external_resources_b:
-  processor: "has_external_resources"
+  processor: "_has_external_resources"

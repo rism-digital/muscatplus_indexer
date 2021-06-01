@@ -26,3 +26,12 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[List]:
         return None
 
     return ungrouped_ext_links
+
+
+def _has_external_resources(record: pymarc.Record) -> bool:
+    """
+    Returns 'True' if the record has an 856 field; false if not.
+    :param record:
+    :return:
+    """
+    return '856' in record

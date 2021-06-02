@@ -27,8 +27,8 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
     if not creator:
         return None
 
-    name: str = creator["a"]
-    dates: str = f" ({d})" if (d := to_solr_single(record, "100", "d")) else ""
+    name: str = creator["a"].strip()
+    dates: str = f" ({d})" if (d := creator["d"]) else ""
 
     return f"{name}{dates}"
 

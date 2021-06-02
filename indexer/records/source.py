@@ -65,6 +65,10 @@ def create_source_index_documents(record: Dict) -> List:
             "main_title": record.get("parent_title"),
         }
 
+    people_names: List = [n.strip() for n in d.split("\n") if n] if (d := record.get("people_names")) else []
+    variant_people_names: List = [n.strip() for n in d.split("\n") if n] if (d := record.get("alt_people_names")) else []
+    related_people_ids: List = [f"person_{n}" for n in d.split("\n") if n] if (d := record.get("people_ids")) else []
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: Dict = {
@@ -80,6 +84,9 @@ def create_source_index_documents(record: Dict) -> List:
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_ids": holding_orgs_ids,
         "subtype_s": RECORD_TYPES_BY_ID.get(record_type_id),
+        "people_names_sm": people_names,
+        "variant_people_names_sm": variant_people_names,
+        "related_people_ids": related_people_ids,
         "is_item_record_b": source_id != f"source_{membership_id}",  # false if this is a parent record; true if a child
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")

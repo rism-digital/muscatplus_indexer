@@ -65,9 +65,9 @@ def create_source_index_documents(record: Dict) -> List:
             "main_title": record.get("parent_title"),
         }
 
-    people_names: List = [n.strip() for n in d.split("\n") if n] if (d := record.get("people_names")) else []
-    variant_people_names: List = [n.strip() for n in d.split("\n") if n] if (d := record.get("alt_people_names")) else []
-    related_people_ids: List = [f"person_{n}" for n in d.split("\n") if n] if (d := record.get("people_ids")) else []
+    people_names: List = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
+    variant_people_names: Optional[List] = _get_variant_people_names(record.get("alt_people_names"))
+    related_people_ids: List = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
 
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
@@ -127,6 +127,27 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
     return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title)]
+
+
+def _get_variant_people_names(variant_names: Optional[str]) -> Optional[List]:
+    """
+    There is no need to index all the name variants, only the unique tokens in the
+    variant names. This splits the list of variant names into tokens, and then
+    adds them to a set, which has the effect of removing duplicate tokens.
+
+    :param variant_names: A string representing a newline-separated list of variant names
+    :return: A list of unique name tokens.
+    """
+    if not variant_names:
+        return None
+
+    list_of_names: List = variant_names.split("\n")
+    unique_tokens = set()
+    for name in list_of_names:
+        name_parts: List = [n.strip() for n in re.split(r",| ", name) if n and len(n) > 2]
+        unique_tokens.update(name_parts)
+
+    return list(unique_tokens)
 
 
 def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[List[str]]:

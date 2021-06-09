@@ -61,3 +61,7 @@ related_places_json: # 551 or 751?
 related_institutions_json: # 710
   processor: "_get_related_institutions_data"
   json: true
+
+external_resources_json: # 856
+  processor: "_get_external_resources_data"
+  json: true

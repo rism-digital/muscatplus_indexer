@@ -294,11 +294,11 @@ def __related_place(field: pymarc.Field, this_id: str, this_type: str, relations
 
     d: PlaceRelationshipIndexDocument = {
         "id": f"{relationship_number}",
+        "this_id": this_id,
+        "this_type": this_type,
         "name": field["a"],
         "relationship": field["i"],
-        "place_id": field["0"],
-        "this_id": this_id,
-        "this_type": this_type
+        "place_id": f"place_{field['0']}"
     }
 
     # strip any null values from the response so that we can do simple checks for available data by looking for the key.

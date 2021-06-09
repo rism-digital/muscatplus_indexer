@@ -77,40 +77,33 @@ def _get_name_variants(record: pymarc.Record) -> Optional[List]:
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
     person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
-    people = get_related_people(record, person_id, "person", ungrouped=True)
-    if not people:
-        return None
+    people: Optional[List] = get_related_people(record, person_id, "person", ungrouped=True)
 
     return people
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
     person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
-    institutions = get_related_institutions(record, person_id, "person", ungrouped=True)
-    if not institutions:
-        return None
+    institutions: Optional[List] = get_related_institutions(record, person_id, "person", ungrouped=True)
 
     return institutions
 
 
 def _get_related_places_data(record: pymarc.Record) -> Optional[List]:
     person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
-    places = get_related_places(record, person_id, "person")
-    if not places:
-        return None
+    places: Optional[List] = get_related_places(record, person_id, "person")
 
     return places
 
 
 def _get_external_resources_data(record: pymarc.Record) -> Optional[List]:
     """
-    Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
-    material group descriptions -- those are handled in the material group indexing section above.
+    Fetch the external links defined on the record.
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ungrouped_ext_links: List = [external_resource_data(f) for f in record.get_fields("856") if f and '8' not in f]
-    if not ungrouped_ext_links:
+    ext_links: List = [external_resource_data(f) for f in record.get_fields("856")]
+    if not ext_links:
         return None
 
-    return ungrouped_ext_links
+    return ext_links

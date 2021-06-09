@@ -123,6 +123,9 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     latest_dates: List[int] = []
 
     for statement in date_statements:
+        if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)"):
+            continue
+
         try:
             earliest, latest = parse_date_statement(statement)
         except Exception as e:  # noqa
@@ -130,6 +133,10 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
             # a blanket exception catch and then log the statement to be fixed so that we might fix it later.
             log.error("Error parsing date statement %s: %s", statement, e)
             return None
+
+        if earliest is None and latest is None:
+            source_id: str = to_solr_single_required(record, '001')
+            log.warning("Problem with date statement %s for source %s", statement, source_id)
 
         if earliest:
             earliest_dates.append(earliest)

@@ -56,6 +56,7 @@ def create_source_index_documents(record: Dict) -> List:
     manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title) or []
     holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
     holding_orgs_ids: List = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
+    holding_orgs_identifiers: List = _get_full_holding_identifiers(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
 
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_json: Optional[Dict] = None
@@ -82,6 +83,7 @@ def create_source_index_documents(record: Dict) -> List:
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
         "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
         "holding_institutions_sm": holding_orgs,
+        "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
         "subtype_s": RECORD_TYPES_BY_ID.get(record_type_id),
         "people_names_sm": people_names,
@@ -199,6 +201,33 @@ def _get_holding_orgs_ids(mss_holdings: List[HoldingIndexDocument], print_holdin
 
     return list(ids)
 
+
+def _get_full_holding_identifiers(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> List[str]:
+    ids: set[str] = set()
+
+    for mss in mss_holdings:
+        institution_sig: str = mss.get("siglum_s", "")
+        institution_name: str = mss.get("institution_s", "")
+        institution_shelfmark: str = mss.get("shelfmark_s", "")
+        ids.add(f"{institution_name} {institution_sig} {institution_shelfmark}")
+
+    all_marc_records: List = []
+
+    if print_holdings:
+        all_marc_records += print_holdings.split("\n")
+    if parent_holdings:
+        all_marc_records += parent_holdings.split("\n")
+
+    for rec in all_marc_records:
+        rec = rec.strip()
+        m: pymarc.Record = create_marc(rec)
+
+        rec_sig: str = to_solr_single(m, "852", "a") or ""
+        rec_shelfmark: str = to_solr_single(m, "852", "c") or ""
+        rec_name: str = to_solr_single(m, "852", "e") or ""
+        ids.add(f"{rec_name} {rec_sig} {rec_shelfmark}")
+
+    return list(ids)
 
 class IncipitIndexDocument(TypedDict):
     id: str

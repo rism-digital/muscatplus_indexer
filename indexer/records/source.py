@@ -255,7 +255,7 @@ UPPERCASE_PITCH_REGEX = re.compile(r"([\dA-Gxbn]+)")
 DATA_FIELD_REGEX = re.compile(r"^@data:(.*)$", re.MULTILINE)
 
 
-def __incipit(field: pymarc.Field, source_id: str, source_title: str, num: int, extended_indexing: bool) -> IncipitIndexDocument:
+def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_name: Optional[str], num: int, extended_indexing: bool) -> IncipitIndexDocument:
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
 
     d: Dict = {
@@ -263,6 +263,7 @@ def __incipit(field: pymarc.Field, source_id: str, source_title: str, num: int, 
         "type": "incipit",
         "source_id": source_id,
         "source_title_s": source_title,
+        "creator_name_s": creator_name,
         "incipit_num_i": num,
         "music_incipit_s": field['p'],
         "text_incipit_s": field['t'],
@@ -297,5 +298,6 @@ def _get_incipits(record: pymarc.Record, source_id: str, source_title: str, exte
     if not incipits:
         return None
 
-    return [__incipit(f, source_id, source_title, num, extended_indexing) for num, f in enumerate(incipits)]
+    creator_name: Optional[str] = to_solr_single(record, "100", "a")
 
+    return [__incipit(f, source_id, source_title, creator_name, num, extended_indexing) for num, f in enumerate(incipits)]

@@ -11,7 +11,7 @@ from simhash import fingerprint, fnvhash
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single
+from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_name_variants
 from indexer.helpers.profiles import process_marc_profile
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
@@ -132,24 +132,11 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
 
 
 def _get_variant_people_names(variant_names: Optional[str]) -> Optional[List]:
-    """
-    There is no need to index all the name variants, only the unique tokens in the
-    variant names. This splits the list of variant names into tokens, and then
-    adds them to a set, which has the effect of removing duplicate tokens.
-
-    :param variant_names: A string representing a newline-separated list of variant names
-    :return: A list of unique name tokens.
-    """
     if not variant_names:
         return None
 
     list_of_names: List = variant_names.split("\n")
-    unique_tokens = set()
-    for name in list_of_names:
-        name_parts: List = [n.strip() for n in re.split(r",| ", name) if n and len(n) > 2]
-        unique_tokens.update(name_parts)
-
-    return list(unique_tokens)
+    return tokenize_name_variants(list_of_names)
 
 
 def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[List[str]]:

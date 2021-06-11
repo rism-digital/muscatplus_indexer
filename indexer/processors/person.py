@@ -6,7 +6,7 @@ import pymarc
 
 from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_single_required, get_related_people, \
-    get_related_institutions, get_related_places, external_resource_data
+    get_related_institutions, get_related_places, external_resource_data, tokenize_name_variants
 
 log = logging.getLogger("muscat_indexer")
 
@@ -55,7 +55,15 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     return [earliest_date, latest_date]
 
 
-def _get_name_variants(record: pymarc.Record) -> Optional[List]:
+def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
+    name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a")
+    if not name_variants:
+        return None
+
+    return tokenize_name_variants(name_variants)
+
+
+def _get_name_variant_data(record: pymarc.Record) -> Optional[List]:
     name_variants = record.get_fields("400")
     if not name_variants:
         return None

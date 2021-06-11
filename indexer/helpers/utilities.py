@@ -423,3 +423,21 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[List[Dict]]:
         c = record.get_fields("383", "690")
 
     return [__title(t, c) for t in titles if t]
+
+
+def tokenize_name_variants(name_variants: List[str]) -> List[str]:
+    """
+    There is no need to index all the name variants, only the unique tokens in the
+    variant names. This splits the list of variant names into tokens, and then
+    adds them to a set, which has the effect of removing duplicate tokens.
+
+    :param name_variants: A string representing a newline-separated list of variant names
+    :return: A list of unique name tokens.
+    """
+    unique_tokens: set = set()
+
+    for name in name_variants:
+        name_parts: List = [n.strip() for n in re.split(r",| ", name) if n and len(n) > 2]
+        unique_tokens.update(name_parts)
+
+    return list(unique_tokens)

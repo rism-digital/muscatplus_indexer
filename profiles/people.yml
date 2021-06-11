@@ -21,12 +21,10 @@ other_dates_s:
   field: "100"
   subfield: "y"
 
-name_variants_sm:
-  field: "400"
-  subfield: "a"
-  multiple: true
-name_variants_json:
+variant_names_sm:
   processor: "_get_name_variants"
+variant_names_json:
+  processor: "_get_name_variant_data"
   json: true
 
 roles_sm:

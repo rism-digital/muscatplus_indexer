@@ -15,7 +15,8 @@ edtf.appsettings.DAY_FIRST = True
 DOT_DIVIDED_REGEX: Pattern = re.compile(r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?")
 CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})(?:th|st|rd) century, (?P<adjective1>\w+)(?: (?P<adjective2>\w+))?$', re.IGNORECASE)
 # Parses dates like '18.2q' (18th century, second quarter) or '19.in' (beginning of the 19th Century)
-ANOTHER_CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})\.(?P<adjective1>[\die])(?P<adjective2>[dqhtnx])$')
+# Also matches "20.sc" ("20eme siecle")
+ANOTHER_CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})\.(?P<adjective1>[\diesm])(?P<adjective2>[dqhtnxce])$')
 CENTURY_DASHES_REGEX: Pattern = re.compile(r'^(\d\d)(?:--|\?\?)$')
 CENTURY_TRUNCATED_REGEX: Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
 
@@ -44,7 +45,11 @@ def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: 
     """
     Parse dates of the form '16th century, second half', '15th century, last third', "18.2d" (second decade of the
     18th century), "17.3q" (third quarter of the 17th century), '19.in' (beginning of the 19th century), '18.ex'
-    (end of the 18th century). "Beginning" and "End" are interpreted as the first and last decades.
+    (end of the 18th century). "Beginning" and "End" are interpreted as the first and last decades. The 'century_start'
+    should already be the start of the actual years, so for '20th century', 'century_start' should be 1900.
+
+    Some dates are fudged a bit, so '20.sc' just means '20th century', but we accept 'c' as the period, and 's' as the
+    ordinal. This might get a bit tricky if we have overlapping meanings...
     :param century_start: e.g. 1500
     :param ordinal: e.g first
     :param period: e.g. quarter
@@ -62,6 +67,8 @@ def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: 
     # interpret 'beginning' (n) and 'end' (x) as a decade, as in '18.ex' or '19.in'
     elif period in ('d', 'n', 'x'):
         divider = 10
+    elif period in ('c', 'e'):
+        divider = 1
     else:
         log.debug('Unknown period %s when parsing century date', period)
         return None
@@ -79,7 +86,7 @@ def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: 
     elif ordinal == 'fourth':
         multiplier = 4
     # if the ending, treat it as the last decade
-    elif ordinal in ('last', 'e'):
+    elif ordinal in ('last', 'e', 's', 'm'):
         multiplier = divider
     else:
         log.debug('Unknown ordinal %s when parsing century date', ordinal)
@@ -120,7 +127,6 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
         simplified_date_statement = simplified_date_statement.replace(".", "-")
 
     simplified_date_statement = re.sub(r'[?\[\]]', r'', simplified_date_statement)
-    simplified_date_statement = re.sub(r"(?P<cent>\d{2})\.(sc|me)", r'\g<cent>--', simplified_date_statement)
     simplified_date_statement = re.sub(STRIP_LETTERS, r"\g<year>", simplified_date_statement)
     simplified_date_statement = re.sub(ZERO_DAY_REGEX, r"\g<year>", simplified_date_statement)
     simplified_date_statement = re.sub(MUSHED_TOGETHER_REGEX, r"\g<first>", simplified_date_statement)

@@ -89,7 +89,7 @@ def create_source_index_documents(record: Dict) -> List:
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
         "related_people_ids": related_people_ids,
-        "is_item_record_b": source_id != f"source_{membership_id}",  # false if this is a parent record; true if a child
+        "is_contents_record_b": source_id != f"source_{membership_id}",  # false if this is a parent record; true if a child
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

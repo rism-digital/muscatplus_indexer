@@ -18,7 +18,7 @@ CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})(?:th|st|rd) century, (
 ANOTHER_CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})\.(?P<adjective1>[\die])(?P<adjective2>[dqhtnx])$')
 CENTURY_DASHES_REGEX: Pattern = re.compile(r'^(\d\d)(?:--|\?\?)$')
 CENTURY_TRUNCATED_REGEX: Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
-YEAR_OMITTED_REGEX: Pattern = re.compile(r'(?<!\d)(?P<year>\d\d\d)[-?]')
+
 # Some date ranges are given as "YYYY-MM-DD-YYYY-MM-DD" so we want to swap the second hyphen for a slash.
 MULTI_YEAR_REGEX: Pattern = re.compile(r'^(?P<first>\d{4}-\d{2}-\d{2})-(?P<second>\d{4}-\d{2}-\d{2})')
 # A lot of dates have a letters attached to them for some odd reason.
@@ -114,10 +114,6 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
 
     # simplify known problems for the edtf parser
     simplified_date_statement = date_statement.replace('(?)', '')
-
-    # handle cases where the final year digit isn't specified.
-    # We just put it in the middle of the decade for simplicity - we don't have many of these
-    simplified_date_statement = YEAR_OMITTED_REGEX.sub(r"\g<year>5", simplified_date_statement)
 
     # Replace any dates that use dots instead of dashes to separate the parameters.
     if DOT_DIVIDED_REGEX.match(simplified_date_statement):

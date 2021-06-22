@@ -214,7 +214,8 @@ def _get_full_holding_identifiers(mss_holdings: List[HoldingIndexDocument], prin
         rec_name: str = to_solr_single(m, "852", "e") or ""
         ids.add(f"{rec_name} {rec_sig} {rec_shelfmark}")
 
-    return list(ids)
+    return [realid for realid in ids if realid.strip()]
+
 
 class IncipitIndexDocument(TypedDict):
     id: str

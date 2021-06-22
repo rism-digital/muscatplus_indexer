@@ -5,7 +5,7 @@ import argparse
 import yaml
 
 from indexer.helpers.utilities import elapsedtime
-from indexer.helpers.solr import solr_idx_conn, swap_cores, empty_solr_core, reload_core
+from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
 from indexer.index_liturgical_festivals import index_liturgical_festivals
@@ -43,9 +43,6 @@ def main(args) -> bool:
         sub = index_subjects(idx_config)
     if args.idx_festivals:
         fst = index_liturgical_festivals(idx_config)
-
-    log.info("Performing Solr Commit")
-    solr_idx_conn.commit()
 
     # force a core reload to ensure it's up-to-date
     reload_success: bool = reload_core(idx_config['solr']['server'],

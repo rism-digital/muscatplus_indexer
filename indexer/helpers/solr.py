@@ -1,7 +1,7 @@
-from typing import List, Dict
 import logging
-import pysolr
-import requests
+from typing import List, Dict
+
+import httpx
 import ujson
 import yaml
 
@@ -12,16 +12,17 @@ solr_address = idx_config['solr']['server']
 solr_idx_core = idx_config['solr']['indexing_core']
 solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 
-solr_idx_conn: pysolr.Solr = pysolr.Solr(solr_idx_server,
-                                         decoder=ujson, encoder=ujson, timeout=120)
-
-session = requests.Session()
+session = httpx.Client()
 
 
 def empty_solr_core() -> bool:
-    solr_idx_conn.delete(q="*:*")
-    solr_idx_conn.commit()
-    return True
+    res = session.post(f"{solr_idx_server}/update",
+                       data=ujson.dumps({"delete": {"query": "*:*"}}),
+                       headers={"Content-Type": "application/json"})
+    if 200 <= res.status_code < 400:
+        log.debug("Deletion was successful")
+        return True
+    return False
 
 
 def submit_to_solr(records: List) -> bool:
@@ -29,11 +30,13 @@ def submit_to_solr(records: List) -> bool:
     Submits a set of records to a Solr server.
 
     :param records: A list of Solr records to index
-    :param solr_conn: A Solr connection object
     :return: True if successful, false if not.
     """
     log.debug("Indexing records to Solr")
-    res = session.post(f"{solr_idx_server}/update", json=records, headers={"Content-Type": "application/json"})
+    res = session.post(f"{solr_idx_server}/update",
+                       data=ujson.dumps(records),
+                       headers={"Content-Type": "application/json"})
+
     if 200 <= res.status_code < 400:
         log.debug("Indexing was successful")
         return True
@@ -52,7 +55,7 @@ def swap_cores(server_address: str, index_core: str, live_core: str) -> bool:
     :param live_core: The core that is currently running the service
     :return: True if swap was successful; otherwise False
     """
-    admconn = requests.get(f"{server_address}/admin/cores?action=SWAP&core={index_core}&other={live_core}")
+    admconn = session.get(f"{server_address}/admin/cores?action=SWAP&core={index_core}&other={live_core}")
 
     if 200 <= admconn.status_code < 400:
         log.info("Core swap for %s and %s was successful.", index_core, live_core)
@@ -73,7 +76,7 @@ def reload_core(server_address: str, core_name: str) -> bool:
     :param core_name: The name of the core to reload.
     :return: True if the reload was successful, otherwise False.
     """
-    admconn = requests.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}")
+    admconn = session.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}")
 
     if 200 <= admconn.status_code < 400:
         log.info("Core reload for %s was successful.", core_name)

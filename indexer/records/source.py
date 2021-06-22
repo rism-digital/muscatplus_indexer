@@ -1,34 +1,35 @@
+import logging
 import re
-from typing import List, Dict, Optional, TypedDict, Tuple
+from typing import List, Dict, Optional, TypedDict
 
 import pymarc
 import ujson
 import verovio
 import yaml
-
-import logging
 from simhash import fingerprint, fnvhash
 
 from indexer.helpers.identifiers import RECORD_TYPES_BY_ID
 from indexer.helpers.marc import create_marc
-from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_name_variants
 from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_name_variants
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
-
 
 log = logging.getLogger("muscat_indexer")
 index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
 
 source_profile: Dict = yaml.full_load(open('profiles/sources.yml', 'r'))
-vrv_tk = verovio.toolkit()
-verovio.enableLog(False)
-vrv_tk.setInputFrom(verovio.PAE)
-vrv_tk.setOptions(ujson.dumps({
-    "footer": 'none',
-    "header": 'none',
-    "breaks": 'none',
-}))
+extended_incipits: bool = index_config['indexing']['extended_incipits']
+
+if extended_incipits:
+    vrv_tk = verovio.toolkit()
+    verovio.enableLog(False)
+    vrv_tk.setInputFrom(verovio.PAE)
+    vrv_tk.setOptions(ujson.dumps({
+        "footer": 'none',
+        "header": 'none',
+        "breaks": 'none',
+    }))
 
 
 def create_source_index_documents(record: Dict) -> List:
@@ -101,7 +102,6 @@ def create_source_index_documents(record: Dict) -> List:
     # Extended incipits have their fingerprints calculated for similarity matching.
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
-    extended_incipits: bool = index_config['indexing']['extended_incipits']
     incipits: List = _get_incipits(marc_record, source_id, main_title, extended_incipits) or []
 
     res: List = [source_core]

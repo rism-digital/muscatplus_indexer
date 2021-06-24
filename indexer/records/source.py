@@ -37,6 +37,8 @@ def create_source_index_documents(record: Dict) -> List:
     marc_record: pymarc.Record = create_marc(source)
 
     record_type_id: int = record['record_type']
+    parent_id: Optional[int] = record.get('source_id')
+    child_count: int = record.get("child_count")
     # A source is always either its own member, or belonging to group of sources
     # all with the same "parent" source. This is stored in the database in the 'source_id'
     # field as either a NULL value, or the ID of the parent source.
@@ -45,7 +47,7 @@ def create_source_index_documents(record: Dict) -> List:
     # NB: this means that a parent source will have its own ID here, while
     # all the 'children' will have a different ID. This is why the field is not called
     # 'parent_id', since it can gather all members of the group, *including* the parent.
-    membership_id: int = m if (m := record.get('source_id')) else record['id']
+    membership_id: int = m if (m := parent_id) else record['id']
     rism_id: str = normalize_id(to_solr_single_required(marc_record, '001'))
     source_id: str = f"source_{rism_id}"
     num_holdings: int = record.get("holdings_count")
@@ -90,7 +92,9 @@ def create_source_index_documents(record: Dict) -> List:
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
         "related_people_ids": related_people_ids,
-        "is_contents_record_b": source_id != f"source_{membership_id}",  # false if this is a parent record; true if a child
+        "is_contents_record_b": _get_is_contents_record(record_type_id, parent_id),
+        "is_collection_record_b": _get_is_collection_record(record_type_id, child_count),
+        "is_composite_volume_b": record_type_id == 11,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -109,6 +113,21 @@ def create_source_index_documents(record: Dict) -> List:
     res.extend(manuscript_holdings)
 
     return res
+
+
+def _get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
+    if record_type_id in (3, 9, 10):
+        return True
+    elif record_type_id in (2, 4, 6) and parent_id is not None:
+        return True
+    else:
+        return False
+
+
+def _get_is_collection_record(record_type_id: int, children_count: int) -> bool:
+    if record_type_id in (1, 4, 5, 6, 7) and children_count > 0:
+        return True
+    return False
 
 
 def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str) -> Optional[List[HoldingIndexDocument]]:

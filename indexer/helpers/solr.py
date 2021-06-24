@@ -12,7 +12,7 @@ solr_address = idx_config['solr']['server']
 solr_idx_core = idx_config['solr']['indexing_core']
 solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 
-session = httpx.Client()
+session = httpx.Client(timeout=None)
 
 
 def empty_solr_core() -> bool:

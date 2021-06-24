@@ -44,6 +44,8 @@ def main(args) -> bool:
     if args.idx_festivals:
         fst = index_liturgical_festivals(idx_config)
 
+    log.info("Finished indexing records, cleaning up.")
+
     # force a core reload to ensure it's up-to-date
     reload_success: bool = reload_core(idx_config['solr']['server'],
                                        idx_config['solr']['indexing_core'])

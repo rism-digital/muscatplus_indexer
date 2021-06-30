@@ -12,13 +12,14 @@ def index_liturgical_festivals(cfg: Dict) -> bool:
     log.info("Indexing liturgical festivals")
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
-    curs.execute("""SELECT
+    curs.execute(f"""SELECT
     id,
     name,
     alternate_terms,
     notes
-    FROM muscat_development.liturgical_feasts""")
+    FROM {dbname}.liturgical_feasts""")
 
     all_festivals: List[Dict] = curs._cursor.fetchall()
 

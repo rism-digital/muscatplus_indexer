@@ -13,11 +13,12 @@ log = logging.getLogger("muscat_indexer")
 def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
-    curs.execute("""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count,
+    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count,
                     p.created_at AS created, p.updated_at AS updated
-                    FROM muscat_development.people AS p
-                    LEFT JOIN muscat_development.sources_to_people AS s ON p.id = s.person_id
+                    FROM {dbname}.people AS p
+                    LEFT JOIN {dbname}.sources_to_people AS s ON p.id = s.person_id
                     WHERE wf_stage = 1
                     GROUP BY p.id;""")
 

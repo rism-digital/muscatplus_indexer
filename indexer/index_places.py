@@ -12,8 +12,9 @@ def index_places(cfg: Dict) -> bool:
     log.info("Indexing places")
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
-    curs.execute("""SELECT 
+    curs.execute(f"""SELECT 
         id, 
         name, 
         country, 
@@ -22,7 +23,7 @@ def index_places(cfg: Dict) -> bool:
         alternate_terms, 
         topic, 
         sub_topic 
-        FROM muscat_development.places
+        FROM {dbname}.places
         WHERE wf_stage = 1;""")
 
     all_places: List[Dict] = curs._cursor.fetchall()

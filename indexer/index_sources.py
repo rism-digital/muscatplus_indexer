@@ -15,13 +15,14 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
     log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
-    curs.execute("""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
+    curs.execute(f"""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
         child.source_id AS source_id, child.marc_source AS marc_source,
         child.created_at AS created, child.updated_at AS updated,
         child.record_type AS record_type, parent.std_title AS parent_title,
         parent.record_type AS parent_record_type, COUNT(h.id) AS holdings_count,
-        (SELECT COUNT(ss.id) FROM muscat_development.sources AS ss WHERE ss.source_id = child.id) as child_count,
+        (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
@@ -29,12 +30,12 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         GROUP_CONCAT(p.full_name SEPARATOR '\n') AS people_names,
         GROUP_CONCAT(p.alternate_names SEPARATOR '\n') AS alt_people_names,
         GROUP_CONCAT(p.id SEPARATOR '\n') AS people_ids
-        FROM muscat_development.sources AS child
-        LEFT JOIN muscat_development.sources AS parent ON parent.id = child.source_id
-        LEFT JOIN muscat_development.holdings h on child.id = h.source_id
-        LEFT JOIN muscat_development.holdings hp on parent.id = hp.source_id
-        LEFT JOIN muscat_development.sources_to_people sp on sp.source_id = child.id
-        LEFT JOIN muscat_development.people p on sp.person_id = p.id
+        FROM {dbname}.sources AS child
+        LEFT JOIN {dbname}.sources AS parent ON parent.id = child.source_id
+        LEFT JOIN {dbname}.holdings h on child.id = h.source_id
+        LEFT JOIN {dbname}.holdings hp on parent.id = hp.source_id
+        LEFT JOIN {dbname}.sources_to_people sp on sp.source_id = child.id
+        LEFT JOIN {dbname}.people p on sp.person_id = p.id
         WHERE child.wf_stage = 1
         GROUP BY child.id
         ORDER BY child.id desc;""")

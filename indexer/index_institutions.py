@@ -14,11 +14,12 @@ log = logging.getLogger("muscat_indexer")
 def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
-    curs.execute("""SELECT i.id, i.marc_source, COUNT(s.source_id) AS source_count,
+    curs.execute(f"""SELECT i.id, i.marc_source, COUNT(s.source_id) AS source_count,
                     i.created_at AS created, i.updated_at AS updated 
-                    FROM muscat_development.institutions AS i
-                    LEFT JOIN muscat_development.sources_to_institutions AS s ON i.id = s.institution_id
+                    FROM {dbname}.institutions AS i
+                    LEFT JOIN {dbname}.sources_to_institutions AS s ON i.id = s.institution_id
                     WHERE wf_stage = 1
                     GROUP BY i.id;""")
 

@@ -13,12 +13,13 @@ log = logging.getLogger("muscat_indexer")
 def _get_holdings_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
     # The published / unpublished state is ignored for holding records, so we just take any and all holding records.
-    curs.execute("""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
+    curs.execute(f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
                            sources.std_title AS source_title 
-                    FROM muscat_development.holdings AS holdings
-                    LEFT JOIN muscat_development.sources AS sources ON holdings.source_id = sources.id;""")
+                    FROM {dbname}.holdings AS holdings
+                    LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

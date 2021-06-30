@@ -12,13 +12,14 @@ def index_subjects(cfg: Dict) -> bool:
     log.info("Indexing subjects")
     conn = mysql_pool.connection()
     curs = conn.cursor()
+    dbname: str = cfg['mysql']['database']
 
-    curs.execute("""SELECT 
+    curs.execute(f"""SELECT 
         id, 
         term, 
         alternate_terms, 
         notes
-        FROM muscat_development.standard_terms
+        FROM {dbname}.standard_terms
         WHERE wf_stage = 1;""")
 
     all_subjects: List[Dict] = curs._cursor.fetchall()

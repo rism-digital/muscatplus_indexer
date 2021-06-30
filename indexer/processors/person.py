@@ -1,3 +1,4 @@
+import datetime
 import logging
 from collections import defaultdict
 from typing import List, Optional
@@ -7,6 +8,10 @@ import pymarc
 from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_single_required, get_related_people, \
     get_related_institutions, get_related_places, external_resource_data, tokenize_name_variants
+
+LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
+EARLIEST_YEAR_IF_MISSING: int = -2000
+
 
 log = logging.getLogger("muscat_indexer")
 
@@ -45,11 +50,11 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
         if latest:
             latest_dates.append(latest)
 
-    earliest_date: int = min(earliest_dates) if earliest_dates else -9999
-    latest_date: int = max(latest_dates) if latest_dates else 9999
+    earliest_date: int = min(earliest_dates) if earliest_dates else EARLIEST_YEAR_IF_MISSING
+    latest_date: int = max(latest_dates) if latest_dates else LATEST_YEAR_IF_MISSING
 
     # If neither date was parseable, don't pretend we have a date.
-    if earliest_date == -9999 and latest_date == 9999:
+    if earliest_date == EARLIEST_YEAR_IF_MISSING and latest_date == LATEST_YEAR_IF_MISSING:
         return None
 
     return [earliest_date, latest_date]

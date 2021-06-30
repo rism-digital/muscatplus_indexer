@@ -1,3 +1,4 @@
+import datetime
 import itertools
 import logging
 from collections import defaultdict
@@ -12,6 +13,9 @@ from indexer.helpers.utilities import to_solr_single, normalize_id, to_solr_mult
     related_person, related_institution, get_catalogue_numbers
 
 log = logging.getLogger("muscat_indexer")
+
+EARLIEST_YEAR_IF_MISSING: int = -2000
+LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 
 
 def _get_has_incipits(record: pymarc.Record) -> bool:
@@ -123,7 +127,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     latest_dates: List[int] = []
 
     for statement in date_statements:
-        if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)"):
+        if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)"):
             continue
 
         try:
@@ -137,6 +141,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
         if earliest is None and latest is None:
             source_id: str = to_solr_single_required(record, '001')
             log.warning("Problem with date statement %s for source %s", statement, source_id)
+            return None
 
         if earliest:
             earliest_dates.append(earliest)
@@ -144,15 +149,20 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
         if latest:
             latest_dates.append(latest)
 
-    earliest_date: int = min(earliest_dates) if earliest_dates else -9999
-    latest_date: int = max(latest_dates) if latest_dates else 9999
+    # To prevent things like 18,345 AD, choose the min value of the latest
+    # date and the current year (which is what we set it to if it's missing).
+    # To do this for the earliest date, choose the min value of all dates
+    # discovered in the source, then choose the max value between that and
+    # the earliest.
+    earliest_date: int = max(min(earliest_dates), EARLIEST_YEAR_IF_MISSING) if earliest_dates else EARLIEST_YEAR_IF_MISSING
+    latest_date: int = min(max(latest_dates), LATEST_YEAR_IF_MISSING) if latest_dates else LATEST_YEAR_IF_MISSING
 
     # If neither date was parseable, don't pretend we have a date.
-    if earliest_date == -9999 and latest_date == 9999:
+    if earliest_date == EARLIEST_YEAR_IF_MISSING and latest_date == LATEST_YEAR_IF_MISSING:
         return None
 
     # If we don't have one but we do have the other, these will still be valid (but
-    # ridiculous) integer values.
+    # improbable) integer values.
     return [earliest_date, latest_date]
 
 

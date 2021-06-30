@@ -25,7 +25,7 @@ MULTI_YEAR_REGEX: Pattern = re.compile(r'^(?P<first>\d{4}-\d{2}-\d{2})-(?P<secon
 # A lot of dates have a letters attached to them for some odd reason.
 STRIP_LETTERS: Pattern = re.compile(r"(?P<year>\d{4})(?:c|p|q|a|!])")
 # Find any cases like "between XXXX and YYYY". Also handles French ('entre XXXX et YYYY') and german ('um XXXX bis um XXXX)
-EXPLICIT_BETWEEN: Pattern = re.compile(r"^.*(?:between|entre|um|von|vor).*(?P<first>\d{4}).*(?P<second>\d{4}).*$", re.IGNORECASE)
+EXPLICIT_BETWEEN: Pattern = re.compile(r"^.*(?:between|entre|um|von|vor|et).*(?P<first>\d{4}).*(?P<second>\d{4}).*$", re.IGNORECASE)
 # Any ranges with explicitly named century periods in parens can be ignored too, e.g., "1750-1799 (18.2d)"
 # Also, any ones with just a single date can be ignored. We can combine these parenthetical statements into
 # a single regex statement afterwards.
@@ -36,6 +36,7 @@ ZERO_DAY_REGEX: Pattern = re.compile(r"(?P<year>\d{4})-\d{2}-00")
 # Deal with dates that are mushed together, e.g., 19991010-19991020
 MUSHED_TOGETHER_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}")
 MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}-(?P<second>\d{4})\d{4}")
+
 
 EARLY_CENTURY_END_YEAR: int = 10
 LATE_CENTURY_START_YEAR: int = 90

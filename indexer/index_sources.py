@@ -69,9 +69,8 @@ def index_source_groups(sources: List) -> bool:
         records_to_index.extend(docs)
 
     check: bool = submit_to_solr(list(records_to_index))
-    commit: bool = commit_changes()
 
-    if not check and commit:
+    if not check:
         log.error("There was an error submitting to Solr!")
 
-    return check and commit
+    return check

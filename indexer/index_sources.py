@@ -4,7 +4,7 @@ from typing import Generator, List, Dict
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
-from indexer.helpers.solr import submit_to_solr
+from indexer.helpers.solr import submit_to_solr, commit_changes
 from indexer.helpers.utilities import parallelise
 from indexer.records.source import create_source_index_documents
 
@@ -69,8 +69,9 @@ def index_source_groups(sources: List) -> bool:
         records_to_index.extend(docs)
 
     check: bool = submit_to_solr(list(records_to_index))
+    commit: bool = commit_changes()
 
-    if not check:
+    if not check and commit:
         log.error("There was an error submitting to Solr!")
 
-    return check
+    return check and commit

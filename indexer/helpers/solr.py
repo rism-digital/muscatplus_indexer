@@ -46,6 +46,17 @@ def submit_to_solr(records: List) -> bool:
     return False
 
 
+def commit_changes():
+    log.info("Committing changes")
+    res = session.get(f"{solr_idx_server}/update?commit=true")
+    if 200 <= res.status_code < 400:
+        log.debug("Commit was successful")
+        return True
+
+    log.error("Could not commit to Solr. %s: %s", res.status_code, res.text)
+    return False
+
+
 def swap_cores(server_address: str, index_core: str, live_core: str) -> bool:
     """
     Swaps the index and live cores after indexing.

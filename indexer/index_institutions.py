@@ -20,7 +20,8 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
                     i.created_at AS created, i.updated_at AS updated 
                     FROM {dbname}.institutions AS i
                     LEFT JOIN {dbname}.sources_to_institutions AS s ON i.id = s.institution_id
-                    WHERE wf_stage = 1
+                    LEFT JOIN {dbname}.sources AS ps ON s.source_id = ps.id
+                    WHERE i.wf_stage = 1 AND ps.wf_stage = 1 
                     GROUP BY i.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):

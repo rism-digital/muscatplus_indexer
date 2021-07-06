@@ -19,7 +19,8 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
                     p.created_at AS created, p.updated_at AS updated
                     FROM {dbname}.people AS p
                     LEFT JOIN {dbname}.sources_to_people AS s ON p.id = s.person_id
-                    WHERE wf_stage = 1
+                    LEFT JOIN {dbname}.sources AS ps ON s.source_id = ps.id 
+                    WHERE p.wf_stage = 1 AND ps.wf_stage = 1
                     GROUP BY p.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa

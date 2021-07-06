@@ -42,7 +42,7 @@ def submit_to_solr(records: List) -> bool:
         return True
 
     log.error("Could not index to Solr. %s: %s", res.status_code, res.text)
-    log.error(records)
+
     return False
 
 

@@ -207,7 +207,8 @@ access_restrictions_sm:
   subfield: "a"
   multiple: true
 
-# 510 seems to be mostly duplicated by 596, so it is skipped.
+rism_series_identifiers_sm:
+  processor: "_get_rism_series_identifiers"
 
 performance_notes_sm:
   field: "518"

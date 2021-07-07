@@ -166,6 +166,26 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     return [earliest_date, latest_date]
 
 
+def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[List]:
+    fields: List[pymarc.Field] = record.get_fields("510")
+    if not fields:
+        return None
+
+    ret: List = []
+
+    for field in fields:
+        stmt: str = ""
+        if series := field['a']:
+            stmt += series
+        if ident := field['c']:
+            stmt += f" {ident}"
+
+        if stmt:
+            ret.append(stmt)
+
+    return ret
+
+
 def _get_source_notes_data(record: pymarc.Record) -> Optional[List[Dict]]:
     # Get all notes fields that we're interested in.
     fields: List[pymarc.Field] = record.get_fields("500", "505", "518", "520", "561", "")

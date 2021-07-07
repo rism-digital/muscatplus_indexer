@@ -132,8 +132,8 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     # over the values in each field.
     # Only return the fields that are not empty and match the ungrouped option.
     if ungrouped:
-        return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip() and ('8' not in field or field['8'] != '0')})
-    return list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip()})
+        return sorted(list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip() and ('8' not in field or field['8'] != '0')}))
+    return sorted(list({val.strip() for field in fields for val in field.get_subfields(subfield) if val and val.strip()}))
 
 
 def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = False) -> List[str]:

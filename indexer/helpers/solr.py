@@ -88,7 +88,8 @@ def reload_core(server_address: str, core_name: str) -> bool:
     :param core_name: The name of the core to reload.
     :return: True if the reload was successful, otherwise False.
     """
-    admconn = httpx.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}")
+    admconn = httpx.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}",
+                        timeout=None)
 
     if 200 <= admconn.status_code < 400:
         log.info("Core reload for %s was successful.", core_name)

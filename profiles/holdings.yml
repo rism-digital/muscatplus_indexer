@@ -5,6 +5,11 @@ local_numbers_sm:
   field: "035"
   subfield: "a"
 
+general_notes_sm:
+  field: "500"
+  subfield: "a"
+  multiple: true
+
 access_restrictions_sm:
   field: "506"
   subfield: "f"
@@ -24,6 +29,16 @@ accession_number_s:
 
 provenance_notes_sm:
   field: "561"
+  subfield: "a"
+  multiple: true
+
+binding_notes_sm:
+  field: "563"
+  subfield: "a"
+  multiple: true
+
+watermark_notes_sm:
+  field: "592"
   subfield: "a"
   multiple: true
 
@@ -55,6 +70,11 @@ provenance_sm:
   field: "852"
   subfield: "z"
   multiple: true
+
+bound_with_sm:
+  field: "973"
+  subfield: "a"
+  multiple: "true"
 
 country_code_s:
   processor: "_get_country_code"

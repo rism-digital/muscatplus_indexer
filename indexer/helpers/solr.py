@@ -12,13 +12,11 @@ solr_address = idx_config['solr']['server']
 solr_idx_core = idx_config['solr']['indexing_core']
 solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 
-session = httpx.Client(timeout=None)
-
 
 def empty_solr_core() -> bool:
-    res = session.post(f"{solr_idx_server}/update",
-                       data=ujson.dumps({"delete": {"query": "*:*"}}),
-                       headers={"Content-Type": "application/json"})
+    res = httpx.post(f"{solr_idx_server}/update",
+                     data=ujson.dumps({"delete": {"query": "*:*"}}),
+                     headers={"Content-Type": "application/json"})
     if 200 <= res.status_code < 400:
         log.debug("Deletion was successful")
         return True
@@ -33,9 +31,10 @@ def submit_to_solr(records: List) -> bool:
     :return: True if successful, false if not.
     """
     log.debug("Indexing records to Solr")
-    res = session.post(f"{solr_idx_server}/update",
-                       data=ujson.dumps(records),
-                       headers={"Content-Type": "application/json"})
+    res = httpx.post(f"{solr_idx_server}/update",
+                     data=ujson.dumps(records),
+                     headers={"Content-Type": "application/json"},
+                     timeout=None)
 
     if 200 <= res.status_code < 400:
         log.debug("Indexing was successful")
@@ -48,7 +47,8 @@ def submit_to_solr(records: List) -> bool:
 
 def commit_changes():
     log.info("Committing changes")
-    res = session.get(f"{solr_idx_server}/update?commit=true")
+    res = httpx.get(f"{solr_idx_server}/update?commit=true",
+                    timeout=None)
     if 200 <= res.status_code < 400:
         log.debug("Commit was successful")
         return True
@@ -66,7 +66,8 @@ def swap_cores(server_address: str, index_core: str, live_core: str) -> bool:
     :param live_core: The core that is currently running the service
     :return: True if swap was successful; otherwise False
     """
-    admconn = session.get(f"{server_address}/admin/cores?action=SWAP&core={index_core}&other={live_core}")
+    admconn = httpx.get(f"{server_address}/admin/cores?action=SWAP&core={index_core}&other={live_core}",
+                        timeout=None)
 
     if 200 <= admconn.status_code < 400:
         log.info("Core swap for %s and %s was successful.", index_core, live_core)
@@ -87,7 +88,7 @@ def reload_core(server_address: str, core_name: str) -> bool:
     :param core_name: The name of the core to reload.
     :return: True if the reload was successful, otherwise False.
     """
-    admconn = session.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}")
+    admconn = httpx.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}")
 
     if 200 <= admconn.status_code < 400:
         log.info("Core reload for %s was successful.", core_name)

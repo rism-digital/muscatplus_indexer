@@ -15,13 +15,13 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.source_id) AS source_count,
-                    p.created_at AS created, p.updated_at AS updated
-                    FROM {dbname}.people AS p
-                    LEFT JOIN {dbname}.sources_to_people AS s ON p.id = s.person_id
-                    LEFT JOIN {dbname}.sources AS ps ON s.source_id = ps.id 
-                    WHERE p.wf_stage = 1 AND ps.wf_stage = 1
-                    GROUP BY p.id;""")
+    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.id) AS source_count,
+                     p.created_at AS created, p.updated_at AS updated
+                     FROM {dbname}.people AS p
+                     LEFT JOIN {dbname}.sources_to_people AS ps ON p.id = ps.person_id
+                     LEFT JOIN {dbname}.sources AS s ON ps.source_id = s.id
+                     WHERE p.wf_stage = 1 AND (s.wf_stage is NULL OR s.wf_stage = 1)
+                     GROUP BY p.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

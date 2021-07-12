@@ -16,13 +16,13 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT i.id, i.marc_source, COUNT(s.source_id) AS source_count,
-                    i.created_at AS created, i.updated_at AS updated 
-                    FROM {dbname}.institutions AS i
-                    LEFT JOIN {dbname}.sources_to_institutions AS s ON i.id = s.institution_id
-                    LEFT JOIN {dbname}.sources AS ps ON s.source_id = ps.id
-                    WHERE i.wf_stage = 1 AND ps.wf_stage = 1 
-                    GROUP BY i.id;""")
+    curs.execute(f"""SELECT i.id, i.marc_source, COUNT(s.id) AS source_count,
+                     i.created_at AS created, i.updated_at AS updated 
+                     FROM {dbname}.institutions AS i
+                     LEFT JOIN {dbname}.sources_to_institutions AS ins ON i.id = ins.institution_id
+                     LEFT JOIN {dbname}.sources AS s ON ins.source_id = s.id
+                     WHERE i.wf_stage = 1 AND (s.wf_stage IS NULL OR s.wf_stage = 1) 
+                     GROUP BY i.id;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows

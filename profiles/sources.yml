@@ -164,7 +164,11 @@ printer_name_sm:
   subfield: "f"
   multiple: true
 
-# 300 is indexed in material groups and does not align well with fulltext search.
+# 300 is also indexed in material groups
+format_extent_sm:
+  field: "300"
+  subfield: "a"
+  multiple: true
 
 # 340 is also indexed in material groups, but we index it on the source so
 # we can filter on techniques and formats, if we want.

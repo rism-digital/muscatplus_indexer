@@ -310,7 +310,7 @@ def _get_secondary_literature_identifiers(record: pymarc.Record) -> Optional[Lis
     return ret
 
 
-def _get_related_people_data(record:pymarc.Record) -> Optional[List]:
+def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
     source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
     people = get_related_people(record, source_id, "source", fields=("700",), ungrouped=True)
     if not people:
@@ -510,7 +510,7 @@ def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
 def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
     # 593
     res: MaterialGroupFields = {
-        "source_type": field.get_subfields('a')
+        "material_group_types": field.get_subfields('a')
     }
 
     return res

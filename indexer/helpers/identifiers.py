@@ -1,20 +1,39 @@
-RECORD_TYPES = {
-    "unspecified": 0,
-    "collection": 1,
-    "source": 2,
-    "edition_content": 3,
-    "libretto_source": 4,
-    "libretto_edition": 5,
-    "theoretica_source": 6,
-    "theoretica_edition": 7,
-    "edition": 8,
-    "libretto_edition_content": 9,
-    "theoretica_edition_content": 10,
-    "composite_volume": 11,
+from enum import unique, IntEnum
+
+
+@unique
+class RecordTypes(IntEnum):
+    UNSPECIFIED = 0
+    COLLECTION = 1
+    SOURCE = 2
+    EDITION_CONTENT = 3
+    LIBRETTO_SOURCE = 4
+    LIBRETTO_EDITION = 5
+    THEORETICA_SOURCE = 6
+    THEORETICA_EDITION = 7
+    EDITION = 8
+    LIBRETTO_EDITION_CONTENT = 9
+    THEORETICA_EDITION_CONTENT = 10
+    COMPOSITE_VOLUME = 11
+
+
+RECORD_TYPES: dict = {
+    "unspecified": RecordTypes.UNSPECIFIED,
+    "collection": RecordTypes.COLLECTION,
+    "source": RecordTypes.SOURCE,
+    "edition_content": RecordTypes.EDITION_CONTENT,
+    "libretto_source": RecordTypes.LIBRETTO_SOURCE,
+    "libretto_edition": RecordTypes.LIBRETTO_EDITION,
+    "theoretica_source": RecordTypes.THEORETICA_SOURCE,
+    "theoretica_edition": RecordTypes.THEORETICA_EDITION,
+    "edition": RecordTypes.EDITION,
+    "libretto_edition_content": RecordTypes.LIBRETTO_EDITION_CONTENT,
+    "theoretica_edition_content": RecordTypes.THEORETICA_EDITION_CONTENT,
+    "composite_volume": RecordTypes.COMPOSITE_VOLUME,
 }
 
 # Invert record types table for lookups
-RECORD_TYPES_BY_ID = {v: k for k, v in RECORD_TYPES.items()}
+RECORD_TYPES_BY_ID: dict = {v: k for k, v in RECORD_TYPES.items()}
 
 
 def country_code_from_siglum(siglum: str) -> str:

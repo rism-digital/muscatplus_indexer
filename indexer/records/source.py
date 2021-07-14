@@ -8,7 +8,7 @@ import verovio
 import yaml
 from simhash import fingerprint, fnvhash
 
-from indexer.helpers.identifiers import RECORD_TYPES_BY_ID
+from indexer.helpers.identifiers import RecordTypes
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_name_variants
@@ -80,6 +80,8 @@ def create_source_index_documents(record: Dict) -> List:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
+        "source_type_s": _get_source_type(record_type_id),
+        "content_type_s": _get_content_type(record_type_id),
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
@@ -88,7 +90,6 @@ def create_source_index_documents(record: Dict) -> List:
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
-        "subtype_s": RECORD_TYPES_BY_ID.get(record_type_id),
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
         "related_people_ids": related_people_ids,
@@ -113,6 +114,56 @@ def create_source_index_documents(record: Dict) -> List:
     res.extend(manuscript_holdings)
 
     return res
+
+
+def _get_source_type(record_type_id: int) -> str:
+    if record_type_id in (
+        RecordTypes.EDITION,
+        RecordTypes.EDITION_CONTENT,
+        RecordTypes.LIBRETTO_EDITION,
+        RecordTypes.THEORETICA_EDITION,
+        RecordTypes.LIBRETTO_EDITION_CONTENT,
+        RecordTypes.THEORETICA_EDITION_CONTENT
+    ):
+        return "printed"
+    elif record_type_id in (
+        RecordTypes.COLLECTION,
+        RecordTypes.SOURCE,
+        RecordTypes.LIBRETTO_SOURCE,
+        RecordTypes.THEORETICA_SOURCE
+    ):
+        return "manuscript"
+    elif record_type_id in (
+        RecordTypes.COMPOSITE_VOLUME,
+    ):
+        return "composite"
+    else:
+        return "unspecified"
+
+
+def _get_content_type(record_type_id: int) -> str:
+    if record_type_id in (
+        RecordTypes.LIBRETTO_EDITION_CONTENT,
+        RecordTypes.LIBRETTO_EDITION,
+        RecordTypes.LIBRETTO_SOURCE
+    ):
+        return "libretto"
+    elif record_type_id in (
+        RecordTypes.THEORETICA_EDITION_CONTENT,
+        RecordTypes.THEORETICA_EDITION,
+        RecordTypes.THEORETICA_SOURCE
+    ):
+        return "treatise"
+    elif record_type_id in (
+        RecordTypes.SOURCE,
+        RecordTypes.EDITION,
+        RecordTypes.EDITION_CONTENT,
+        RecordTypes.COLLECTION,
+        RecordTypes.COMPOSITE_VOLUME
+    ):
+        return "musical_source"
+    else:
+        return "unspecified"
 
 
 def _get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:

@@ -290,6 +290,26 @@ def _get_bibliographic_reference_data(record: pymarc.Record) -> Optional[List[Di
     return [__secondary_literature_data(f) for f in fields]
 
 
+def _get_secondary_literature_identifiers(record: pymarc.Record) -> Optional[List]:
+    fields: List[pymarc.Field] = record.get_fields("691")
+    if not fields:
+        return None
+
+    ret: List = []
+    for field in fields:
+        stmt: str = ""
+        if ref := field['a']:
+            stmt += ref
+        if num := field['n']:
+            stmt += f" {num}"
+
+        # ensure we strip leading and trailing spaces
+        if chomped := stmt.strip():
+            ret.append(chomped)
+
+    return ret
+
+
 def _get_related_people_data(record:pymarc.Record) -> Optional[List]:
     source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
     people = get_related_people(record, source_id, "source", fields=("700",), ungrouped=True)

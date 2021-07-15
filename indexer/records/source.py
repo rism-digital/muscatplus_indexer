@@ -11,7 +11,7 @@ from simhash import fingerprint, fnvhash
 from indexer.helpers.identifiers import RecordTypes
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_name_variants
+from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_variants
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 
@@ -74,6 +74,8 @@ def create_source_index_documents(record: Dict) -> List:
     variant_people_names: Optional[List] = _get_variant_people_names(record.get("alt_people_names"))
     related_people_ids: List = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
 
+    variant_standard_terms: Optional[list] = _get_variant_standard_terms(record.get("alt_standard_terms"))
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: Dict = {
@@ -93,6 +95,7 @@ def create_source_index_documents(record: Dict) -> List:
         "holding_institutions_ids": holding_orgs_ids,
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
+        "variant_standard_terms_sm": variant_standard_terms,
         "related_people_ids": related_people_ids,
         "is_contents_record_b": _get_is_contents_record(record_type_id, parent_id),
         "is_collection_record_b": _get_is_collection_record(record_type_id, child_count),
@@ -228,7 +231,15 @@ def _get_variant_people_names(variant_names: Optional[str]) -> Optional[List]:
         return None
 
     list_of_names: List = variant_names.split("\n")
-    return tokenize_name_variants(list_of_names)
+    return tokenize_variants(list_of_names)
+
+
+def _get_variant_standard_terms(variant_terms: Optional[str]) -> Optional[list]:
+    if not variant_terms:
+        return None
+
+    list_of_terms: list = variant_terms.split("\n")
+    return tokenize_variants(list_of_terms)
 
 
 def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[List[str]]:

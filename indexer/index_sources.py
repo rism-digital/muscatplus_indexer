@@ -30,6 +30,7 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         GROUP_CONCAT(hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
         GROUP_CONCAT(p.full_name SEPARATOR '\n') AS people_names,
         GROUP_CONCAT(p.alternate_names SEPARATOR '\n') AS alt_people_names,
+        GROUP_CONCAT(st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
         GROUP_CONCAT(p.id SEPARATOR '\n') AS people_ids
         FROM {dbname}.sources AS child
         LEFT JOIN {dbname}.sources AS parent ON parent.id = child.source_id
@@ -37,6 +38,8 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         LEFT JOIN {dbname}.holdings hp on parent.id = hp.source_id
         LEFT JOIN {dbname}.sources_to_people sp on sp.source_id = child.id
         LEFT JOIN {dbname}.people p on sp.person_id = p.id
+        LEFT JOIN {dbname}.sources_to_standard_terms sst on sst.source_id = child.id
+        LEFT JOIN {dbname}.standard_terms st ON sst.standard_term_id = st.id
         WHERE child.wf_stage = 1
         GROUP BY child.id
         ORDER BY child.id desc;""")

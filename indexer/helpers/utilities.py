@@ -425,19 +425,30 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[List[Dict]]:
     return [__title(t, c) for t in titles if t]
 
 
-def tokenize_name_variants(name_variants: List[str]) -> List[str]:
+def tokenize_variants(variants: List[str]) -> List[str]:
     """
-    There is no need to index all the name variants, only the unique tokens in the
-    variant names. This splits the list of variant names into tokens, and then
-    adds them to a set, which has the effect of removing duplicate tokens.
+    If we're only searching, there is no need to index all the term variants, only the unique tokens in the
+    variant names. This splits the list of variants into tokens, and then
+    adds them to a set, which has the effect of removing any duplicate tokens.
 
-    :param name_variants: A string representing a newline-separated list of variant names
+    In other words, if you have the following:
+
+    Bach, Johann Sebastian
+    Bach, J Sebastian
+    Bach, JS
+    Beck, J
+
+    The result will be: [Bach, Johann, Sebastian, Beck]
+
+    NB: Tokens 2 characters or shorter will not be included to reduce the noise.
+
+    :param variants: A string representing a newline-separated list of variant terms
     :return: A list of unique name tokens.
     """
     unique_tokens: set = set()
 
-    for name in name_variants:
-        name_parts: List = [n.strip() for n in re.split(r",| ", name) if n and len(n) > 2]
+    for variant in variants:
+        name_parts: List = [n.strip() for n in re.split(r",| ", variant) if n and len(n) > 2]
         unique_tokens.update(name_parts)
 
     return list(unique_tokens)

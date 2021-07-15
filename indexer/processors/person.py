@@ -7,7 +7,7 @@ import pymarc
 
 from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_single_required, get_related_people, \
-    get_related_institutions, get_related_places, external_resource_data, tokenize_name_variants
+    get_related_institutions, get_related_places, external_resource_data, tokenize_variants
 
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 EARLIEST_YEAR_IF_MISSING: int = -2000
@@ -65,7 +65,7 @@ def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
     if not name_variants:
         return None
 
-    return tokenize_name_variants(name_variants)
+    return tokenize_variants(name_variants)
 
 
 def _get_name_variant_data(record: pymarc.Record) -> Optional[List]:

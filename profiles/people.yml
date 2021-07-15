@@ -36,11 +36,13 @@ additional_biography_sm:
   field: "678"
   subfield: "a"
   multiple: true
+  breaks: true
 
 general_notes_sm:
   field: "680"
   subfield: "a"
   multiple: true
+  breaks: true
 
 related_people_json:
   processor: "_get_related_people_data"

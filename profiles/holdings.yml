@@ -4,15 +4,19 @@
 local_numbers_sm:
   field: "035"
   subfield: "a"
+  multiple: true
 
 general_notes_sm:
   field: "500"
   subfield: "a"
   multiple: true
+  breaks: true
 
 access_restrictions_sm:
   field: "506"
   subfield: "f"
+  multiple: true
+  breaks: true
 
 acquisition_note_s:
   field: "541"
@@ -31,16 +35,19 @@ provenance_notes_sm:
   field: "561"
   subfield: "a"
   multiple: true
+  breaks: true
 
 binding_notes_sm:
   field: "563"
   subfield: "a"
   multiple: true
+  breaks: true
 
 watermark_notes_sm:
   field: "592"
   subfield: "a"
   multiple: true
+  breaks: true
 
 related_people_ids:
   field: "700"
@@ -100,7 +107,7 @@ provenance_sm:
 bound_with_sm:
   field: "973"
   subfield: "a"
-  multiple: "true"
+  multiple: true
 
 country_code_s:
   processor: "_get_country_code"

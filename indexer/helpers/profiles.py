@@ -49,6 +49,7 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
             solr_document[solr_field] = field_result
         else:
             ungrouped: bool = field_config.get("ungrouped", False)
+            breaks: bool = field_config.get("breaks", False)
 
             # these will explode if the configuration is not correct.
             marc_field = field_config['field']
@@ -72,6 +73,17 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
                 # document anyway, so we just skip any further processing or adding
                 # this value to the result document.
                 continue
+
+            if multiple and breaks:
+                # a field *must* be multivalued to support processing
+                # breaks, since a break will create a list of values.
+                full_result = []
+                for res in field_result:
+                    m = [s.strip() for s in res.split("{{brk}}") if s]
+                    full_result += m
+                # set the field result to the new values from the processed
+                # breaks.
+                field_result = full_result
 
             if 'value_prefix' in field_config:
                 if isinstance(field_result, list):

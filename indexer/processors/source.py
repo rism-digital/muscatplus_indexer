@@ -474,8 +474,11 @@ def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
     # 500
+    note_values: List[str] = field.get_subfields("a")
+    notes: list[str] = __process_brk(note_values)
+
     res: MaterialGroupFields = {
-        "general_notes": field.get_subfields("a")
+        "general_notes": notes
     }
 
     return res
@@ -483,8 +486,11 @@ def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
     # 563
+    note_values = field.get_subfields("a")
+    notes = __process_brk(note_values)
+
     res: MaterialGroupFields = {
-        "binding_notes": field.get_subfields("a")
+        "binding_notes": notes
     }
 
     return res
@@ -501,8 +507,11 @@ def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
     # 592
+    note_values = field.get_subfields("a")
+    notes = __process_brk(note_values)
+
     res: MaterialGroupFields = {
-        "watermark_notes": field.get_subfields("a")
+        "watermark_notes": notes
     }
     return res
 
@@ -640,3 +649,13 @@ def _get_material_groups(record: pymarc.Record) -> Optional[List[Dict]]:
         res.append(base_group)
 
     return res
+
+
+def __process_brk(note_values: list[str]) -> list[str]:
+    notes: list = []
+    for note in note_values:
+        # the '{{brk}}' string is used in some notes to signify a line break.
+        new_note = note.split("{{brk}}")
+        notes += new_note
+
+    return notes

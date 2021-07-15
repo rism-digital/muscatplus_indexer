@@ -23,6 +23,7 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         child.record_type AS record_type, parent.std_title AS parent_title,
         parent.record_type AS parent_record_type, COUNT(h.id) AS holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
+        (SELECT GROUP_CONCAT(DISTINCT srt.record_type SEPARATOR ',') FROM {dbname}.sources AS srt WHERE srt.source_id = child.id AND srt.source_id IS NOT NULL GROUP BY srt.source_id) AS child_record_types,
         GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(hp.marc_source SEPARATOR '\n') as parent_holdings_marc,

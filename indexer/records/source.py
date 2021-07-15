@@ -52,6 +52,7 @@ def create_source_index_documents(record: Dict) -> List:
     source_id: str = f"source_{rism_id}"
     num_holdings: int = record.get("holdings_count")
     main_title: str = record['std_title']
+    child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",")] if record['child_record_types'] else []
 
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
@@ -81,7 +82,7 @@ def create_source_index_documents(record: Dict) -> List:
         "rism_id": rism_id,
         "source_id": source_id,
         "source_type_s": _get_source_type(record_type_id),
-        "content_type_s": _get_content_type(record_type_id),
+        "content_types_sm": _get_content_type(record_type_id, child_record_types),
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
@@ -141,42 +142,63 @@ def _get_source_type(record_type_id: int) -> str:
         return "unspecified"
 
 
-def _get_content_type(record_type_id: int) -> str:
-    if record_type_id in (
-        RecordTypes.LIBRETTO_EDITION_CONTENT,
-        RecordTypes.LIBRETTO_EDITION,
-        RecordTypes.LIBRETTO_SOURCE
-    ):
-        return "libretto"
-    elif record_type_id in (
-        RecordTypes.THEORETICA_EDITION_CONTENT,
-        RecordTypes.THEORETICA_EDITION,
-        RecordTypes.THEORETICA_SOURCE
-    ):
-        return "treatise"
-    elif record_type_id in (
-        RecordTypes.SOURCE,
-        RecordTypes.EDITION,
-        RecordTypes.EDITION_CONTENT,
-        RecordTypes.COLLECTION,
-        RecordTypes.COMPOSITE_VOLUME
-    ):
-        return "musical_source"
-    else:
-        return "unspecified"
+def _get_content_type(record_type_id: int, child_record_types: list[int]) -> List[str]:
+    """
+    Takes all record types associated with this record, and returns a list of
+    all possible content types for it.
+
+    Checks if two sets have an intersection set (that they have members overlapping).
+
+    :param record_type_id: The record type id of the source record
+    :param child_record_types: The record type ids of all child records
+    :return: A list of index values containing the content types.
+    """
+    all_types: set = set([record_type_id] + child_record_types)
+    ret: list = []
+
+    if all_types & {RecordTypes.LIBRETTO_EDITION_CONTENT,
+                    RecordTypes.LIBRETTO_EDITION,
+                    RecordTypes.LIBRETTO_SOURCE}:
+        ret.append("libretto")
+
+    if all_types & {RecordTypes.THEORETICA_EDITION_CONTENT,
+                    RecordTypes.THEORETICA_EDITION,
+                    RecordTypes.THEORETICA_SOURCE}:
+        ret.append("treatise")
+
+    if all_types & {RecordTypes.SOURCE,
+                    RecordTypes.EDITION,
+                    RecordTypes.EDITION_CONTENT}:
+        ret.append("musical_source")
+
+    return ret
 
 
 def _get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
-    if record_type_id in (3, 9, 10):
+    if record_type_id in (
+        RecordTypes.EDITION_CONTENT,
+        RecordTypes.LIBRETTO_EDITION_CONTENT,
+        RecordTypes.THEORETICA_EDITION_CONTENT
+    ):
         return True
-    elif record_type_id in (2, 4, 6) and parent_id is not None:
+    elif record_type_id in (
+        RecordTypes.SOURCE,
+        RecordTypes.LIBRETTO_SOURCE,
+        RecordTypes.THEORETICA_SOURCE
+    ) and parent_id is not None:
         return True
     else:
         return False
 
 
 def _get_is_collection_record(record_type_id: int, children_count: int) -> bool:
-    if record_type_id in (1, 4, 5, 6, 7) and children_count > 0:
+    if record_type_id in (
+        RecordTypes.COLLECTION,
+        RecordTypes.LIBRETTO_SOURCE,
+        RecordTypes.LIBRETTO_EDITION,
+        RecordTypes.THEORETICA_SOURCE,
+        RecordTypes.THEORETICA_EDITION
+    ) and children_count > 0:
         return True
     return False
 

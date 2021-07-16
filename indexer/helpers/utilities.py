@@ -208,10 +208,10 @@ def external_resource_data(field: pymarc.Field) -> Optional[ExternalResourceDocu
 
 class PersonRelationshipIndexDocument(TypedDict):
     id: str
-    name: str
-    relationship: str
-    qualifier: str
-    date_statement: str
+    name: Optional[str]
+    relationship: Optional[str]
+    qualifier: Optional[str]
+    date_statement: Optional[str]
     person_id: str
     this_id: str
     this_type: str
@@ -278,8 +278,8 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
 
 class PlaceRelationshipIndexDocument(TypedDict):
     id: str
-    name: str
-    relationship: str
+    name: Optional[str]
+    relationship: Optional[str]
     place_id: str
     this_id: str
     this_type: str

@@ -325,6 +325,7 @@ class IncipitIndexDocument(TypedDict):
     type: str
     source_id: str
     incipit_num_i: int
+    incipit_len_i: int
     work_num_s: str
     music_incipit_s: Optional[str]
     text_incipit_s: Optional[str]
@@ -334,6 +335,7 @@ class IncipitIndexDocument(TypedDict):
     key_s: Optional[str]
     timesig_s: Optional[str]
     clef_s: Optional[str]
+    is_mensural_b: bool
     general_notes_sm: Optional[List[str]]
     scoring_sm: Optional[List[str]]
 
@@ -377,6 +379,20 @@ DATA_FIELD_REGEX = re.compile(r"^@data:(.*)$", re.MULTILINE)
 
 def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_name: Optional[str], num: int, extended_indexing: bool) -> IncipitIndexDocument:
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
+    clef: Optional[str] = field['g']
+
+    is_mensural: bool = False
+    if clef and "+" in clef:
+        is_mensural = True
+
+    # This is a rough measure of the length of an incipit is so that we can
+    # identify and check the rendering of long incipits.
+    music_incipit: Optional[str] = field['p']
+    incipit_len: int = 0
+    if music_incipit:
+        # ensure we strip any leading or trailing whitespace.
+        music_incipit = music_incipit.strip()
+        incipit_len = len(music_incipit)
 
     d: Dict = {
         "id": f"{source_id}_incipit_{num}",
@@ -385,7 +401,8 @@ def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_na
         "source_title_s": source_title,
         "creator_name_s": creator_name,
         "incipit_num_i": num,
-        "music_incipit_s": field['p'],
+        "music_incipit_s": music_incipit,
+        "incipit_len_i": incipit_len,
         "text_incipit_s": field['t'],
         "title_s": field['d'],
         "role_s": field['e'],
@@ -394,6 +411,7 @@ def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_na
         "key_s": field['n'],
         "timesig_s": field['o'],
         "clef_s": field['g'],
+        "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
         "scoring_sm": field.get_subfields('z'),
     }

@@ -24,6 +24,19 @@ country_code_s:  # Extract the country code from the siglum.
 institution_types_sm:  # 368
   processor: "_get_institution_types"
 
+countries_sm:
+  field: "370"
+  subfield: "c"
+  multiple: true
+headquarters_sm:
+  field: "370"
+  subfield: "e"
+  multiple: true
+other_places_sm:
+  field: "370"
+  subfield: "f"
+  multiple: true
+
 website_s:
   field: "371"
   subfield: "u"

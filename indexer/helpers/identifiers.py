@@ -37,14 +37,11 @@ RECORD_TYPES_BY_ID: dict = {v: k for k, v in RECORD_TYPES.items()}
 
 
 def country_code_from_siglum(siglum: str) -> str:
-    # split the country code from the rest of the siglum, and return that. If there was a problem splitting the siglum
-    # because it was malformed, return it wholescale and keep going.
-    try:
-        country, _ = siglum.split("-")
-    except ValueError:
-        return siglum
-
-    return country
+    # split the country code from the rest of the siglum, and return that.
+    # If there was a problem splitting the siglum because it was malformed,
+    # return it wholescale and keep going.
+    split_sig = siglum.split("-")
+    return split_sig[0] if len(split_sig) > 0 else siglum
 
 
 # Until the data is cleaned up in Muscat, we can map these letters to

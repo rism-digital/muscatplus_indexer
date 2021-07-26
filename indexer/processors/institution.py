@@ -3,7 +3,7 @@ from typing import Optional, List
 import logging
 import pymarc
 
-from indexer.helpers.identifiers import country_code_from_siglum, KALLIOPE_MAPPING
+from indexer.helpers.identifiers import country_code_from_siglum, KALLIOPE_MAPPING, COUNTRY_CODE_MAPPING
 from indexer.helpers.utilities import to_solr_single_required, to_solr_single, normalize_id, get_related_people, \
     get_related_institutions, get_related_places, external_resource_data
 
@@ -26,6 +26,14 @@ def _get_country_code(record: pymarc.Record) -> Optional[str]:
 
     return country_code_from_siglum(siglum)
 
+
+def _get_country_names(record: pymarc.Record) -> Optional[list]:
+    country_code = _get_country_code(record)
+    if not country_code:
+        return None
+
+    # will also return None if the country code is not found.
+    return COUNTRY_CODE_MAPPING.get(country_code)
 
 def _get_location(record: pymarc.Record) -> Optional[str]:
     if record['034'] and (lon := record['034']['d']) and (lat := record['034']['f']):

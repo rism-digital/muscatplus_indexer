@@ -20,6 +20,8 @@ siglum_s:
   subfield: "g"
 country_code_s:  # Extract the country code from the siglum.
   processor: "_get_country_code"
+country_names_sm:
+  processor: "_get_country_names"
 
 institution_types_sm:  # 368
   processor: "_get_institution_types"

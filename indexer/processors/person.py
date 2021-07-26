@@ -28,7 +28,7 @@ def _get_external_ids(record: pymarc.Record) -> Optional[List]:
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     earliest_dates: List[int] = []
     latest_dates: List[int] = []
-    date_statements: Optional[List] = to_solr_multi(record, "100", "d")
+    date_statements: Optional[List] = to_solr_multi(record, "100", "d", ungrouped=True)
 
     # if no date statement, return an empty dictionary. This allows us to keep a consistent return type
     # since a call to `.update()` with an empty dictionary won't do anything.
@@ -61,7 +61,8 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
 
 
 def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
-    name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a")
+    name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a", ungrouped=True)
+    print(name_variants)
     if not name_variants:
         return None
 

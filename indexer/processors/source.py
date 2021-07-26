@@ -98,7 +98,7 @@ def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
 
        ["V", "orch", "B", "guit"]
        """
-    fields: Optional[List] = to_solr_multi(record, "240", "m")
+    fields: Optional[List] = to_solr_multi(record, "240", "m", ungrouped=True)
     if not fields:
         return None
 
@@ -119,7 +119,7 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
-    date_statements: Optional[List] = to_solr_multi(record, "260", "c")
+    date_statements: Optional[List] = to_solr_multi(record, "260", "c", ungrouped=True)
     if not date_statements:
         return None
 

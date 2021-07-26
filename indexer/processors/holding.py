@@ -3,12 +3,12 @@ from typing import Optional, List
 import pymarc as pymarc
 
 from indexer.helpers.identifiers import country_code_from_siglum
-from indexer.helpers.utilities import to_solr_single, external_resource_data, normalize_id, to_solr_single_required, \
-    get_related_people, get_related_institutions
+from indexer.helpers.utilities import to_solr_single, external_resource_data, get_related_people, \
+    get_related_institutions
 
 
 def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
-    siglum: Optional[str] = to_solr_single(marc_record, "852", "a")
+    siglum: Optional[str] = to_solr_single(marc_record, "852", "a", ungrouped=True)
     if not siglum:
         return None
 
@@ -25,7 +25,7 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
-    holding_id: str = f"holding_nnnn" # TODO: Fix when holding records have a 001
+    holding_id: str = f"holding_nnnn"  # TODO: Fix when holding records have a 001
     institutions = get_related_institutions(record, holding_id, "holding", fields=("710",))
     if not institutions:
         return None

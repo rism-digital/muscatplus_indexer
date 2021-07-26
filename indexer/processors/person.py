@@ -62,7 +62,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
 
 def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
     name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a", ungrouped=True)
-    print(name_variants)
+
     if not name_variants:
         return None
 

@@ -4,7 +4,7 @@ from typing import Generator, List, Dict
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
-from indexer.helpers.solr import submit_to_solr, commit_changes
+from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.source import create_source_index_documents
 

@@ -1,11 +1,14 @@
 import logging
+import struct
 from collections import namedtuple
 from typing import Dict, TypedDict, Optional, List
+import hashlib
 
 import pymarc as pymarc
 import ujson
 import verovio
 import yaml
+import zlib
 
 from indexer.helpers.utilities import to_solr_single
 
@@ -15,7 +18,7 @@ index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
 RenderedPAE = namedtuple('RenderedPAE', ['svg', 'midi', 'features'])
 verovio.enableLog(False)
 VEROVIO_OPTIONS = ujson.dumps({
-    "paeFeatures": True,
+    # "paeFeatures": True,
     "footer": 'none',
     "header": 'none',
     "breaks": 'auto',
@@ -27,12 +30,12 @@ VEROVIO_OPTIONS = ujson.dumps({
     "pageWidth": 2200,
     "spacingStaff": 1,
     "scale": 40,
-    "adjustPageHeight": "true",
+    "adjustPageHeight": True,
     # "svgHtml5": "true",
-    "svgFormatRaw": "true",
-    "svgRemoveXlink": "true",
-    "svgViewBox": "true",
-    "xmlIdSeed": 1
+    "svgFormatRaw": True,
+    "svgRemoveXlink": True,
+    "svgViewBox": True,
+    "xmlIdChecksum": True
 })
 vrv_tk = verovio.toolkit()
 vrv_tk.setInputFrom(verovio.PAE)
@@ -76,15 +79,16 @@ def _incipit_to_pae(incipit: Dict) -> str:
         pae_code.append(f"@keysig:{keysig}")
     if incip := incipit.get("music_incipit_s"):
         pae_code.append(f"@data:{incip}")
+    if docid := incipit.get("id"):
+        pae_code.append(f"@end:{docid}")
 
     return "\n".join(pae_code)
 
 
 def _render_pae(pae: str) -> dict:
-    vrv_tk.resetXmlIdSeed()
     vrv_tk.loadData(pae)
     # Verovio is set to render PAE to features
-    features: str = vrv_tk.renderToPAE()
+    features: str = vrv_tk.getDescriptiveFeatures("{}")
     # svg: str = vrv_tk.renderToSVG()
     # midi: str = vrv_tk.renderToMIDI()
     # b64midi: str = f"data:audio/midi;base64,{midi}"

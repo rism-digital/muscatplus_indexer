@@ -1,14 +1,11 @@
 import logging
-import struct
 from collections import namedtuple
 from typing import Dict, TypedDict, Optional, List
-import hashlib
 
 import pymarc as pymarc
 import ujson
 import verovio
 import yaml
-import zlib
 
 from indexer.helpers.utilities import to_solr_single
 

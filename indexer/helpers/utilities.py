@@ -72,14 +72,14 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
     if not fields:
         return None
 
-    # If we only want ungrouped fields, and this one is grouped ("$8") then return None.
-    # Make sure we don't count $80
-    if ungrouped and ('8' in fields[0] or fields[0]['8'] != '01'):
-        return None
-
     # If the subfield argument is None, return the whole field value.
     if subfield is None:
         return f"{fields[0].value()}"
+
+    # If we only want ungrouped fields, and this one is grouped ("$8") then return None.
+    # Make sure we don't count $801.
+    if ungrouped and ('8' in fields[0] or fields[0]['8'] != '01'):
+        return None
 
     return fields[0][subfield]
 

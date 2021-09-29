@@ -7,7 +7,8 @@ import ujson
 import verovio
 import yaml
 
-from indexer.helpers.utilities import to_solr_single
+from indexer.helpers.datelib import process_date_statements
+from indexer.helpers.utilities import to_solr_single, to_solr_multi
 
 log = logging.getLogger("muscat_indexer")
 index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
@@ -103,7 +104,7 @@ def _get_intervals(intvlist: list) -> dict:
     return fields
 
 
-def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_name: Optional[str], num: int) -> IncipitIndexDocument:
+def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source_title: str, num: int) -> IncipitIndexDocument:
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
 
@@ -120,6 +121,11 @@ def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_na
         music_incipit = music_incipit.strip()
         incipit_len = len(music_incipit)
 
+    creator_name: Optional[str] = to_solr_single(record, "100", "a")
+
+    date_statements: Optional[list] = to_solr_multi(record, "260", "c", ungrouped=True)
+    source_dates: Optional[list] = process_date_statements(record, date_statements)
+
     d: Dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
@@ -130,6 +136,7 @@ def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_na
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
         "incipit_len_i": incipit_len,
         "text_incipit_s": field['t'],
+        "date_ranges_im": source_dates,
         "title_s": field['d'],
         "role_s": field['e'],
         "work_num_s": work_number,
@@ -170,10 +177,9 @@ def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_na
 
 
 def get_incipits(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List]:
-    incipits: List = record.get_fields("031")
-    if not incipits:
+    if "031" not in record:
         return None
 
-    creator_name: Optional[str] = to_solr_single(record, "100", "a")
+    incipits: List = record.get_fields("031")
 
-    return [__incipit(f, source_id, source_title, creator_name, num) for num, f in enumerate(incipits)]
+    return [__incipit(f, record, source_id, source_title, num) for num, f in enumerate(incipits)]

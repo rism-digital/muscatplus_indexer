@@ -116,7 +116,7 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
-    date_statements: Optional[List] = to_solr_multi(record, "260", "c", ungrouped=True)
+    date_statements: Optional[list] = to_solr_multi(record, "260", "c", ungrouped=True)
     if not date_statements:
         return None
 

@@ -124,7 +124,10 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
     creator_name: Optional[str] = to_solr_single(record, "100", "a")
 
     date_statements: Optional[list] = to_solr_multi(record, "260", "c", ungrouped=True)
-    source_dates: Optional[list] = process_date_statements(record, date_statements)
+
+    source_dates: list = []
+    if date_statements:
+        source_dates = process_date_statements(record, date_statements)
 
     d: Dict = {
         "id": f"{source_id}_incipit_{num}",

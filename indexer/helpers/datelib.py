@@ -1,3 +1,4 @@
+import datetime
 import functools
 import logging.config
 import math
@@ -5,7 +6,10 @@ import re
 from typing import Pattern, Tuple, Optional, List
 
 import edtf
+import pymarc as pymarc
 from edtf.parser.edtf_exceptions import EDTFParseException
+
+from indexer.helpers.utilities import to_solr_single_required
 
 log = logging.getLogger("muscat_indexer")
 # assume European format dates

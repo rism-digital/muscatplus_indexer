@@ -23,7 +23,7 @@ CENTURY_TRUNCATED_REGEX: Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2
 # Some date ranges are given as "YYYY-MM-DD-YYYY-MM-DD" so we want to swap the second hyphen for a slash.
 MULTI_YEAR_REGEX: Pattern = re.compile(r'^(?P<first>\d{4}-\d{2}-\d{2})-(?P<second>\d{4}-\d{2}-\d{2})')
 # A lot of dates have a letters attached to them for some odd reason.
-STRIP_LETTERS: Pattern = re.compile(r"(?P<year>\d{4})(?:c|p|q|a|!])")
+STRIP_LETTERS: Pattern = re.compile(r"(?P<year>\d{3,4})(?:c|p|q|a|!])")
 # Find any cases like "between XXXX and YYYY". Also handles French ('entre XXXX et YYYY') and german ('um XXXX bis um XXXX)
 EXPLICIT_BETWEEN: Pattern = re.compile(r"^.*(?:between|entre|um|von|vor|et).*(?P<first>\d{4}).*(?P<second>\d{4}).*$", re.IGNORECASE)
 # Any ranges with explicitly named century periods in parens can be ignored too, e.g., "1750-1799 (18.2d)"

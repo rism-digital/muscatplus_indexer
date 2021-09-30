@@ -347,15 +347,6 @@ bibliographic_references_json: # 691
 secondary_literature_identifiers_sm:
   processor: "_get_secondary_literature_identifiers"
 
-related_people_ids:
-  field: "700"
-  subfield: "0"
-  multiple: true
-  value_prefix: "person_"
-related_people_sm:
-  field: "700"
-  subfield: "a"
-  multiple: true
 related_people_json:
   processor: "_get_related_people_data"
   json: true

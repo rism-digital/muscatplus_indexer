@@ -137,6 +137,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
         "creator_name_s": creator_name,
         "incipit_num_i": num,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
+        "has_notation_b": incipit_len > 0,
         "incipit_len_i": incipit_len,
         "text_incipit_s": field['t'],
         "date_ranges_im": source_dates,

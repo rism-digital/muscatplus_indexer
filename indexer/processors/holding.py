@@ -8,7 +8,7 @@ from indexer.helpers.utilities import to_solr_single, external_resource_data, ge
 
 
 def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
-    siglum: Optional[str] = to_solr_single(marc_record, "852", "a", ungrouped=True)
+    siglum: Optional[str] = to_solr_single(marc_record, "852", "a")
     if not siglum:
         return None
 
@@ -40,7 +40,7 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[List]:
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ungrouped_ext_links: List = [external_resource_data(f) for f in record.get_fields("856") if f and ('8' not in f or f['8'] != "0")]
+    ungrouped_ext_links: List = [external_resource_data(f) for f in record.get_fields("856") if f and ('8' not in f or f['8'] != "01")]
     if not ungrouped_ext_links:
         return None
 

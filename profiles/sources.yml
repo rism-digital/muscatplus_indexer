@@ -10,7 +10,8 @@
 #    required: true | false (default); i.e.: will raise an exception if XXX$n is `None`)
 #    multiple: true | false (default); NB: solr field must allow multiple values!)
 #    value_prefix: foo_  (optional); All values will be prefixed with this string.)
-#    ungrouped: true | false (default); when true will select only fields that are not part of a material group!)
+#    all_fields: true (default) | false; when true will select all fields; when false, will select
+#      only those that are not part of a material group
 #    breaks: true | false (default); Will additionally process the field values to handle "{{brk}}",
 #      particularly used in notes fields.
 #    -- or --
@@ -83,10 +84,12 @@ language_text_sm:
   field: "041"
   subfield: "a"
   multiple: true
+
 language_libretto_sm:
   field: "041"
   subfield: "e"
   multiple: true
+
 language_original_sm:
   field: "041"
   subfield: "h"

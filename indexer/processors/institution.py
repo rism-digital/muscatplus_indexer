@@ -23,7 +23,7 @@ def _get_country_code(record: pymarc.Record) -> Optional[str]:
     if '110' not in record:
         return None
 
-    siglum: Optional[str] = to_solr_single(record, "110", "g", ungrouped=False)
+    siglum: Optional[str] = to_solr_single(record, "110", "g")
 
     if not siglum:
         return None
@@ -47,7 +47,7 @@ def _get_location(record: pymarc.Record) -> Optional[str]:
             _ = float(lon)
             _ = float(lat)
         except ValueError:
-            log.error("Problem with the following values lat,lon %s,%s: %s", lat, lon, to_solr_single_required(record, "001", ungrouped=True))
+            log.error("Problem with the following values lat,lon %s,%s: %s", lat, lon, record["001"].value())
             return None
 
         return f"{lat},{lon}"
@@ -80,21 +80,21 @@ def _get_institution_types(record: pymarc.Record) -> List[str]:
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
-    institution_id: str = f"institution_{normalize_id(to_solr_single_required(record, '001', ungrouped=True))}"
+    institution_id: str = f"institution_{normalize_id(record['001'].value())}"
     people: Optional[List] = get_related_people(record, institution_id, "institution", ungrouped=True)
 
     return people
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
-    institution_id: str = f"institution_{normalize_id(to_solr_single_required(record, '001', ungrouped=True))}"
+    institution_id: str = f"institution_{normalize_id(record['001'].value())}"
     institutions: Optional[List] = get_related_institutions(record, institution_id, "institution")
 
     return institutions
 
 
 def _get_related_places_data(record: pymarc.Record) -> Optional[List]:
-    institution_id: str = f"institution_{normalize_id(to_solr_single_required(record, '001', ungrouped=True))}"
+    institution_id: str = f"institution_{normalize_id(record['001'].value())}"
     places: Optional[List] = get_related_places(record, institution_id, "institution")
 
     return places

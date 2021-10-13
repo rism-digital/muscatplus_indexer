@@ -95,7 +95,7 @@ def _get_scoring_summary(record: pymarc.Record) -> Optional[List]:
 
        ["V", "orch", "B", "guit"]
        """
-    fields: Optional[List] = to_solr_multi(record, "240", "m", ungrouped=True)
+    fields: Optional[List] = to_solr_multi(record, "240", "m")
     if not fields:
         return None
 
@@ -116,7 +116,7 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
-    date_statements: Optional[list] = to_solr_multi(record, "260", "c", ungrouped=True)
+    date_statements: Optional[list] = to_solr_multi(record, "260", "c")
     if not date_statements:
         return None
 
@@ -268,7 +268,7 @@ def _get_secondary_literature_identifiers(record: pymarc.Record) -> Optional[Lis
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
-    source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
+    source_id: str = f"source_{normalize_id(record['001'].value())}"
     people = get_related_people(record, source_id, "source", fields=("700",), ungrouped=True)
     if not people:
         return None
@@ -277,7 +277,7 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
-    source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
+    source_id: str = f"source_{normalize_id(record['001'].value())}"
     institutions = get_related_institutions(record, source_id, "source", fields=("710",))
     if not institutions:
         return None
@@ -353,7 +353,7 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[List]:
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ungrouped_ext_links: List = [external_resource_data(f) for f in record.get_fields("856") if f and ('8' not in f or f['8'] != 0)]
+    ungrouped_ext_links: List = [external_resource_data(f) for f in record.get_fields("856") if f and ('8' not in f or f['8'] != "01")]
     if not ungrouped_ext_links:
         return None
 

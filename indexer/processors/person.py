@@ -5,13 +5,12 @@ from typing import List, Optional
 
 import pymarc
 
-from indexer.helpers.datelib import parse_date_statement, process_date_statements
+from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_single_required, get_related_people, \
     get_related_institutions, get_related_places, external_resource_data, tokenize_variants
 
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 EARLIEST_YEAR_IF_MISSING: int = -2000
-
 
 log = logging.getLogger("muscat_indexer")
 
@@ -26,7 +25,7 @@ def _get_external_ids(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
-    date_statements: Optional[List] = to_solr_multi(record, "100", "d", ungrouped=True)
+    date_statements: Optional[List] = to_solr_multi(record, "100", "d")
     if not date_statements:
         return None
 
@@ -34,7 +33,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
 
 
 def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
-    name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a", ungrouped=True)
+    name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a")
 
     if not name_variants:
         return None
@@ -70,14 +69,14 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
-    person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
+    person_id: str = f"person_{normalize_id(record['001'].value())}"
     institutions: Optional[List] = get_related_institutions(record, person_id, "person", ungrouped=True)
 
     return institutions
 
 
 def _get_related_places_data(record: pymarc.Record) -> Optional[List]:
-    person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
+    person_id: str = f"person_{normalize_id(record['001'].value())}"
     places: Optional[List] = get_related_places(record, person_id, "person")
 
     return places

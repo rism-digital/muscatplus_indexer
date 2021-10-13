@@ -48,7 +48,7 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
 
             solr_document[solr_field] = field_result
         else:
-            ungrouped: bool = field_config.get("ungrouped", False)
+            all_fields: bool = field_config.get("all_fields", True)
             breaks: bool = field_config.get("breaks", False)
 
             # these will explode if the configuration is not correct.
@@ -67,7 +67,7 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
                 processor_fn = to_solr_single
 
             # This will raise an error if the processors encounter unexpected data.
-            field_result = processor_fn(marc, marc_field, marc_subfield, ungrouped)
+            field_result = processor_fn(marc, marc_field, marc_subfield, all_fields)
             if field_result is None:
                 # For values of 'None' we would expect this field to not appear in the
                 # document anyway, so we just skip any further processing or adding

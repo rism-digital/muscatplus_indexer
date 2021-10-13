@@ -122,8 +122,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
         incipit_len = len(music_incipit)
 
     creator_name: Optional[str] = to_solr_single(record, "100", "a")
-
-    date_statements: Optional[list] = to_solr_multi(record, "260", "c", ungrouped=True)
+    date_statements: Optional[list] = to_solr_multi(record, "260", "c")
 
     source_dates: list = []
     if date_statements:

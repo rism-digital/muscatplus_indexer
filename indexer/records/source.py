@@ -1,16 +1,14 @@
-import copy
 import logging
-from typing import List, Dict, Optional, TypedDict
+from typing import List, Dict, Optional
 
 import pymarc
 import ujson
-import verovio
 import yaml
 
 from indexer.helpers.identifiers import RecordTypes
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_variants
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -37,7 +35,7 @@ def create_source_index_documents(record: Dict) -> List:
     # all the 'children' will have a different ID. This is why the field is not called
     # 'parent_id', since it can gather all members of the group, *including* the parent.
     membership_id: int = m if (m := parent_id) else record['id']
-    rism_id: str = normalize_id(to_solr_single_required(marc_record, '001'))
+    rism_id: str = normalize_id(marc_record['001'].value())
     source_id: str = f"source_{rism_id}"
     num_holdings: int = record.get("holdings_count")
     main_title: str = record['std_title']
@@ -205,7 +203,7 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     if "852" not in record:
         return None
 
-    source_num: str = to_solr_single_required(record, '001')
+    source_num: str = record['001'].value()
     holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
     # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
     # should result in a unique identifier for this holding record.

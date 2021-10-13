@@ -9,8 +9,6 @@ import edtf
 import pymarc as pymarc
 from edtf.parser.edtf_exceptions import EDTFParseException
 
-from indexer.helpers.utilities import to_solr_single_required
-
 log = logging.getLogger("muscat_indexer")
 # assume European format dates
 edtf.appsettings.DAY_FIRST = True
@@ -312,8 +310,8 @@ def process_date_statements(record: pymarc.Record, date_statements: list) -> Opt
             return None
 
         if earliest is None and latest is None:
-            source_id: str = to_solr_single_required(record, '001')
-            log.warning("Problem with date statement %s for source %s", statement, source_id)
+            source_id: str = record['001'].value()
+            log.warning("Problem with date statement %s for record %s", statement, source_id)
             return None
 
         if earliest:

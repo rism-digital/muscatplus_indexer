@@ -5,7 +5,7 @@ solr:
   live_core: muscatplus_live
 
 indexing:
-  extended_incipits: false
+  extended_incipits: yes
 
 mysql:
   server: localhost

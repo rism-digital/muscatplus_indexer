@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 from typing import Dict, List, TypedDict, Optional
 
 import pymarc
@@ -23,7 +22,7 @@ class PersonIndexDocument(TypedDict):
     name_s: Optional[str]
     date_statement_s: Optional[str]
     other_dates_s: Optional[str]
-    name_variants_sm: Optional[List]
+    variant_names_sm: Optional[List]
     related_places_sm: Optional[List]
     related_people_sm: Optional[List]
     related_institutions_sm: Optional[List]

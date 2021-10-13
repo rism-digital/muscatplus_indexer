@@ -13,6 +13,10 @@ from indexer.index_people import index_people
 from indexer.index_places import index_places
 from indexer.index_sources import index_sources
 from indexer.index_subjects import index_subjects
+import faulthandler
+
+
+faulthandler.enable()
 
 log_config: Dict = yaml.full_load(open('logging.yml', 'r'))
 idx_config: Dict = yaml.full_load(open('index_config.yml', 'r'))
@@ -91,6 +95,7 @@ if __name__ == "__main__":
     success: bool = main(args)
     if success:
         # Exit with status 0 (success).
+        faulthandler.disable()
         sys.exit()
     # Exit with an error code.
     sys.exit(1)

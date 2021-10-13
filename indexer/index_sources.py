@@ -4,7 +4,7 @@ from typing import Generator, List, Dict
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
-from indexer.helpers.solr import submit_to_solr, commit_changes
+from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.source import create_source_index_documents
 
@@ -25,13 +25,13 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT GROUP_CONCAT(DISTINCT srt.record_type SEPARATOR ',') FROM {dbname}.sources AS srt WHERE srt.source_id = child.id AND srt.source_id IS NOT NULL GROUP BY srt.source_id) AS child_record_types,
         GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc,
-        GROUP_CONCAT(h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
-        GROUP_CONCAT(hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
-        GROUP_CONCAT(p.full_name SEPARATOR '\n') AS people_names,
-        GROUP_CONCAT(p.alternate_names SEPARATOR '\n') AS alt_people_names,
-        GROUP_CONCAT(st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
-        GROUP_CONCAT(p.id SEPARATOR '\n') AS people_ids
+        GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,
+        GROUP_CONCAT(DISTINCT hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
+        GROUP_CONCAT(DISTINCT p.full_name SEPARATOR '\n') AS people_names,
+        GROUP_CONCAT(DISTINCT p.alternate_names SEPARATOR '\n') AS alt_people_names,
+        GROUP_CONCAT(DISTINCT st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
+        GROUP_CONCAT(DISTINCT p.id SEPARATOR '\n') AS people_ids
         FROM {dbname}.sources AS child
         LEFT JOIN {dbname}.sources AS parent ON parent.id = child.source_id
         LEFT JOIN {dbname}.holdings h on child.id = h.source_id

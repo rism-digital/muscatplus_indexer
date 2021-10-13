@@ -5,7 +5,7 @@ from typing import List, Optional
 
 import pymarc
 
-from indexer.helpers.datelib import parse_date_statement
+from indexer.helpers.datelib import parse_date_statement, process_date_statements
 from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_single_required, get_related_people, \
     get_related_institutions, get_related_places, external_resource_data, tokenize_variants
 
@@ -26,38 +26,11 @@ def _get_external_ids(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
-    earliest_dates: List[int] = []
-    latest_dates: List[int] = []
     date_statements: Optional[List] = to_solr_multi(record, "100", "d", ungrouped=True)
-
-    # if no date statement, return an empty dictionary. This allows us to keep a consistent return type
-    # since a call to `.update()` with an empty dictionary won't do anything.
     if not date_statements:
         return None
 
-    for statement in date_statements:
-        try:
-            earliest, latest = parse_date_statement(statement)
-        except Exception as e:  # noqa
-            # The breadth of errors mean we could spend all day catching things, so in this case we use
-            # a blanket exception catch and then log the statement to be fixed so that we might fix it later.
-            log.error("Error parsing date statement %s: %s", statement, e)
-            raise
-
-        if earliest:
-            earliest_dates.append(earliest)
-
-        if latest:
-            latest_dates.append(latest)
-
-    earliest_date: int = min(earliest_dates) if earliest_dates else EARLIEST_YEAR_IF_MISSING
-    latest_date: int = max(latest_dates) if latest_dates else LATEST_YEAR_IF_MISSING
-
-    # If neither date was parseable, don't pretend we have a date.
-    if earliest_date == EARLIEST_YEAR_IF_MISSING and latest_date == LATEST_YEAR_IF_MISSING:
-        return None
-
-    return [earliest_date, latest_date]
+    return process_date_statements(record, date_statements)
 
 
 def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:

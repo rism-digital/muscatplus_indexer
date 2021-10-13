@@ -14,7 +14,7 @@ solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 
 
 def empty_solr_core() -> bool:
-    res = httpx.post(f"{solr_idx_server}/update",
+    res = httpx.post(f"{solr_idx_server}/update?commit=true",
                      data=ujson.dumps({"delete": {"query": "*:*"}}),
                      headers={"Content-Type": "application/json"})
 

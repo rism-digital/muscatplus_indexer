@@ -21,7 +21,11 @@ def _get_external_ids(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_country_code(record: pymarc.Record) -> Optional[str]:
-    siglum: Optional[str] = to_solr_single(record, "110", "g")
+    if '110' not in record:
+        return None
+
+    siglum: Optional[str] = to_solr_single(record, "110", "g", ungrouped=False)
+
     if not siglum:
         return None
 

@@ -1,12 +1,11 @@
+import copy
 import logging
-import re
 from typing import List, Dict, Optional, TypedDict
 
 import pymarc
 import ujson
 import verovio
 import yaml
-from simhash import fingerprint, fnvhash
 
 from indexer.helpers.identifiers import RecordTypes
 from indexer.helpers.marc import create_marc
@@ -14,22 +13,12 @@ from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import normalize_id, to_solr_single_required, to_solr_single, tokenize_variants
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
+from indexer.records.incipits import get_incipits
 
 log = logging.getLogger("muscat_indexer")
 index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
 
 source_profile: Dict = yaml.full_load(open('profiles/sources.yml', 'r'))
-extended_incipits: bool = index_config['indexing']['extended_incipits']
-
-if extended_incipits:
-    vrv_tk = verovio.toolkit()
-    verovio.enableLog(False)
-    vrv_tk.setInputFrom(verovio.PAE)
-    vrv_tk.setOptions(ujson.dumps({
-        "footer": 'none',
-        "header": 'none',
-        "breaks": 'none',
-    }))
 
 
 def create_source_index_documents(record: Dict) -> List:
@@ -111,7 +100,7 @@ def create_source_index_documents(record: Dict) -> List:
     # Extended incipits have their fingerprints calculated for similarity matching.
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
-    incipits: List = _get_incipits(marc_record, source_id, main_title, extended_incipits) or []
+    incipits: List = get_incipits(marc_record, source_id, main_title) or []
 
     res: List = [source_core]
     res.extend(incipits)
@@ -318,124 +307,3 @@ def _get_full_holding_identifiers(mss_holdings: List[HoldingIndexDocument], prin
         ids.add(f"{rec_name} {rec_sig} {rec_shelfmark}")
 
     return [realid for realid in ids if realid.strip()]
-
-
-class IncipitIndexDocument(TypedDict):
-    id: str
-    type: str
-    source_id: str
-    incipit_num_i: int
-    incipit_len_i: int
-    work_num_s: str
-    music_incipit_s: Optional[str]
-    text_incipit_s: Optional[str]
-    role_s: Optional[str]
-    title_s: Optional[str]
-    key_mode_s: Optional[str]
-    key_s: Optional[str]
-    timesig_s: Optional[str]
-    clef_s: Optional[str]
-    is_mensural_b: bool
-    general_notes_sm: Optional[List[str]]
-    scoring_sm: Optional[List[str]]
-
-
-def _incipit_to_pae(incipit: Dict) -> str:
-    """
-    :param incipit: A Dict result object for an incipit.
-    :return: A string formatted as Plaine and Easie code
-    """
-    pae_code: List = ["@start:pae-file"]
-
-    if clef := incipit.get("clef_s"):
-        pae_code.append(f"@clef:{clef}")
-    if timesig := incipit.get("timesig_s"):
-        pae_code.append(f"@timesig:{timesig}")
-    if key_or_mode := incipit.get("key_mode_s"):
-        pae_code.append(f"@key:{key_or_mode}")
-    if keysig := incipit.get("key_s"):
-        pae_code.append(f"@keysig:{keysig}")
-    if incip := incipit.get("music_incipit_s"):
-        pae_code.append(f"@data:{incip}")
-
-    pae_code.append("@end:pae-file")
-
-    return "\n".join(pae_code)
-
-
-def normalized_pae(pae_code: str) -> str:
-    try:
-        vrv_tk.loadData(pae_code)
-        pae = vrv_tk.renderToPAE()
-    except Exception as e:
-        pae = f"Error with pae conversion: {e}"
-
-    return pae
-
-
-UPPERCASE_PITCH_REGEX = re.compile(r"([\dA-Gxbn]+)")
-DATA_FIELD_REGEX = re.compile(r"^@data:(.*)$", re.MULTILINE)
-
-
-def __incipit(field: pymarc.Field, source_id: str, source_title: str, creator_name: Optional[str], num: int, extended_indexing: bool) -> IncipitIndexDocument:
-    work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
-    clef: Optional[str] = field['g']
-
-    is_mensural: bool = False
-    if clef and "+" in clef:
-        is_mensural = True
-
-    # This is a rough measure of the length of an incipit is so that we can
-    # identify and check the rendering of long incipits.
-    music_incipit: Optional[str] = field['p']
-    incipit_len: int = 0
-    if music_incipit:
-        # ensure we strip any leading or trailing whitespace.
-        music_incipit = music_incipit.strip()
-        incipit_len = len(music_incipit)
-
-    d: Dict = {
-        "id": f"{source_id}_incipit_{num}",
-        "type": "incipit",
-        "source_id": source_id,
-        "source_title_s": source_title,
-        "creator_name_s": creator_name,
-        "incipit_num_i": num,
-        "music_incipit_s": music_incipit,
-        "incipit_len_i": incipit_len,
-        "text_incipit_s": field['t'],
-        "title_s": field['d'],
-        "role_s": field['e'],
-        "work_num_s": work_number,
-        "key_mode_s": field['r'],
-        "key_s": field['n'],
-        "timesig_s": field['o'],
-        "clef_s": field['g'],
-        "is_mensural_b": is_mensural,
-        "general_notes_sm": field.get_subfields('q'),
-        "scoring_sm": field.get_subfields('z'),
-    }
-    pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
-    d["original_pae_sni"] = pae_code
-
-    # If extended indexing is enabled, run the PAE through Verovio and calculate
-    # the various fingerprints. (This is currently WIP and slows things down quite
-    # a bit, so we needed a way to disable it when we're not actively working on
-    # incipit searching.)
-    if pae_code and extended_indexing:
-        d["original_fingerprint_lp"] = fingerprint(list(map(fnvhash, pae_code)))
-        norm_pae: str = normalized_pae(pae_code)
-        d["normalized_fingerprint_lp"] = fingerprint(list(map(fnvhash, norm_pae)))
-        d["normalized_pae_sni"] = norm_pae
-
-    return d
-
-
-def _get_incipits(record: pymarc.Record, source_id: str, source_title: str, extended_indexing: bool) -> Optional[List]:
-    incipits: List = record.get_fields("031")
-    if not incipits:
-        return None
-
-    creator_name: Optional[str] = to_solr_single(record, "100", "a")
-
-    return [__incipit(f, source_id, source_title, creator_name, num, extended_indexing) for num, f in enumerate(incipits)]

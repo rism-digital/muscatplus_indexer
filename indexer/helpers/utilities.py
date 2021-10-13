@@ -72,14 +72,14 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
     if not fields:
         return None
 
-    # If we only want ungrouped fields, and this one is grouped ("$8") then return None.
-    # Make sure we don't count $80
-    if ungrouped and ('8' in fields[0] or fields[0]['8'] != '01'):
-        return None
-
     # If the subfield argument is None, return the whole field value.
     if subfield is None:
         return f"{fields[0].value()}"
+
+    # If we only want ungrouped fields, and this one is grouped ("$8") then return None.
+    # Make sure we don't count $801.
+    if ungrouped and ('8' in fields[0] or fields[0]['8'] != '01'):
+        return None
 
     return fields[0][subfield]
 
@@ -131,9 +131,10 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     # and we are dealing with a list of fields, so we iterate twice here: Once over the fields, and then
     # over the values in each field.
     # Only return the fields that are not empty and match the ungrouped option.
+    # Note that this function considers group 01 to be 'ungrouped'!
     if ungrouped:
-        return sorted(list({subf.strip() for field in fields for subf in field.get_subfields(subfield) if subf and subf.strip() and '8' not in field}))
-    return sorted(list({subf.strip() for field in fields for subf in field.get_subfields(subfield) if subf and subf.strip() and '8' in field}))
+        return sorted(list({subf.strip() for field in fields for subf in field.get_subfields(subfield) if subf and subf.strip() and ('8' not in field or field['8'] == "01")}))
+    return sorted(list({subf.strip() for field in fields for subf in field.get_subfields(subfield) if subf and subf.strip() and '8' in field and field['8'] != "01"}))
 
 
 def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = False) -> List[str]:

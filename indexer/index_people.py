@@ -15,7 +15,7 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(s.id) AS source_count,
+    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(DISTINCT ps.source_id) AS source_count,
                      p.created_at AS created, p.updated_at AS updated
                      FROM {dbname}.people AS p
                      LEFT JOIN {dbname}.sources_to_people AS ps ON p.id = ps.person_id

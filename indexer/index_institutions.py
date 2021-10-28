@@ -16,7 +16,7 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT i.id, i.marc_source, COUNT(s.id) AS source_count,
+    curs.execute(f"""SELECT i.id, i.marc_source, COUNT(DISTINCT ins.source_id) AS source_count,
                      i.created_at AS created, i.updated_at AS updated 
                      FROM {dbname}.institutions AS i
                      LEFT JOIN {dbname}.sources_to_institutions AS ins ON i.id = ins.institution_id

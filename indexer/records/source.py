@@ -40,6 +40,7 @@ def create_source_index_documents(record: Dict) -> List:
     num_holdings: int = record.get("holdings_count")
     main_title: str = record['std_title']
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",")] if record['child_record_types'] else []
+    institution_places: list[str] = [s for s in record['institution_places'].split(",")] if record['institution_places'] else []
 
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
@@ -80,6 +81,7 @@ def create_source_index_documents(record: Dict) -> List:
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
+        "holding_institutions_places_sm": institution_places,
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
         "variant_standard_terms_sm": variant_standard_terms,

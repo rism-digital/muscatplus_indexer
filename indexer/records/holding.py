@@ -43,11 +43,13 @@ def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]
+    creator_name: str = record['creator_name']
 
-    return holding_index_document(marc_record, holding_id, record_id, membership_id, main_title)
+    return holding_index_document(marc_record, holding_id, record_id, membership_id, main_title, creator_name)
 
 
-def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_id: str, membership_id: str, main_title: str) -> HoldingIndexDocument:
+def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_id: str,
+                           membership_id: str, main_title: str, creator_name: str) -> HoldingIndexDocument:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.
@@ -57,6 +59,7 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
     :param record_id: The id of the source record
     :param membership_id: The id of the parent record; if no parent record, this is the same as the record_id.
     :param main_title: The main title of the source record. Used primarily for link text, etc.
+    :param creator_name: The name of the composer / author of the source. This is stored primarily for display.
     :return: A holding index document.
     """
     holding_core: Dict = {
@@ -64,6 +67,7 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
         "type": "holding",
         "source_id": membership_id,
         "main_title_s": main_title,
+        "creator_name_s": creator_name,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
     }
 

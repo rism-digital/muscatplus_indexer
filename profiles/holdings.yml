@@ -104,10 +104,10 @@ provenance_sm:
   subfield: "z"
   multiple: true
 
-bound_with_sm:
+composite_parent_id:
   field: "973"
-  subfield: "a"
-  multiple: true
+  subfield: "u"
+  value_prefix: "source_"
 
 country_code_s:
   processor: "_get_country_code"

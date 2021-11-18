@@ -18,7 +18,7 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
     dbname: str = cfg['mysql']['database']
 
     curs.execute(f"""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
-        child.source_id AS source_id, child.marc_source AS marc_source,
+        child.source_id AS source_id, child.marc_source AS marc_source, child.composer AS creator_name,
         child.created_at AS created, child.updated_at AS updated,
         child.record_type AS record_type, parent.std_title AS parent_title,
         parent.record_type AS parent_record_type,

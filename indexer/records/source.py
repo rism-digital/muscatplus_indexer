@@ -169,6 +169,9 @@ def _get_content_type(record_type_id: int, child_record_types: list[int]) -> Lis
                     RecordTypes.EDITION_CONTENT}:
         ret.append("musical_source")
 
+    if all_types & {RecordTypes.COMPOSITE_VOLUME}:
+        ret.append("composite_content")
+
     return ret
 
 

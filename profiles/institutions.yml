@@ -27,8 +27,8 @@ institution_types_sm:  # 368
   processor: "_get_institution_types"
 
 countries_sm:
-  field: "370"
-  subfield: "c"
+  field: "371"
+  subfield: "d"
   multiple: true
 headquarters_sm:
   field: "370"

@@ -77,6 +77,7 @@ def create_source_index_documents(record: Dict) -> List:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
+        "record_type_s": _get_record_type(record_type_id),
         "source_type_s": _get_source_type(record_type_id),
         "content_types_sm": _get_content_type(record_type_id, child_record_types),
         "source_membership_id": f"source_{membership_id}",
@@ -113,6 +114,22 @@ def create_source_index_documents(record: Dict) -> List:
     res.extend(manuscript_holdings)
 
     return res
+
+
+def _get_record_type(record_type_id: int) -> str:
+    if record_type_id in (
+        RecordTypes.COLLECTION,
+        RecordTypes.EDITION,
+        RecordTypes.LIBRETTO_EDITION,
+        RecordTypes.THEORETICA_EDITION
+    ):
+        return "collection"
+    elif record_type_id in (
+        RecordTypes.COMPOSITE_VOLUME,
+    ):
+        return "composite"
+    else:
+        return "item"
 
 
 def _get_source_type(record_type_id: int) -> str:

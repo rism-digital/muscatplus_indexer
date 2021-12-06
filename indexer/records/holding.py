@@ -4,6 +4,7 @@ from typing import TypedDict, Optional, List, Dict
 import pymarc
 import yaml
 
+from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_type
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.processors import holding as holding_processor
@@ -44,12 +45,18 @@ def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]
     creator_name: str = record['creator_name']
+    record_type_id: int = record['record_type']
 
-    return holding_index_document(marc_record, holding_id, record_id, membership_id, main_title, creator_name)
+    return holding_index_document(marc_record, holding_id, record_id, membership_id, main_title, creator_name, record_type_id)
 
 
-def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_id: str,
-                           membership_id: str, main_title: str, creator_name: str) -> HoldingIndexDocument:
+def holding_index_document(marc_record: pymarc.Record,
+                           holding_id: str,
+                           record_id: str,
+                           membership_id: str,
+                           main_title: str,
+                           creator_name: str,
+                           record_type_id: int) -> HoldingIndexDocument:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.
@@ -62,10 +69,14 @@ def holding_index_document(marc_record: pymarc.Record, holding_id: str, record_i
     :param creator_name: The name of the composer / author of the source. This is stored primarily for display.
     :return: A holding index document.
     """
+
     holding_core: Dict = {
         "id": holding_id,
         "type": "holding",
         "source_id": membership_id,
+        "record_type_s": get_record_type(record_type_id),
+        "source_type_s": get_source_type(record_type_id),
+        "content_types_sm": get_content_type(record_type_id, []),
         "main_title_s": main_title,
         "creator_name_s": creator_name,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.

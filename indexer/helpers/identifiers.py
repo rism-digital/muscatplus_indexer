@@ -1,4 +1,5 @@
 from enum import unique, IntEnum
+from typing import Optional
 
 
 @unique
@@ -34,6 +35,111 @@ RECORD_TYPES: dict = {
 
 # Invert record types table for lookups
 RECORD_TYPES_BY_ID: dict = {v: k for k, v in RECORD_TYPES.items()}
+
+
+def get_record_type(record_type_id: int) -> str:
+    if record_type_id in (
+            RecordTypes.COLLECTION,
+            RecordTypes.EDITION,
+            RecordTypes.LIBRETTO_EDITION,
+            RecordTypes.THEORETICA_EDITION
+    ):
+        return "collection"
+    elif record_type_id in (
+            RecordTypes.COMPOSITE_VOLUME,
+    ):
+        return "composite"
+    else:
+        return "item"
+
+
+def get_source_type(record_type_id: int) -> str:
+    if record_type_id in (
+            RecordTypes.EDITION,
+            RecordTypes.EDITION_CONTENT,
+            RecordTypes.LIBRETTO_EDITION,
+            RecordTypes.THEORETICA_EDITION,
+            RecordTypes.LIBRETTO_EDITION_CONTENT,
+            RecordTypes.THEORETICA_EDITION_CONTENT
+    ):
+        return "printed"
+    elif record_type_id in (
+            RecordTypes.COLLECTION,
+            RecordTypes.SOURCE,
+            RecordTypes.LIBRETTO_SOURCE,
+            RecordTypes.THEORETICA_SOURCE
+    ):
+        return "manuscript"
+    elif record_type_id in (
+            RecordTypes.COMPOSITE_VOLUME,
+    ):
+        return "composite"
+    else:
+        return "unspecified"
+
+
+def get_content_type(record_type_id: int, child_record_types: list[int]) -> list[str]:
+    """
+    Takes all record types associated with this record, and returns a list of
+    all possible content types for it.
+
+    Checks if two sets have an intersection set (that they have members overlapping).
+
+    :param record_type_id: The record type id of the source record
+    :param child_record_types: The record type ids of all child records
+    :return: A list of index values containing the content types.
+    """
+    all_types: set = set([record_type_id] + child_record_types)
+    ret: list = []
+
+    if all_types & {RecordTypes.LIBRETTO_EDITION_CONTENT,
+                    RecordTypes.LIBRETTO_EDITION,
+                    RecordTypes.LIBRETTO_SOURCE}:
+        ret.append("libretto")
+
+    if all_types & {RecordTypes.THEORETICA_EDITION_CONTENT,
+                    RecordTypes.THEORETICA_EDITION,
+                    RecordTypes.THEORETICA_SOURCE}:
+        ret.append("treatise")
+
+    if all_types & {RecordTypes.SOURCE,
+                    RecordTypes.EDITION,
+                    RecordTypes.EDITION_CONTENT}:
+        ret.append("musical")
+
+    if all_types & {RecordTypes.COMPOSITE_VOLUME}:
+        ret.append("composite_content")
+
+    return ret
+
+
+def get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
+    if record_type_id in (
+            RecordTypes.EDITION_CONTENT,
+            RecordTypes.LIBRETTO_EDITION_CONTENT,
+            RecordTypes.THEORETICA_EDITION_CONTENT
+    ):
+        return True
+    elif record_type_id in (
+            RecordTypes.SOURCE,
+            RecordTypes.LIBRETTO_SOURCE,
+            RecordTypes.THEORETICA_SOURCE
+    ) and parent_id is not None:
+        return True
+    else:
+        return False
+
+
+def get_is_collection_record(record_type_id: int, children_count: int) -> bool:
+    if record_type_id in (
+            RecordTypes.COLLECTION,
+            RecordTypes.LIBRETTO_SOURCE,
+            RecordTypes.LIBRETTO_EDITION,
+            RecordTypes.THEORETICA_SOURCE,
+            RecordTypes.THEORETICA_EDITION
+    ) and children_count > 0:
+        return True
+    return False
 
 
 def country_code_from_siglum(siglum: str) -> str:

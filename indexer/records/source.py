@@ -5,7 +5,8 @@ import pymarc
 import ujson
 import yaml
 
-from indexer.helpers.identifiers import RecordTypes
+from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_type, \
+    get_is_contents_record, get_is_collection_record
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants
@@ -51,7 +52,7 @@ def create_source_index_documents(record: Dict) -> List:
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
     # id on the sources, regardless of whether they have a holding record, or they are a MS.
-    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name) or []
+    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name, record_type_id) or []
     holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
     holding_orgs_ids: List = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
     holding_orgs_identifiers: List = _get_full_holding_identifiers(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
@@ -77,9 +78,9 @@ def create_source_index_documents(record: Dict) -> List:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
-        "record_type_s": _get_record_type(record_type_id),
-        "source_type_s": _get_source_type(record_type_id),
-        "content_types_sm": _get_content_type(record_type_id, child_record_types),
+        "record_type_s": get_record_type(record_type_id),
+        "source_type_s": get_source_type(record_type_id),
+        "content_types_sm": get_content_type(record_type_id, child_record_types),
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
@@ -93,8 +94,8 @@ def create_source_index_documents(record: Dict) -> List:
         "variant_people_names_sm": variant_people_names,
         "variant_standard_terms_sm": variant_standard_terms,
         "related_people_ids": related_people_ids,
-        "is_contents_record_b": _get_is_contents_record(record_type_id, parent_id),
-        "is_collection_record_b": _get_is_collection_record(record_type_id, child_count),
+        "is_contents_record_b": get_is_contents_record(record_type_id, parent_id),
+        "is_collection_record_b": get_is_collection_record(record_type_id, child_count),
         "is_composite_volume_b": record_type_id == 11,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -116,112 +117,11 @@ def create_source_index_documents(record: Dict) -> List:
     return res
 
 
-def _get_record_type(record_type_id: int) -> str:
-    if record_type_id in (
-        RecordTypes.COLLECTION,
-        RecordTypes.EDITION,
-        RecordTypes.LIBRETTO_EDITION,
-        RecordTypes.THEORETICA_EDITION
-    ):
-        return "collection"
-    elif record_type_id in (
-        RecordTypes.COMPOSITE_VOLUME,
-    ):
-        return "composite"
-    else:
-        return "item"
-
-
-def _get_source_type(record_type_id: int) -> str:
-    if record_type_id in (
-        RecordTypes.EDITION,
-        RecordTypes.EDITION_CONTENT,
-        RecordTypes.LIBRETTO_EDITION,
-        RecordTypes.THEORETICA_EDITION,
-        RecordTypes.LIBRETTO_EDITION_CONTENT,
-        RecordTypes.THEORETICA_EDITION_CONTENT
-    ):
-        return "printed"
-    elif record_type_id in (
-        RecordTypes.COLLECTION,
-        RecordTypes.SOURCE,
-        RecordTypes.LIBRETTO_SOURCE,
-        RecordTypes.THEORETICA_SOURCE
-    ):
-        return "manuscript"
-    elif record_type_id in (
-        RecordTypes.COMPOSITE_VOLUME,
-    ):
-        return "composite"
-    else:
-        return "unspecified"
-
-
-def _get_content_type(record_type_id: int, child_record_types: list[int]) -> List[str]:
-    """
-    Takes all record types associated with this record, and returns a list of
-    all possible content types for it.
-
-    Checks if two sets have an intersection set (that they have members overlapping).
-
-    :param record_type_id: The record type id of the source record
-    :param child_record_types: The record type ids of all child records
-    :return: A list of index values containing the content types.
-    """
-    all_types: set = set([record_type_id] + child_record_types)
-    ret: list = []
-
-    if all_types & {RecordTypes.LIBRETTO_EDITION_CONTENT,
-                    RecordTypes.LIBRETTO_EDITION,
-                    RecordTypes.LIBRETTO_SOURCE}:
-        ret.append("libretto")
-
-    if all_types & {RecordTypes.THEORETICA_EDITION_CONTENT,
-                    RecordTypes.THEORETICA_EDITION,
-                    RecordTypes.THEORETICA_SOURCE}:
-        ret.append("treatise")
-
-    if all_types & {RecordTypes.SOURCE,
-                    RecordTypes.EDITION,
-                    RecordTypes.EDITION_CONTENT}:
-        ret.append("musical")
-
-    if all_types & {RecordTypes.COMPOSITE_VOLUME}:
-        ret.append("composite_content")
-
-    return ret
-
-
-def _get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
-    if record_type_id in (
-        RecordTypes.EDITION_CONTENT,
-        RecordTypes.LIBRETTO_EDITION_CONTENT,
-        RecordTypes.THEORETICA_EDITION_CONTENT
-    ):
-        return True
-    elif record_type_id in (
-        RecordTypes.SOURCE,
-        RecordTypes.LIBRETTO_SOURCE,
-        RecordTypes.THEORETICA_SOURCE
-    ) and parent_id is not None:
-        return True
-    else:
-        return False
-
-
-def _get_is_collection_record(record_type_id: int, children_count: int) -> bool:
-    if record_type_id in (
-        RecordTypes.COLLECTION,
-        RecordTypes.LIBRETTO_SOURCE,
-        RecordTypes.LIBRETTO_EDITION,
-        RecordTypes.THEORETICA_SOURCE,
-        RecordTypes.THEORETICA_EDITION
-    ) and children_count > 0:
-        return True
-    return False
-
-
-def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: str, creator_name: str) -> Optional[List[HoldingIndexDocument]]:
+def _get_manuscript_holdings(record: pymarc.Record,
+                             source_id: str,
+                             main_title: str,
+                             creator_name: str,
+                             record_type_id: int) -> Optional[List[HoldingIndexDocument]]:
     """
         Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
         This is so that we can provide a unified interface for searching all holdings of an institution
@@ -238,7 +138,7 @@ def _get_manuscript_holdings(record: pymarc.Record, source_id: str, main_title: 
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
     holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
-    return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title, creator_name)]
+    return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title, creator_name, record_type_id)]
 
 
 def _get_variant_people_names(variant_names: Optional[str]) -> Optional[List]:

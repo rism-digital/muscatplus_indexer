@@ -3,8 +3,13 @@ from typing import Optional, List
 import pymarc as pymarc
 
 from indexer.helpers.identifiers import country_code_from_siglum
-from indexer.helpers.utilities import to_solr_single, external_resource_data, get_related_people, \
-    get_related_institutions
+from indexer.helpers.utilities import (
+    to_solr_single,
+    external_resource_data,
+    get_related_people,
+    get_related_institutions,
+    to_solr_single_required
+)
 
 
 def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
@@ -16,7 +21,8 @@ def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
-    holding_id: str = f"holding_nnnn"  # TODO: Fix when holding records have a 001
+    rism_id: str = to_solr_single_required(record, '001')
+    holding_id: str = f"holding_{rism_id}"
     people = get_related_people(record, holding_id, "holding", fields=("700",), ungrouped=True)
     if not people:
         return None
@@ -25,7 +31,8 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
-    holding_id: str = f"holding_nnnn"  # TODO: Fix when holding records have a 001
+    rism_id: str = to_solr_single_required(record, '001')
+    holding_id: str = f"holding_{rism_id}"
     institutions = get_related_institutions(record, holding_id, "holding", fields=("710",))
     if not institutions:
         return None

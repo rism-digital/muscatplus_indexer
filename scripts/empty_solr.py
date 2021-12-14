@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("core", help="A solr core to empty. Should correspond to values in the silo_s field in Solr.")
     args = parser.parse_args()
 
-    configuration: Dict = yaml.full_load(open('index_config.yml', 'r'))  # nosec
+    configuration: Dict = yaml.full_load(open('../index_config.yml', 'r'))  # nosec
     solr_server = configuration['solr']['server']
     core = args.core
 

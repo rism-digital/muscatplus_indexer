@@ -52,6 +52,7 @@ def create_person_index_document(record: Dict) -> Dict:
         "person_id": person_id,
         "rism_id": rism_id,
         "source_count_i": record['source_count'] if rism_id != "30004985" else 0,
+        "holdings_count_i": record['holdings_count'],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

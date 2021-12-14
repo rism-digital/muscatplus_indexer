@@ -30,7 +30,7 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         GROUP_CONCAT(hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(DISTINCT hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
-        GROUP_CONCAT(DISTINCT p.full_name SEPARATOR '\n') AS people_names,
+        GROUP_CONCAT(DISTINCT CONCAT(p.full_name, " (", p.life_dates, ")") SEPARATOR '\n') AS people_names,
         GROUP_CONCAT(DISTINCT p.alternate_names SEPARATOR '\n') AS alt_people_names,
         GROUP_CONCAT(DISTINCT st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
         GROUP_CONCAT(DISTINCT p.id SEPARATOR '\n') AS people_ids

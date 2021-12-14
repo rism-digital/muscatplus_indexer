@@ -16,13 +16,20 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT i.id, i.marc_source, COUNT(DISTINCT ins.source_id) AS source_count,
-                     i.created_at AS created, i.updated_at AS updated 
-                     FROM {dbname}.institutions AS i
-                     LEFT JOIN {dbname}.sources_to_institutions AS ins ON i.id = ins.institution_id
-                     LEFT JOIN {dbname}.sources AS s ON ins.source_id = s.id
-                     WHERE i.wf_stage = 1 AND (s.wf_stage IS NULL OR s.wf_stage = 1) 
-                     GROUP BY i.id;""")
+    curs.execute(f"""SELECT i.id, i.marc_source,
+                        i.created_at AS created, i.updated_at AS updated,
+                    (SELECT COUNT(DISTINCT si.source_id)
+                       FROM {dbname}.sources_to_institutions AS si
+                       LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
+                       WHERE si.institution_id = i.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
+                       AS source_count,
+                    (SELECT COUNT(DISTINCT hi.holding_id)
+                        FROM {dbname}.holdings_to_institutions AS hi
+                        LEFT JOIN {dbname}.holdings AS hh on hi.holding_id = hh.id
+                        WHERE hi.institution_id = i.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
+                        AS holdings_count
+                    FROM {dbname}.institutions AS i
+                    WHERE i.wf_stage = 1;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows

@@ -15,13 +15,20 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source, COUNT(DISTINCT ps.source_id) AS source_count,
-                     p.created_at AS created, p.updated_at AS updated
+    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source,
+                     p.created_at AS created, p.updated_at AS updated,
+                    (SELECT COUNT(DISTINCT sp.source_id)
+                        FROM {dbname}.sources_to_people AS sp
+                        LEFT JOIN {dbname}.sources AS ss ON sp.source_id = ss.id
+                        WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)) 
+                        AS source_count,
+                    (SELECT COUNT(DISTINCT hp.holding_id)
+                        FROM {dbname}.holdings_to_people AS hp
+                        LEFT JOIN {dbname}.holdings AS hh ON hp.holding_id = hh.id
+                        WHERE hp.person_id = p.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
+                        AS holdings_count
                      FROM {dbname}.people AS p
-                     LEFT JOIN {dbname}.sources_to_people AS ps ON p.id = ps.person_id
-                     LEFT JOIN {dbname}.sources AS s ON ps.source_id = s.id
-                     WHERE p.wf_stage = 1 AND (s.wf_stage is NULL OR s.wf_stage = 1)
-                     GROUP BY p.id;""")
+                     WHERE p.wf_stage = 1;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

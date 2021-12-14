@@ -456,3 +456,13 @@ def tokenize_variants(variants: List[str]) -> List[str]:
         unique_tokens.update(name_parts)
 
     return list(unique_tokens)
+
+
+def get_creator_name(record: pymarc.Record) -> Optional[str]:
+    creator_field = record['100']
+    if not creator_field:
+        return None
+
+    creator_name: str = creator_field["a"].strip()
+    creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
+    return f"{creator_name}{creator_dates}"

@@ -120,8 +120,8 @@ def create_source_index_documents(record: Dict) -> List:
 def _get_manuscript_holdings(record: pymarc.Record,
                              source_id: str,
                              main_title: str,
-                             creator_name: str,
-                             record_type_id: int) -> Optional[List[HoldingIndexDocument]]:
+                             creator_name: Optional[str],
+                             record_type_id: int) -> Optional[list[HoldingIndexDocument]]:
     """
         Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
         This is so that we can provide a unified interface for searching all holdings of an institution

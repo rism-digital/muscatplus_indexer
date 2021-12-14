@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Optional
+from typing import Optional
 
 import pymarc
 import ujson
@@ -9,18 +9,18 @@ from indexer.helpers.identifiers import get_record_type, get_source_type, get_co
     get_is_contents_record, get_is_collection_record
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
 
 log = logging.getLogger("muscat_indexer")
-index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
+index_config: dict = yaml.full_load(open("index_config.yml", "r"))
 
-source_profile: Dict = yaml.full_load(open('profiles/sources.yml', 'r'))
+source_profile: dict = yaml.full_load(open('profiles/sources.yml', 'r'))
 
 
-def create_source_index_documents(record: Dict) -> List:
+def create_source_index_documents(record: dict) -> list:
     source: str = record['marc_source']
     marc_record: pymarc.Record = create_marc(source)
 
@@ -41,39 +41,35 @@ def create_source_index_documents(record: Dict) -> List:
     num_holdings: int = record.get("holdings_count")
     main_title: str = record['std_title']
 
-    # This pulls the composer name from the database directly. This is only used for indexing holdings; we actually
-    # read the source MARC record when we index the creator name on the record so that we can get the IDs and other.
-    # information about that person. However, to have the creator name available on the holdings records we need to
-    # have this before we run the other record processors, so this is the easiest way to get that.
-    creator_name: str = record['creator_name']
+    creator_name: Optional[str] = get_creator_name(marc_record)
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",")] if record['child_record_types'] else []
     institution_places: list[str] = [s for s in record['institution_places'].split(",")] if record['institution_places'] else []
 
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
     # id on the sources, regardless of whether they have a holding record, or they are a MS.
-    manuscript_holdings: List = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name, record_type_id) or []
-    holding_orgs: List = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
-    holding_orgs_ids: List = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
-    holding_orgs_identifiers: List = _get_full_holding_identifiers(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
+    manuscript_holdings: list = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name, record_type_id) or []
+    holding_orgs: list = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
+    holding_orgs_ids: list = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
+    holding_orgs_identifiers: list = _get_full_holding_identifiers(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
 
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
-    source_membership_json: Optional[Dict] = None
+    source_membership_json: Optional[dict] = None
     if parent_record_type_id:
         source_membership_json = {
             "source_id": f"source_{membership_id}",
             "main_title": record.get("parent_title"),
         }
 
-    people_names: List = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
-    variant_people_names: Optional[List] = _get_variant_people_names(record.get("alt_people_names"))
-    related_people_ids: List = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
+    people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
+    variant_people_names: Optional[list] = _get_variant_people_names(record.get("alt_people_names"))
+    related_people_ids: list = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
 
     variant_standard_terms: Optional[list] = _get_variant_standard_terms(record.get("alt_standard_terms"))
 
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
-    source_core: Dict = {
+    source_core: dict = {
         "id": source_id,
         "type": "source",
         "rism_id": rism_id,
@@ -102,15 +98,15 @@ def create_source_index_documents(record: Dict) -> List:
     }
 
     # Process the MARC record and profile configuration and add additional fields
-    additional_fields: Dict = process_marc_profile(source_profile, source_id, marc_record, source_processor)
+    additional_fields: dict = process_marc_profile(source_profile, source_id, marc_record, source_processor)
     source_core.update(additional_fields)
 
     # Extended incipits have their fingerprints calculated for similarity matching.
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
-    incipits: List = get_incipits(marc_record, source_id, main_title) or []
+    incipits: list = get_incipits(marc_record, source_id, main_title) or []
 
-    res: List = [source_core]
+    res: list = [source_core]
     res.extend(incipits)
     res.extend(manuscript_holdings)
 
@@ -141,11 +137,11 @@ def _get_manuscript_holdings(record: pymarc.Record,
     return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title, creator_name, record_type_id)]
 
 
-def _get_variant_people_names(variant_names: Optional[str]) -> Optional[List]:
+def _get_variant_people_names(variant_names: Optional[str]) -> Optional[list]:
     if not variant_names:
         return None
 
-    list_of_names: List = variant_names.split("\n")
+    list_of_names: list = variant_names.split("\n")
     return tokenize_variants(list_of_names)
 
 
@@ -157,7 +153,7 @@ def _get_variant_standard_terms(variant_terms: Optional[str]) -> Optional[list]:
     return tokenize_variants(list_of_terms)
 
 
-def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[List[str]]:
+def _get_holding_orgs(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[list[str]]:
     # Coalesces both print and mss holdings into a multivalued field so that we can filter sources by their holding
     # library
     # If there are any holding records for MSS, get the siglum. Use a set to ignore any duplicates
@@ -167,7 +163,7 @@ def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: 
         if siglum := mss.get("siglum_s"):
             sigs.add(siglum)
 
-    all_holdings: List = []
+    all_holdings: list = []
 
     if print_holdings:
         all_holdings += print_holdings.split("\n")
@@ -182,14 +178,14 @@ def _get_holding_orgs(mss_holdings: List[HoldingIndexDocument], print_holdings: 
     return list(sigs)
 
 
-def _get_holding_orgs_ids(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> List[str]:
+def _get_holding_orgs_ids(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> list[str]:
     ids: set[str] = set()
 
     for mss in mss_holdings:
         if inst_id := mss.get("institution_id"):
             ids.add(inst_id)
 
-    all_marc_records: List = []
+    all_marc_records: list = []
 
     if print_holdings:
         all_marc_records += print_holdings.split("\n")
@@ -207,7 +203,7 @@ def _get_holding_orgs_ids(mss_holdings: List[HoldingIndexDocument], print_holdin
     return list(ids)
 
 
-def _get_full_holding_identifiers(mss_holdings: List[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> List[str]:
+def _get_full_holding_identifiers(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> list[str]:
     ids: set[str] = set()
 
     for mss in mss_holdings:
@@ -216,7 +212,7 @@ def _get_full_holding_identifiers(mss_holdings: List[HoldingIndexDocument], prin
         institution_shelfmark: str = mss.get("shelfmark_s", "")
         ids.add(f"{institution_name} {institution_sig} {institution_shelfmark}")
 
-    all_marc_records: List = []
+    all_marc_records: list = []
 
     if print_holdings:
         all_marc_records += print_holdings.split("\n")

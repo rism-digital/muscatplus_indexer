@@ -88,7 +88,7 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
     institution_id: str = f"institution_{normalize_id(record['001'].value())}"
-    institutions: Optional[List] = get_related_institutions(record, institution_id, "institution")
+    institutions: Optional[List] = get_related_institutions(record, institution_id, "institution", fields=('710',))
 
     return institutions
 

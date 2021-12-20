@@ -59,6 +59,9 @@ def create_source_index_documents(record: dict) -> list:
         source_membership_json = {
             "source_id": f"source_{membership_id}",
             "main_title": record.get("parent_title"),
+            "record_type": get_record_type(parent_record_type_id),
+            "source_type": get_source_type(parent_record_type_id),
+            "content_types": get_content_type(parent_record_type_id, [])
         }
 
     people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []

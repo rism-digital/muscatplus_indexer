@@ -6,7 +6,7 @@ import ujson
 import yaml
 
 from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_type, \
-    get_is_contents_record, get_is_collection_record
+    get_is_contents_record, get_is_collection_record, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
@@ -52,6 +52,7 @@ def create_source_index_documents(record: dict) -> list:
     holding_orgs: list = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
     holding_orgs_ids: list = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
     holding_orgs_identifiers: list = _get_full_holding_identifiers(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
+    country_codes: list = _get_country_codes(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
 
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_json: Optional[dict] = None
@@ -89,6 +90,7 @@ def create_source_index_documents(record: dict) -> list:
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
         "holding_institutions_places_sm": institution_places,
+        "country_codes_sm": country_codes,
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
         "variant_standard_terms_sm": variant_standard_terms,
@@ -232,3 +234,27 @@ def _get_full_holding_identifiers(mss_holdings: list[HoldingIndexDocument], prin
         ids.add(f"{rec_name} {rec_sig} {rec_shelfmark}")
 
     return [realid for realid in ids if realid.strip()]
+
+
+def _get_country_codes(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> list[str]:
+    codes: set[str] = set()
+
+    for mss in mss_holdings:
+        institution_sig: Optional[str] = mss.get("siglum_s")
+        if institution_sig:
+            codes.add(country_code_from_siglum(institution_sig))
+
+    all_marc_records: list = []
+    if print_holdings:
+        all_marc_records += print_holdings.split("\n")
+    if parent_holdings:
+        all_marc_records += parent_holdings.split("\n")
+
+    for rec in all_marc_records:
+        rec = rec.strip()
+        m: pymarc.Record = create_marc(rec)
+        rec_sig: Optional[str] = to_solr_single(m, "852", "a")
+        if rec_sig:
+            codes.add(country_code_from_siglum(rec_sig))
+
+    return list(codes)

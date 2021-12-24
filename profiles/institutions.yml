@@ -7,6 +7,11 @@ external_ids:  # 024
 location_loc:  # 034
   processor: "_get_location"
 
+gnd_country_codes_sm:  # 043; form of XX-YY
+  field: "043"
+  subfield: "c"
+  multiple: true
+
 name_s:
   field: "110"
   subfield: "a"
@@ -18,8 +23,8 @@ city_s:
 siglum_s:
   field: "110"
   subfield: "g"
-country_code_s:  # Extract the country code from the siglum.
-  processor: "_get_country_code"
+country_codes_sm:  # Extract the country code from the siglum.
+  processor: "_get_country_codes"
 country_names_sm:
   processor: "_get_country_names"
 

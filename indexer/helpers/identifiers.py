@@ -189,7 +189,7 @@ COUNTRY_CODE_MAPPING = {
     "CN": ["China"],
     "CO": ["Colombia"],
     "CR": ["Costa Rica"],
-    "CZ": ["Czechoslovakia"],
+    "CZ": ["Czechoslovakia", "Czech Republic"],
     "D": ["Germany", "Deutschland", "Allemagne", "Germania", "Alemania", "Alemanha", "Niemcy"],
     "DK": ["Denmark"],
     "E": ["Spain", "Espagne", "Spanien", "Spagna", "España", "Hiszpania", "Espanha"],
@@ -251,7 +251,7 @@ COUNTRY_CODE_MAPPING = {
     "UA": ["Ukraine"],
     "US": ["America", "United States", "États Unis", "Stany Zjednoczone AP", "Vereinigte Staaten", "Amerika", "Estados Unidos", "Stati Uniti"],
     "USB": ["Uzbekistan"],
-    "V": ["Vatican", "Vatikan", "Vaticano", "Watykan"],
+    "V": ["Vatican", "Vatikan", "Vaticano", "Watykan", "Holy See"],
     "VE": ["Venezuela"],
     "XX": [],
     "ZA": ["South Africa"]

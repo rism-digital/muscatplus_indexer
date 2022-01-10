@@ -62,7 +62,7 @@ def index_sources(cfg: Dict) -> bool:
 
 
 def index_source_groups(sources: List) -> bool:
-    log.info("Index source group")
+    log.info("Indexing Source Group")
     records_to_index: deque = deque()
 
     for record in sources:

@@ -1,8 +1,8 @@
 import logging
 import types
-from typing import Callable, Dict, Any
+from typing import Callable, Any
 
-import pymarc as pymarc
+import pymarc
 import ujson
 
 from indexer.exceptions import RequiredFieldException
@@ -11,8 +11,8 @@ from indexer.helpers.utilities import to_solr_single_required, to_solr_multi, to
 log = logging.getLogger("muscat_indexer")
 
 
-def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType) -> Dict:
-    solr_document: Dict = {}
+def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType) -> dict:
+    solr_document: dict = {}
 
     for solr_field, field_config in cfg.items():
         multiple: bool = field_config.get("multiple", False)

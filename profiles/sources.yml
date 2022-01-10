@@ -328,6 +328,12 @@ subjects_json:
   processor: "_get_subjects"
   json: true
 
+
+location_of_performance_ids:
+  field: "651"
+  subfield: "0"
+  multiple: true
+  value_prefix: "place_"
 location_of_performance_json:  # 651 is linked to the places list
   processor: "_get_location_performance_data"
   json: true

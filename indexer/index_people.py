@@ -28,7 +28,13 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
                         WHERE hp.person_id = p.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
                         AS holdings_count
                      FROM {dbname}.people AS p
-                     WHERE p.wf_stage = 1;""")
+                     WHERE
+                     (SELECT COUNT(DISTINCT(pi.person_id)) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
+                     (SELECT COUNT(DISTINCT(pp.person_a_id)) FROM {dbname}.people_to_people AS pp WHERE p.id = pp.person_a_id OR p.id = pp.person_b_id) > 0 OR
+                     (SELECT COUNT(DISTINCT(pl.person_id)) FROM {dbname}.people_to_places AS pl WHERE p.id = pl.person_id) > 0 OR
+                     (SELECT COUNT(DISTINCT(sp.person_id)) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
+                     (SELECT COUNT(DISTINCT(hp.person_id)) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
+                     (SELECT COUNT(DISTINCT(ip.person_id)) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0;""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows
@@ -46,8 +52,8 @@ def index_people(cfg: Dict) -> bool:
 
 def index_people_groups(people: List) -> bool:
     log.info("Indexing People")
-
     records_to_index: deque = deque()
+
     for record in people:
         doc = create_person_index_document(record)
         records_to_index.append(doc)

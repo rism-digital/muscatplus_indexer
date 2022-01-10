@@ -290,12 +290,6 @@ class PlaceRelationshipIndexDocument(TypedDict):
 
 
 def __related_place(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> PlaceRelationshipIndexDocument:
-    # Note that as of this writing the places are not controlled by the place authorities,
-    # so we don't have a place authority ID to store here.
-
-    # TODO: Fix this to point to the place authority once the IDs are stored in MARC. See
-    #   https://github.com/rism-digital/muscat/issues/1080
-
     d: PlaceRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "this_id": this_id,

@@ -58,6 +58,15 @@ parallel_names_sm:
   subfield: "a"
   multiple: true
 
+related_places_json: # 551 or 751?
+  processor: "_get_related_places_data"
+  json: true
+place_ids:
+  field: "551"
+  subfield: "0"
+  multiple: true
+  value_prefix: "place_"
+
 # TODO: Figure out what to do with 670, linked to secondary literature
 
 institution_history_sm:
@@ -74,10 +83,6 @@ general_notes_sm:
 
 related_people_json:  # 700
   processor: "_get_related_people_data"
-  json: true
-
-related_places_json: # 551 or 751?
-  processor: "_get_related_places_data"
   json: true
 
 related_institutions_json: # 710

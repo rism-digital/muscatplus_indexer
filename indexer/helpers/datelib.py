@@ -6,12 +6,16 @@ import re
 from typing import Pattern, Tuple, Optional, List
 
 import edtf
-import pymarc as pymarc
 from edtf.parser.edtf_exceptions import EDTFParseException
 
 log = logging.getLogger("muscat_indexer")
 # assume European format dates
 edtf.appsettings.DAY_FIRST = True
+
+# The simplest single year match
+SIMPLE_SINGLE_YEAR_REGEX: Pattern = re.compile("(?P<year>\d{4})")
+# The simplest date range -- 1234-1256
+SIMPLE_RANGE_REGEX: Pattern = re.compile("(?P<first>\d{4})-(?P<second>\d{4})")
 
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
 DOT_DIVIDED_REGEX: Pattern = re.compile(r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?")
@@ -38,7 +42,6 @@ ZERO_DAY_REGEX: Pattern = re.compile(r"(?P<year>\d{4})-\d{2}-00")
 # Deal with dates that are mushed together, e.g., 19991010-19991020
 MUSHED_TOGETHER_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}")
 MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}-(?P<second>\d{4})\d{4}")
-
 
 EARLY_CENTURY_END_YEAR: int = 10
 LATE_CENTURY_START_YEAR: int = 90
@@ -122,7 +125,21 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
     if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "[s.d.]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "[o.J]", "o.J", "[s.n.]", "(s. d.)"):
         return None, None
 
-    # simplify known problems for the edtf parser
+    # Fast path: If we have a single date of four digits, don't bother doing any additional processing.
+    if simplest_single_match := SIMPLE_SINGLE_YEAR_REGEX.match(date_statement):
+        year: int = int(simplest_single_match.group("year"))
+        return year, year
+
+    # Fast path: If we have a really simple range, then short circuit all additional processing
+    # and check this first.
+    if simplest_range_match := SIMPLE_RANGE_REGEX.match(date_statement):
+        first: int = int(simplest_range_match.group("first"))
+        second: int = int(simplest_range_match.group("second"))
+
+        return first, second
+
+    # Slow path
+    # First simplify known problems for the edtf parser
     simplified_date_statement = date_statement.replace('(?)', '')
 
     # Replace any dates that use dots instead of dashes to separate the parameters.
@@ -146,6 +163,15 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
     simplified_date_statement = simplified_date_statement.strip()
     log.debug("Parsing %s simplified to %s", date_statement, simplified_date_statement)
 
+    # adds / subtracts 99 years if a person's birth or death dates are the only known dates
+    if simplified_date_statement.endswith("*") or simplified_date_statement.endswith("+"):
+        year_section: str = simplified_date_statement[:4]
+        if year_section.isdigit():
+            if simplified_date_statement.endswith("*"):
+                return int(year_section), int(year_section) + 99
+            elif simplified_date_statement.endswith("+"):
+                return int(year_section) - 99, int(year_section)
+
     # handles 17-- or 17?? case
     dashes_match = CENTURY_DASHES_REGEX.match(simplified_date_statement)
     if dashes_match:
@@ -160,10 +186,7 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
         second: int = ((int(slashes_match.group("second"))) * 100) - 1
         return first, second
 
-    # handle integers directly
-    # edtf assumes that 2 digit years are shortened years - e.g. 79 is 1979, 20 is 2020 etc. It should instead assume
-    # 79 is 79 AD I only know of one example in our data, which this handles, but if we get some like 79-89 we should
-    # come back to this. The problem is in the dateutil parse function
+    # handle cleaned integers directly
     if simplified_date_statement.isdigit():
         return int(simplified_date_statement), int(simplified_date_statement)
 
@@ -293,12 +316,12 @@ EARLIEST_YEAR_IF_MISSING: int = -2000
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 
 
-def process_date_statements(record: pymarc.Record, date_statements: list) -> Optional[list[int]]:
+def process_date_statements(date_statements: list, record_id: str) -> Optional[list[int]]:
     earliest_dates: List[int] = []
     latest_dates: List[int] = []
 
     for statement in date_statements:
-        if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)"):
+        if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)", "xxxx-xxxx", "uuuu-uuuu", "?", "??"):
             continue
 
         try:
@@ -310,8 +333,7 @@ def process_date_statements(record: pymarc.Record, date_statements: list) -> Opt
             return None
 
         if earliest is None and latest is None:
-            source_id: str = record['001'].value()
-            log.warning("Problem with date statement %s for record %s", statement, source_id)
+            log.warning("Problem with date statement %s for record %s", statement, record_id)
             return None
 
         if earliest:

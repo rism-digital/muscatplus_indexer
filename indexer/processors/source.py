@@ -1,5 +1,4 @@
 import itertools
-import itertools
 import logging
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
@@ -8,9 +7,20 @@ import pymarc
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import country_code_from_siglum
-from indexer.helpers.utilities import to_solr_single, normalize_id, to_solr_multi, external_resource_data, \
-    to_solr_single_required, get_related_people, get_related_institutions, get_related_places, get_titles, \
-    related_person, related_institution, get_catalogue_numbers
+from indexer.helpers.utilities import (
+    to_solr_single,
+    normalize_id,
+    to_solr_multi,
+    external_resource_data,
+    to_solr_single_required,
+    get_related_people,
+    get_related_institutions,
+    get_related_places,
+    get_titles,
+    related_person,
+    related_institution,
+    get_catalogue_numbers
+)
 
 log = logging.getLogger("muscat_indexer")
 
@@ -120,7 +130,9 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     if not date_statements:
         return None
 
-    return process_date_statements(record, date_statements)
+    record_id: str = record['001'].value()
+
+    return process_date_statements(date_statements, record_id)
 
 
 def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[List]:
@@ -141,11 +153,6 @@ def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[List]:
             ret.append(stmt)
 
     return ret
-
-
-def _get_source_notes_data(record: pymarc.Record) -> Optional[List[Dict]]:
-    # Get all notes fields that we're interested in.
-    fields: List[pymarc.Field] = record.get_fields("500", "505", "518", "520", "561", "")
 
 
 def __scoring(field: pymarc.Field) -> Dict:

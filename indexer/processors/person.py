@@ -29,7 +29,9 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     if not date_statements:
         return None
 
-    return process_date_statements(record, date_statements)
+    record_id: str = record['001'].value()
+
+    return process_date_statements(date_statements, record_id)
 
 
 def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:

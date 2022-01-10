@@ -126,7 +126,8 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
 
     source_dates: list = []
     if date_statements:
-        source_dates = process_date_statements(record, date_statements)
+        record_id: str = record['001'].value()
+        source_dates = process_date_statements(date_statements, record_id)
 
     d: Dict = {
         "id": f"{source_id}_incipit_{num}",

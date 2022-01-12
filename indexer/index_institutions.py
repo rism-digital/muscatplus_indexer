@@ -25,11 +25,17 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
                        AS source_count,
                     (SELECT COUNT(DISTINCT hi.holding_id)
                         FROM {dbname}.holdings_to_institutions AS hi
-                        LEFT JOIN {dbname}.holdings AS hh on hi.holding_id = hh.id
+                        LEFT JOIN {dbname}.holdings AS hh ON hi.holding_id = hh.id
                         WHERE hi.institution_id = i.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
                         AS holdings_count
                     FROM {dbname}.institutions AS i
-                    WHERE i.wf_stage = 1;""")
+                    WHERE i.siglum IS NOT NULL OR
+                        ((SELECT COUNT(DISTINCT(hi.holding_id)) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(DISTINCT(ii.institution_b_id)) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
+                         (SELECT COUNT(DISTINCT(pi.person_id)) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(DISTINCT(bi.publication_id)) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(DISTINCT(si.source_id)) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
+                        );""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows

@@ -26,7 +26,7 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
                     (SELECT COUNT(DISTINCT hi.holding_id)
                         FROM {dbname}.holdings_to_institutions AS hi
                         LEFT JOIN {dbname}.holdings AS hh ON hi.holding_id = hh.id
-                        WHERE hi.institution_id = i.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
+                        WHERE hi.institution_id = i.id)
                         AS holdings_count
                     FROM {dbname}.institutions AS i
                     WHERE i.siglum IS NOT NULL OR

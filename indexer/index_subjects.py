@@ -19,8 +19,7 @@ def index_subjects(cfg: Dict) -> bool:
         term, 
         alternate_terms, 
         notes
-        FROM {dbname}.standard_terms
-        WHERE wf_stage = 1;""")
+        FROM {dbname}.standard_terms;""")
 
     all_subjects: List[Dict] = curs._cursor.fetchall()
 

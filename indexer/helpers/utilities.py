@@ -4,7 +4,7 @@ import re
 import timeit
 from collections import OrderedDict
 from functools import wraps
-from typing import List, Any, Iterable, Optional, Dict, TypedDict, Tuple, Pattern
+from typing import Iterable, Optional, TypedDict, Pattern, Callable
 
 import pymarc
 
@@ -38,7 +38,7 @@ def elapsedtime(func):
     return timed_f
 
 
-def parallelise(records: Iterable, func: Any, *args, **kwargs) -> None:
+def parallelise(records: Iterable, func: Callable, *args, **kwargs) -> None:
     """
     Given a list of records, this function will parallelise processing of those records. It will
     coalesce the arguments into an array, to be handled by function `func`.
@@ -99,7 +99,7 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
     return values[0]
 
 
-def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> Optional[List[str]]:
+def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> Optional[list[str]]:
     """
     Returns all the values for a given field and subfield. Extracting this data from the
     field is done by creating an OrderedDict from the keys, and then casting it back to a list. This removes
@@ -114,7 +114,7 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
 
     :return: A sorted list of strings, or None if not found.
     """
-    fields: List[pymarc.Field] = record.get_fields(field)
+    fields: list[pymarc.Field] = record.get_fields(field)
     if not fields:
         return None
 
@@ -139,7 +139,7 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     return sorted(list(retval))
 
 
-def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> List[str]:
+def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> list[str]:
     """
     The same operation as to_solr_multi, except this function must return at least one value otherwise it
     will raise an exception.
@@ -171,7 +171,7 @@ def normalize_id(identifier: str) -> str:
     return f"{int(m.group())}"
 
 
-def clean_multivalued(fields: Dict, field_name: str) -> Optional[List[str]]:
+def clean_multivalued(fields: dict, field_name: str) -> Optional[list[str]]:
     if not fields.get(field_name):
         return None
 
@@ -253,7 +253,7 @@ def related_person(field: pymarc.Field, this_id: str, this_type: str, relationsh
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_people(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("500", "700"), ungrouped: bool = False) -> Optional[List[PersonRelationshipIndexDocument]]:
+def get_related_people(record: pymarc.Record, record_id: str, record_type: str, fields: tuple = ("500", "700"), ungrouped: bool = False) -> Optional[list[PersonRelationshipIndexDocument]]:
     """
     In some cases you will want to restrict the fields that are used for this lookup. By default it will look at 500
     and 700 fields, since that is where they are kept in the authority records; however, source records use 500 for
@@ -270,7 +270,7 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
 
     :return: A list of person relationships, or None if not applicable.
     """
-    people: List = record.get_fields(*fields)
+    people: list = record.get_fields(*fields)
     if not people:
         return None
 
@@ -303,8 +303,8 @@ def __related_place(field: pymarc.Field, this_id: str, this_type: str, relations
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_places(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("551", "751")) -> Optional[List[PlaceRelationshipIndexDocument]]:
-    places: List = record.get_fields(*fields)
+def get_related_places(record: pymarc.Record, record_id: str, record_type: str, fields: tuple = ("551", "751")) -> Optional[list[PlaceRelationshipIndexDocument]]:
+    places: list = record.get_fields(*fields)
     if not places:
         return None
 
@@ -337,9 +337,9 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
     return {k: v for k, v in d.items() if v}
 
 
-def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: Tuple = ("510", "710"), ungrouped: bool = False) -> Optional[List[InstitutionRelationshipIndexDocument]]:
+def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: tuple = ("510", "710"), ungrouped: bool = False) -> Optional[list[InstitutionRelationshipIndexDocument]]:
     # Due to inconsistencies in authority records, these relationships are held in both 510 and 710 fields.
-    institutions: List = record.get_fields(*fields)
+    institutions: list = record.get_fields(*fields)
     if not institutions:
         return None
 
@@ -349,27 +349,38 @@ def get_related_institutions(record: pymarc.Record, record_id: str, record_type:
 
 
 BREAK_CONVERT: Pattern = re.compile(r"({{brk}})")
-URL_MATCH: Pattern = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)", re.MULTILINE|re.UNICODE)
+URL_MATCH: Pattern = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)", re.MULTILINE | re.UNICODE)
+OPAC_LINK: Pattern = re.compile(r"https?://opac\.rism\.info/search\?id=(\d+)&View=rism", re.MULTILINE | re.UNICODE)
+MUSCAT_LINK: Pattern = re.compile(r"https?://muscat\.rism\.info/admin/sources/(\d+)", re.MULTILINE | re.UNICODE)
 
 
-def format_notes_field(note: str) -> List[str]:
+def note_links(note: str) -> str:
     """
-    Does some general formatting of a notes field that replaces certain characters and creates links in the text.
+    Creates links in notes text
     :param note: The raw MARC string
     :return: A formatted string.
     """
+    # If there are no URLs in this note, don't process any further.
+    if "http" not in note:
+        return note
+
     # If the note already contains a single anchor tag, assume that all links are anchored and skip them. This
     # avoids double-encoding anchor tags.
     if "<a href" not in note:
-        note = URL_MATCH.sub(r"<a href=\"\1\" _target=\"blank\">\1</a>", note)
+        # Check to see if it's an OPAC or a MUSCAT link; if so, rewrite to an internal link.
+        if re.search(OPAC_LINK, note):
+            note = OPAC_LINK.sub(r'<a href="/sources/\1" _target="blank">RISM Source ID \1</a>', note)
+        elif re.search(MUSCAT_LINK, note):
+            note = MUSCAT_LINK.sub(r'<a href="/sources/\1" _target="blank">RISM Source ID \1</a>', note)
+        else:
+            # Any other URLs are passed through wrapped in an anchor tag.
+            note = URL_MATCH.sub(r'<a href="\1" _target="blank">\1</a>', note)
 
-    notelist: List[str] = note.split("{{brk}}")
-
-    return notelist
+    return note
 
 
-def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]]) -> List:
-    catalogue_numbers: List = []
+def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]]) -> list:
+    catalogue_numbers: list = []
 
     if field.tag == "730" and 'n' in field:
         catalogue_numbers.append(field['n'])
@@ -386,7 +397,7 @@ def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[List[p
     return catalogue_numbers
 
 
-def __title(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]]) -> Dict:
+def __title(field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]]) -> dict:
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
@@ -404,7 +415,7 @@ def __title(field: pymarc.Field, catalogue_fields: Optional[List[pymarc.Field]])
     return {k: v for k, v in d.items() if v}
 
 
-def get_titles(record: pymarc.Record, field: str) -> Optional[List[Dict]]:
+def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
     """
     Standardize the title field structure. This is used for both the 240 and 730 fields
     since they have similar structure.
@@ -416,14 +427,14 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[List[Dict]]:
     if not titles:
         return None
 
-    c: Optional[List[pymarc.Field]] = None
+    c: Optional[list[pymarc.Field]] = None
     if field == "240":
         c = record.get_fields("383", "690")
 
     return [__title(t, c) for t in titles if t]
 
 
-def tokenize_variants(variants: List[str]) -> List[str]:
+def tokenize_variants(variants: list[str]) -> list[str]:
     """
     If we're only searching, there is no need to index all the term variants, only the unique tokens in the
     variant names. This splits the list of variants into tokens, and then
@@ -446,7 +457,7 @@ def tokenize_variants(variants: List[str]) -> List[str]:
     unique_tokens: set = set()
 
     for variant in variants:
-        name_parts: List = [n.strip() for n in re.split(r",| ", variant) if n and len(n) > 2]
+        name_parts: list = [n.strip() for n in re.split(r",| ", variant) if n and len(n) > 2]
         unique_tokens.update(name_parts)
 
     return list(unique_tokens)
@@ -460,3 +471,24 @@ def get_creator_name(record: pymarc.Record) -> Optional[str]:
     creator_name: str = creator_field["a"].strip()
     creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
     return f"{creator_name}{creator_dates}"
+
+
+
+def rewrite_links(note_list: list[str]) -> list[str]:
+    """
+    Processes a notes field and, if it finds a
+    :param note_list:
+    :return:
+    """
+    notes: list[str] = []
+    for note in note_list:
+        if 'opac.rism.info' in note:
+            # rewrite opac links
+            pass
+        elif 'muscat.rism.info' in note:
+            # rewrite muscat links
+            pass
+        else:
+            notes += note
+
+    return notes

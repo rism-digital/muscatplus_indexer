@@ -14,6 +14,7 @@
 #      only those that are not part of a material group
 #    breaks: true | false (default); Will additionally process the field values to handle "{{brk}}",
 #      particularly used in notes fields.
+#    links: true | false (default); Will additional process a field for URLs to handle creating links.
 #    -- or --
 #    processor: _function_name (string; must exist in the corresponding processor module)
 #    required: true | false (default)
@@ -207,12 +208,14 @@ source_general_notes_smni:
   multiple: true
   ungrouped: true
   breaks: true
+  links: true
 
 contents_notes_sm:
   field: "505"
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 access_restrictions_sm:
   field: "506"
@@ -227,18 +230,21 @@ performance_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 description_summary_sm:
   field: "520"
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 supplementary_material_sm:
   field: "525"
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 # 541 is indexed in the holding document, since it deals with the provenance of the
 # source and how it was acquired by the institution. Remember that all sources
@@ -250,6 +256,7 @@ language_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 # 561 is indexed in the holding document
 
@@ -258,6 +265,7 @@ binding_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 # $u is deprecated and will not be indexed.
 
 source_of_description_notes_sm:
@@ -265,6 +273,7 @@ source_of_description_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 # 590 is indexed in the material groups.
 
@@ -281,6 +290,7 @@ watermark_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 # different types in material groups will produce a list of all source types
 # associated with this source. So a source with mixed MS and print contents
@@ -315,6 +325,7 @@ colophon_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  links: true
 
 # 598 is deprecated and will not be indexed.
 # 599 is an internal note and will not be indexed.
@@ -327,7 +338,6 @@ subjects_sm:
 subjects_json:
   processor: "_get_subjects"
   json: true
-
 
 location_of_performance_ids:
   field: "651"

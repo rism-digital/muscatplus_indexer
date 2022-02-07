@@ -1,5 +1,4 @@
 import logging
-from typing import List, Dict
 
 import httpx
 import ujson
@@ -7,7 +6,7 @@ import yaml
 
 log = logging.getLogger("muscat_indexer")
 
-idx_config: Dict = yaml.full_load(open('index_config.yml', 'r'))
+idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 solr_address = idx_config['solr']['server']
 solr_idx_core = idx_config['solr']['indexing_core']
 solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
@@ -24,7 +23,7 @@ def empty_solr_core() -> bool:
     return False
 
 
-def submit_to_solr(records: List) -> bool:
+def submit_to_solr(records: list) -> bool:
     """
     Submits a set of records to a Solr server.
 

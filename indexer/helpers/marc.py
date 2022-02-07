@@ -1,20 +1,20 @@
 import re
 import itertools
-from typing import Optional, TypedDict, List, Pattern, Set
+from typing import Optional, TypedDict, Pattern, Set
 import pymarc
 import logging
 
 MARC_LINE_REGEX: Pattern = re.compile(r'^=(?P<idtag>001)\s{2}(?P<ident>.*)|(?P<tag>\d{3})\s{2}(?P<indicators>[0-9#|]{2})(?P<subfields>.*)', re.S)
 
-MarcSubField = List[str]
+MarcSubField = list[str]
 
 log = logging.getLogger("muscat_indexer")
 
 
 class MarcField(TypedDict):
     tag: str
-    indicators: Optional[List]
-    subfields: Optional[List[str]]
+    indicators: Optional[list]
+    subfields: Optional[list[str]]
     data: Optional[str]
 
 
@@ -27,11 +27,11 @@ def _parse_field(line: str) -> MarcField:
     # Control fields are those in the 001-008 range. They do not have
     # subfields, but have the data encoded in them directly.
     control: bool = tag_value.isdigit() and int(tag_value) < 10
-    subfields: Optional[List[str]]
+    subfields: Optional[list[str]]
 
     if not control:
-        subf_list: List = sub_value.split("$") if sub_value else []
-        parsed_subfields: List[MarcSubField] = [_parse_subf(itm) for itm in subf_list if itm != '']
+        subf_list: list = sub_value.split("$") if sub_value else []
+        parsed_subfields: list[MarcSubField] = [_parse_subf(itm) for itm in subf_list if itm != '']
         subfields = list(itertools.chain.from_iterable(parsed_subfields))
         data = None
     else:
@@ -46,7 +46,7 @@ def _parse_field(line: str) -> MarcField:
     }
 
 
-def _parse_subf(subf_value: str) -> List:
+def _parse_subf(subf_value: str) -> list[str]:
     code: str = subf_value[0]
     value: str = subf_value[1:]
     return [code, value]
@@ -59,8 +59,8 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    lines: List = re.split(r"[\r\n]+", record)
-    fields: List[MarcField] = [_parse_field(line) for line in lines if line != '']
+    lines: list = re.split(r"[\r\n]+", record)
+    fields: list[MarcField] = [_parse_field(line) for line in lines if line != '']
     r: pymarc.Record = pymarc.Record()
 
     for field in fields:
@@ -71,7 +71,7 @@ def create_marc(record: str) -> pymarc.Record:
     return r
 
 
-def record_value_lookup(record: pymarc.Record, tag: str, subfield: str) -> Optional[List]:
+def record_value_lookup(record: pymarc.Record, tag: str, subfield: str) -> Optional[list]:
     """
     Takes a record, tag, and subfield and extracts the string value from that.
     Returns None if the tag or subfield is not found.
@@ -81,7 +81,7 @@ def record_value_lookup(record: pymarc.Record, tag: str, subfield: str) -> Optio
     :param subfield: A string representing the subfield
     :return: A list of subfield values
     """
-    fields: List[pymarc.Field] = record.get_fields(tag)
+    fields: list[pymarc.Field] = record.get_fields(tag)
     if not fields:
         return None
 
@@ -90,7 +90,7 @@ def record_value_lookup(record: pymarc.Record, tag: str, subfield: str) -> Optio
     return list(subfields)
 
 
-def id_field_lookup(record: pymarc.Record, id_type: str) -> Optional[List]:
+def id_field_lookup(record: pymarc.Record, id_type: str) -> Optional[list]:
     """
     A specialized lookup field for extracting specific ID types from the
     repeatable 024 field. All other fields that do not match the value given
@@ -102,12 +102,12 @@ def id_field_lookup(record: pymarc.Record, id_type: str) -> Optional[List]:
     :param id_type: The value of the $2 field to match
     :return: A list of values from the $a of the 024 that match the id type
     """
-    id_fields: List[pymarc.Field] = record.get_fields("024")
+    id_fields: list[pymarc.Field] = record.get_fields("024")
 
     if not id_fields:
         return None
 
-    ids: List = []
+    ids: list = []
 
     for field in id_fields:
         is_of_type: bool = len(field.get_subfields("2")) > 0 and field.get_subfields("2")[0] == id_type
@@ -115,7 +115,7 @@ def id_field_lookup(record: pymarc.Record, id_type: str) -> Optional[List]:
         if not is_of_type:
             continue
 
-        id_val: List = field.get_subfields("a")
+        id_val: list = field.get_subfields("a")
         if not id_val:
             continue
 

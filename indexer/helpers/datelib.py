@@ -3,7 +3,7 @@ import functools
 import logging.config
 import math
 import re
-from typing import Pattern, Tuple, Optional, List
+from typing import Pattern, Optional
 
 import edtf
 from edtf.parser.edtf_exceptions import EDTFParseException
@@ -47,7 +47,7 @@ EARLY_CENTURY_END_YEAR: int = 10
 LATE_CENTURY_START_YEAR: int = 90
 
 
-def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: str) -> Optional[Tuple[int, int]]:
+def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: str) -> Optional[tuple[int, int]]:
     """
     Parse dates of the form '16th century, second half', '15th century, last third', "18.2d" (second decade of the
     18th century), "17.3q" (third quarter of the 17th century), '19.in' (beginning of the 19th century), '18.ex'
@@ -102,7 +102,7 @@ def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: 
     return century_start + ((multiplier - 1) * period_years), century_start + (multiplier * period_years)
 
 
-def _parse_century_date_with_adjective(century_start: int, adjective: str) -> Optional[Tuple[int, int]]:
+def _parse_century_date_with_adjective(century_start: int, adjective: str) -> Optional[tuple[int, int]]:
     """
     Parse dates of the form '16th century, early', '15th century, end'
     :param century_start: e.g. 1500
@@ -120,7 +120,7 @@ def _parse_century_date_with_adjective(century_start: int, adjective: str) -> Op
 
 
 @functools.lru_cache(maxsize=2048)
-def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[int]]:  # noqa: MC0001
+def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[int]]:  # noqa: MC0001
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
     if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "[s.d.]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "[o.J]", "o.J", "[s.n.]", "(s. d.)"):
         return None, None
@@ -272,8 +272,8 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
     return start_year, end_year
 
 
-def parse_date_metadata(date_statements: List[str], start_year: Optional[int],
-                        end_year: Optional[int]) -> Tuple[Optional[int], Optional[int]]:
+def parse_date_metadata(date_statements: list[str], start_year: Optional[int],
+                        end_year: Optional[int]) -> tuple[Optional[int], Optional[int]]:
     """
     Parse the date metadata we're given in mods/dc (usually some combination of date statements, start year and end year)
     into start year and end year, with missing information filled in from the other date fields where possible
@@ -317,8 +317,8 @@ LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 
 
 def process_date_statements(date_statements: list, record_id: str) -> Optional[list[int]]:
-    earliest_dates: List[int] = []
-    latest_dates: List[int] = []
+    earliest_dates: list[int] = []
+    latest_dates: list[int] = []
 
     for statement in date_statements:
         if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)", "xxxx-xxxx", "uuuu-uuuu", "?", "??"):

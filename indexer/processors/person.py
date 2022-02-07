@@ -1,7 +1,7 @@
 import datetime
 import logging
 from collections import defaultdict
-from typing import List, Optional
+from typing import Optional
 
 import pymarc
 
@@ -15,17 +15,17 @@ EARLIEST_YEAR_IF_MISSING: int = -2000
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_external_ids(record: pymarc.Record) -> Optional[List]:
+def _get_external_ids(record: pymarc.Record) -> Optional[list]:
     """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later. """
-    ids: List = record.get_fields('024')
+    ids: list = record.get_fields('024')
     if not ids:
         return None
 
     return [f"{idf['2'].lower()}:{idf['a']}" for idf in ids if (idf and idf['2'])]
 
 
-def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
-    date_statements: Optional[List] = to_solr_multi(record, "100", "d")
+def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
+    date_statements: Optional[list] = to_solr_multi(record, "100", "d")
     if not date_statements:
         return None
 
@@ -34,8 +34,8 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[List[int]]:
     return process_date_statements(date_statements, record_id)
 
 
-def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
-    name_variants: Optional[List[str]] = to_solr_multi(record, "400", "a")
+def _get_name_variants(record: pymarc.Record) -> Optional[list[str]]:
+    name_variants: Optional[list[str]] = to_solr_multi(record, "400", "a")
 
     if not name_variants:
         return None
@@ -43,7 +43,7 @@ def _get_name_variants(record: pymarc.Record) -> Optional[List[str]]:
     return tokenize_variants(name_variants)
 
 
-def _get_name_variant_data(record: pymarc.Record) -> Optional[List]:
+def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
     name_variants = record.get_fields("400")
     if not name_variants:
         return None
@@ -58,39 +58,39 @@ def _get_name_variant_data(record: pymarc.Record) -> Optional[List]:
         names[category].append(n)
 
     # Sort the variants alphabetically and format as list
-    name_variants: List = [{"type": k, "variants": sorted(v)} for k, v in names.items()]
+    name_variants: list = [{"type": k, "variants": sorted(v)} for k, v in names.items()]
 
     return name_variants
 
 
-def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
+def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
-    people: Optional[List] = get_related_people(record, person_id, "person", ungrouped=True)
+    people: Optional[list] = get_related_people(record, person_id, "person", ungrouped=True)
 
     return people
 
 
-def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
+def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
     person_id: str = f"person_{normalize_id(record['001'].value())}"
-    institutions: Optional[List] = get_related_institutions(record, person_id, "person", ungrouped=True)
+    institutions: Optional[list] = get_related_institutions(record, person_id, "person", ungrouped=True)
 
     return institutions
 
 
-def _get_related_places_data(record: pymarc.Record) -> Optional[List]:
+def _get_related_places_data(record: pymarc.Record) -> Optional[list]:
     person_id: str = f"person_{normalize_id(record['001'].value())}"
-    places: Optional[List] = get_related_places(record, person_id, "person")
+    places: Optional[list] = get_related_places(record, person_id, "person")
 
     return places
 
 
-def _get_external_resources_data(record: pymarc.Record) -> Optional[List]:
+def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     """
     Fetch the external links defined on the record.
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ext_links: List = [external_resource_data(f) for f in record.get_fields("856")]
+    ext_links: list = [external_resource_data(f) for f in record.get_fields("856")]
     if not ext_links:
         return None
 

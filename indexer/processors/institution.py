@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 
 import logging
 import pymarc
@@ -7,12 +7,13 @@ from indexer.helpers.identifiers import country_code_from_siglum, KALLIOPE_MAPPI
 from indexer.helpers.utilities import to_solr_single_required, to_solr_single, normalize_id, get_related_people, \
     get_related_institutions, get_related_places, external_resource_data
 
+
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_external_ids(record: pymarc.Record) -> Optional[List]:
+def _get_external_ids(record: pymarc.Record) -> Optional[list]:
     """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later. """
-    ids: List = record.get_fields('024')
+    ids: list = record.get_fields('024')
     if not ids:
         return None
 
@@ -61,16 +62,16 @@ def _get_location(record: pymarc.Record) -> Optional[str]:
     return None
 
 
-def _get_institution_types(record: pymarc.Record) -> List[str]:
-    all_institution_type_fields: List[pymarc.Field] = record.get_fields("368")
+def _get_institution_types(record: pymarc.Record) -> list[str]:
+    all_institution_type_fields: list[pymarc.Field] = record.get_fields("368")
     all_types: set = set()
 
     # gather all the different values
     for itfield in all_institution_type_fields:
-        field_labels: List[str] = itfield.get_subfields("a")
+        field_labels: list[str] = itfield.get_subfields("a")
         # Splits on any semicolon, strips any extraneous space from the split strings, and flattens the result into
         # a single list of all values, and ignores any values that evaluate to 'None'.
-        split_field_labels: List[str] = [item.strip() for sublist in field_labels if sublist for item in sublist.split(";") if item]
+        split_field_labels: list[str] = [item.strip() for sublist in field_labels if sublist for item in sublist.split(";") if item]
         all_types.update(split_field_labels)
 
     mapped: set = set()
@@ -85,34 +86,34 @@ def _get_institution_types(record: pymarc.Record) -> List[str]:
     return list(mapped)
 
 
-def _get_related_people_data(record: pymarc.Record) -> Optional[List]:
+def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     institution_id: str = f"institution_{normalize_id(record['001'].value())}"
-    people: Optional[List] = get_related_people(record, institution_id, "institution", ungrouped=True)
+    people: Optional[list] = get_related_people(record, institution_id, "institution", ungrouped=True)
 
     return people
 
 
-def _get_related_institutions_data(record: pymarc.Record) -> Optional[List]:
+def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
     institution_id: str = f"institution_{normalize_id(record['001'].value())}"
-    institutions: Optional[List] = get_related_institutions(record, institution_id, "institution", fields=('710',))
+    institutions: Optional[list] = get_related_institutions(record, institution_id, "institution", fields=('710',))
 
     return institutions
 
 
-def _get_related_places_data(record: pymarc.Record) -> Optional[List]:
+def _get_related_places_data(record: pymarc.Record) -> Optional[list]:
     institution_id: str = f"institution_{normalize_id(record['001'].value())}"
-    places: Optional[List] = get_related_places(record, institution_id, "institution")
+    places: Optional[list] = get_related_places(record, institution_id, "institution")
 
     return places
 
 
-def _get_external_resources_data(record: pymarc.Record) -> Optional[List]:
+def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     """
     Fetch the external links defined on the record.
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ext_links: List = [external_resource_data(f) for f in record.get_fields("856")]
+    ext_links: list = [external_resource_data(f) for f in record.get_fields("856")]
     if not ext_links:
         return None
 

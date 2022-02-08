@@ -1,18 +1,19 @@
 import logging
 import types
-from typing import Callable, Dict, Any
+from typing import Callable, Any
 
-import pymarc as pymarc
+import pymarc
 import ujson
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.utilities import to_solr_single_required, to_solr_multi, to_solr_multi_required, to_solr_single
+from indexer.helpers.utilities import to_solr_single_required, to_solr_multi, to_solr_multi_required, to_solr_single, \
+    note_links
 
 log = logging.getLogger("muscat_indexer")
 
 
-def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType) -> Dict:
-    solr_document: Dict = {}
+def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType) -> dict:
+    solr_document: dict = {}
 
     for solr_field, field_config in cfg.items():
         multiple: bool = field_config.get("multiple", False)
@@ -50,6 +51,7 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
         else:
             all_fields: bool = field_config.get("all_fields", True)
             breaks: bool = field_config.get("breaks", False)
+            links: bool = field_config.get("links", False)
 
             # these will explode if the configuration is not correct.
             marc_field = field_config['field']
@@ -84,6 +86,15 @@ def process_marc_profile(cfg: Dict, doc_id: str, marc: pymarc.Record, processors
                 # set the field result to the new values from the processed
                 # breaks.
                 field_result = full_result
+
+            if multiple and links:
+                link_result = []
+                for res in field_result:
+                    linked = note_links(res)
+                    link_result.append(linked)
+                field_result = link_result
+            elif multiple is False and links:
+                field_result = note_links(field_result)
 
             if 'value_prefix' in field_config:
                 if isinstance(field_result, list):

@@ -33,7 +33,11 @@ def create_place_index_document(place: Dict) -> PlaceIndexDocument:
         "district_s": place.get("district"),
         "alternate_terms_sm": clean_multivalued(place, "alternate_terms"),
         "topic_sm": clean_multivalued(place, "topic"),
-        "subtopic_sm": clean_multivalued(place, "sub_topic")
+        "subtopic_sm": clean_multivalued(place, "sub_topic"),
+        "sources_count_i": place.get("sources_count", 0),
+        "people_count_i": place.get("people_count", 0),
+        "institutions_count_i": place.get("institutions_count", 0),
+        "holdings_count_i": place.get("holdings_count", 0)
     }
 
     return d

@@ -18,7 +18,7 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: ERROR
     formatter: simple
-    filename: ./indexer.log
+    filename: ./logs/indexer.log
     when: D
     backupCount: 7
 loggers:

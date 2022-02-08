@@ -1,13 +1,11 @@
-from typing import Dict
-
 import MySQLdb
 import yaml
 from MySQLdb.cursors import SSDictCursor, SSCursor
 from DBUtils.PooledDB import PooledDB
 
-idx_config: Dict = yaml.full_load(open('index_config.yml', 'r'))
+idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 
-config: Dict = {
+config: dict = {
     "user": idx_config['mysql']['username'],
     "password": idx_config['mysql']['password'],
     "db": idx_config['mysql']['database'],

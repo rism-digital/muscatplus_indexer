@@ -7,6 +7,11 @@ external_ids:  # 024
 location_loc:  # 034
   processor: "_get_location"
 
+gnd_country_codes_sm:  # 043; form of XX-YY
+  field: "043"
+  subfield: "c"
+  multiple: true
+
 name_s:
   field: "110"
   subfield: "a"
@@ -18,8 +23,8 @@ city_s:
 siglum_s:
   field: "110"
   subfield: "g"
-country_code_s:  # Extract the country code from the siglum.
-  processor: "_get_country_code"
+country_codes_sm:  # Extract the country code from the siglum.
+  processor: "_get_country_codes"
 country_names_sm:
   processor: "_get_country_names"
 
@@ -27,8 +32,8 @@ institution_types_sm:  # 368
   processor: "_get_institution_types"
 
 countries_sm:
-  field: "370"
-  subfield: "c"
+  field: "371"
+  subfield: "d"
   multiple: true
 headquarters_sm:
   field: "370"
@@ -53,6 +58,15 @@ parallel_names_sm:
   subfield: "a"
   multiple: true
 
+related_places_json: # 551 or 751?
+  processor: "_get_related_places_data"
+  json: true
+place_ids:
+  field: "551"
+  subfield: "0"
+  multiple: true
+  value_prefix: "place_"
+
 # TODO: Figure out what to do with 670, linked to secondary literature
 
 institution_history_sm:
@@ -69,10 +83,6 @@ general_notes_sm:
 
 related_people_json:  # 700
   processor: "_get_related_people_data"
-  json: true
-
-related_places_json: # 551 or 751?
-  processor: "_get_related_places_data"
   json: true
 
 related_institutions_json: # 710

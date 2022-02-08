@@ -2,3 +2,6 @@
 .idea
 __pycache__
 muscatplus_indexer.iml
+logs/*.log*
+mp.tar.gz
+*.sql

@@ -8,7 +8,7 @@ import verovio
 import yaml
 
 from indexer.helpers.datelib import process_date_statements
-from indexer.helpers.utilities import to_solr_single, to_solr_multi
+from indexer.helpers.utilities import to_solr_single, to_solr_multi, get_creator_name
 
 log = logging.getLogger("muscat_indexer")
 index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
@@ -121,19 +121,20 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
         music_incipit = music_incipit.strip()
         incipit_len = len(music_incipit)
 
-    creator_name: Optional[str] = to_solr_single(record, "100", "a")
+    creator: Optional[str] = get_creator_name(record)
     date_statements: Optional[list] = to_solr_multi(record, "260", "c")
 
     source_dates: list = []
     if date_statements:
-        source_dates = process_date_statements(record, date_statements)
+        record_id: str = record['001'].value()
+        source_dates = process_date_statements(date_statements, record_id)
 
     d: Dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
         "source_title_s": source_title,
-        "creator_name_s": creator_name,
+        "creator_name_s": creator,
         "incipit_num_i": num,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
         "has_notation_b": incipit_len > 0,

@@ -18,18 +18,19 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
     dbname: str = cfg['mysql']['database']
 
     curs.execute(f"""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
-        child.source_id AS source_id, child.marc_source AS marc_source,
+        child.source_id AS source_id, child.marc_source AS marc_source, child.composer AS creator_name,
         child.created_at AS created, child.updated_at AS updated,
         child.record_type AS record_type, parent.std_title AS parent_title,
         parent.record_type AS parent_record_type,
         (SELECT COUNT(hh.id) FROM {dbname}.holdings AS hh WHERE hh.source_id = child.id) AS holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT GROUP_CONCAT(DISTINCT srt.record_type SEPARATOR ',') FROM {dbname}.sources AS srt WHERE srt.source_id = child.id AND srt.source_id IS NOT NULL GROUP BY srt.source_id) AS child_record_types,
+        (SELECT GROUP_CONCAT(DISTINCT ins.place SEPARATOR '|') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE child.id = ssi.source_id) AS institution_places,
         GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(DISTINCT hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
-        GROUP_CONCAT(DISTINCT p.full_name SEPARATOR '\n') AS people_names,
+        GROUP_CONCAT(DISTINCT CONCAT_WS('', p.full_name, NULLIF( CONCAT(" (", p.life_dates, ")"), '')) SEPARATOR '\n') AS people_names,
         GROUP_CONCAT(DISTINCT p.alternate_names SEPARATOR '\n') AS alt_people_names,
         GROUP_CONCAT(DISTINCT st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
         GROUP_CONCAT(DISTINCT p.id SEPARATOR '\n') AS people_ids
@@ -61,7 +62,7 @@ def index_sources(cfg: Dict) -> bool:
 
 
 def index_source_groups(sources: List) -> bool:
-    log.info("Index source group")
+    log.info("Indexing Source Group")
     records_to_index: deque = deque()
 
     for record in sources:

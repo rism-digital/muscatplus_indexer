@@ -623,6 +623,6 @@ def _reformat_notes(note_values: list[str]) -> list[str]:
 
     notes: list = []
     for note in split_notes:
-        notes += note_links(note)
+        notes.append(note_links(note))
 
     return notes

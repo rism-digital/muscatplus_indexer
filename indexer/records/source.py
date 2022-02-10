@@ -45,14 +45,23 @@ def create_source_index_documents(record: dict) -> list:
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",")] if record['child_record_types'] else []
     institution_places: list[str] = [s for s in record['institution_places'].split(",")] if record['institution_places'] else []
 
+    all_print_holding_records: list[pymarc.Record] = []
+    all_print_holding_records += _create_marc_from_str(record.get("holdings_marc"))
+    all_print_holding_records += _create_marc_from_str(record.get("parent_holdings_marc"))
+
+    all_print_holding_sigla: list[str] = []
+    all_print_holding_sigla += _create_sigla_list_from_str(record.get("holdings_org"))
+    all_print_holding_sigla += _create_sigla_list_from_str(record.get("parent_holdings_org"))
+
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
     # id on the sources, regardless of whether they have a holding record, or they are a MS.
     manuscript_holdings: list = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name, record_type_id) or []
-    holding_orgs: list = _get_holding_orgs(manuscript_holdings, record.get("holdings_org"), record.get("parent_holdings_org")) or []
-    holding_orgs_ids: list = _get_holding_orgs_ids(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
-    holding_orgs_identifiers: list = _get_full_holding_identifiers(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
-    country_codes: list = _get_country_codes(manuscript_holdings, record.get("holdings_marc"), record.get("parent_holdings_marc")) or []
+    holding_orgs: list = _get_holding_orgs(manuscript_holdings, all_print_holding_sigla) or []
+    holding_orgs_ids: list = _get_holding_orgs_ids(manuscript_holdings, all_print_holding_records) or []
+
+    holding_orgs_identifiers: list = _get_full_holding_identifiers(manuscript_holdings, all_print_holding_records) or []
+    country_codes: list = _get_country_codes(manuscript_holdings, all_print_holding_records) or []
 
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_json: Optional[dict] = None
@@ -98,6 +107,8 @@ def create_source_index_documents(record: dict) -> list:
         "is_contents_record_b": get_is_contents_record(record_type_id, parent_id),
         "is_collection_record_b": get_is_collection_record(record_type_id, child_count),
         "is_composite_volume_b": record_type_id == 11,
+        "has_digitization_b": _get_has_digitization(marc_record, all_print_holding_records),
+        "has_iiif_manifest_b": _get_has_iiif_manifest(marc_record, all_print_holding_records),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -158,7 +169,7 @@ def _get_variant_standard_terms(variant_terms: Optional[str]) -> Optional[list]:
     return tokenize_variants(list_of_terms)
 
 
-def _get_holding_orgs(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> Optional[list[str]]:
+def _get_holding_orgs(mss_holdings: list[HoldingIndexDocument], all_holding_sigla: list[str]) -> Optional[list[str]]:
     # Coalesces both print and mss holdings into a multivalued field so that we can filter sources by their holding
     # library
     # If there are any holding records for MSS, get the siglum. Use a set to ignore any duplicates
@@ -168,47 +179,27 @@ def _get_holding_orgs(mss_holdings: list[HoldingIndexDocument], print_holdings: 
         if siglum := mss.get("siglum_s"):
             sigs.add(siglum)
 
-    all_holdings: list = []
-
-    if print_holdings:
-        all_holdings += print_holdings.split("\n")
-
-    if parent_holdings:
-        all_holdings += parent_holdings.split("\n")
-
-    for lib in all_holdings:
-        if siglum := lib.strip():
-            sigs.add(siglum)
+    for siglum in all_holding_sigla:
+        sigs.add(siglum)
 
     return list(sigs)
 
 
-def _get_holding_orgs_ids(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> list[str]:
+def _get_holding_orgs_ids(mss_holdings: list[HoldingIndexDocument], all_holdings: list[pymarc.Record]) -> list[str]:
     ids: set[str] = set()
 
     for mss in mss_holdings:
         if inst_id := mss.get("institution_id"):
             ids.add(inst_id)
 
-    all_marc_records: list = []
-
-    if print_holdings:
-        all_marc_records += print_holdings.split("\n")
-
-    if parent_holdings:
-        all_marc_records += parent_holdings.split("\n")
-
-    for rec in all_marc_records:
-        rec = rec.strip()
-        m: pymarc.Record = create_marc(rec)
-
-        if inst := to_solr_single(m, "852", "x"):
+    for rec in all_holdings:
+        if inst := to_solr_single(rec, "852", "x"):
             ids.add(f"institution_{inst}")
 
     return list(ids)
 
 
-def _get_full_holding_identifiers(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> list[str]:
+def _get_full_holding_identifiers(mss_holdings: list[HoldingIndexDocument], all_holdings: list[pymarc.Record]) -> list[str]:
     ids: set[str] = set()
 
     for mss in mss_holdings:
@@ -217,26 +208,16 @@ def _get_full_holding_identifiers(mss_holdings: list[HoldingIndexDocument], prin
         institution_shelfmark: str = mss.get("shelfmark_s", "")
         ids.add(f"{institution_name} {institution_sig} {institution_shelfmark}")
 
-    all_marc_records: list = []
-
-    if print_holdings:
-        all_marc_records += print_holdings.split("\n")
-    if parent_holdings:
-        all_marc_records += parent_holdings.split("\n")
-
-    for rec in all_marc_records:
-        rec = rec.strip()
-        m: pymarc.Record = create_marc(rec)
-
-        rec_sig: str = to_solr_single(m, "852", "a") or ""
-        rec_shelfmark: str = to_solr_single(m, "852", "c") or ""
-        rec_name: str = to_solr_single(m, "852", "e") or ""
+    for rec in all_holdings:
+        rec_sig: str = to_solr_single(rec, "852", "a") or ""
+        rec_shelfmark: str = to_solr_single(rec, "852", "c") or ""
+        rec_name: str = to_solr_single(rec, "852", "e") or ""
         ids.add(f"{rec_name} {rec_sig} {rec_shelfmark}")
 
     return [realid for realid in ids if realid.strip()]
 
 
-def _get_country_codes(mss_holdings: list[HoldingIndexDocument], print_holdings: Optional[str] = None, parent_holdings: Optional[str] = None) -> list[str]:
+def _get_country_codes(mss_holdings: list[HoldingIndexDocument], all_holdings: list[pymarc.Record]) -> list[str]:
     codes: set[str] = set()
 
     for mss in mss_holdings:
@@ -244,17 +225,60 @@ def _get_country_codes(mss_holdings: list[HoldingIndexDocument], print_holdings:
         if institution_sig:
             codes.add(country_code_from_siglum(institution_sig))
 
-    all_marc_records: list = []
-    if print_holdings:
-        all_marc_records += print_holdings.split("\n")
-    if parent_holdings:
-        all_marc_records += parent_holdings.split("\n")
-
-    for rec in all_marc_records:
-        rec = rec.strip()
-        m: pymarc.Record = create_marc(rec)
-        rec_sig: Optional[str] = to_solr_single(m, "852", "a")
+    for rec in all_holdings:
+        rec_sig: Optional[str] = to_solr_single(rec, "852", "a")
         if rec_sig:
             codes.add(country_code_from_siglum(rec_sig))
 
     return list(codes)
+
+
+def _get_has_digitization(source_record: pymarc.Record, print_records: list[pymarc.Record]) -> bool:
+    """
+    Looks through all records and determines whether any of them have a digitization link
+    attached to them. Returns 'True' if any record is True.
+
+    :param records: A list of records (source + holding) to check
+    :return: A bool indicating whether any one record has the correct value in 856$x
+    """
+    all_records = [source_record]
+    all_records += print_records
+
+    for record in all_records:
+        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources")]
+        if len(digitization_links) > 0:
+            return True
+
+    return False
+
+
+def _get_has_iiif_manifest(source_record: pymarc.Record, print_records: list[pymarc.Record]) -> bool:
+    all_records = [source_record]
+    all_records += print_records
+
+    for record in all_records:
+        iiif_manifests: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("IIIF",)]
+        if len(iiif_manifests) > 0:
+            return True
+
+    return False
+
+
+def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:
+    """
+    Returns a list of sigla for a source. This is a set, that is cast to a list.
+    Always returns a list.
+    :param sigla: A string of newline-separated sigla
+    :return: A list of sigla.
+    """
+    return list({s.strip() for s in sigla.split("\n") if s}) if sigla else []
+
+
+def _create_marc_from_str(marc_records: Optional[str]) -> list[pymarc.Record]:
+    """
+    Will always return a list, potentially an empty one.
+
+    :param marc_records: A string of newline-separated MARC records
+    :return: A list of pymarc.Record objects
+    """
+    return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []

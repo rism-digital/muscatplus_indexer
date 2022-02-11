@@ -108,7 +108,7 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     :param record: A pymarc.Record instance
     :param field: A string indicating the tag that should be extracted
     :param subfield: An optional subfield. If this is not provided, the full value of the field will be returned
-        as a MARC string (e.g., "$aFoo$bBar).
+        as a MARC string (e.g., $aFoo$bBar).
     :param all_fields: If True then all values will be returned, regardless of group value ($8). If False, then only
         values from fields with $801 or no $8 field will be returned.
 

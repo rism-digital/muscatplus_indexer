@@ -6,7 +6,7 @@ import pymarc
 import ujson
 import yaml
 
-from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_type, \
+from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types, \
     get_is_contents_record, get_is_collection_record, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
@@ -80,7 +80,7 @@ def create_source_index_documents(record: dict) -> list:
             "main_title": record.get("parent_title"),
             "record_type": get_record_type(parent_record_type_id),
             "source_type": get_source_type(parent_record_type_id),
-            "content_types": get_content_type(parent_record_type_id, [])
+            "content_types": get_content_types(parent_record_type_id, [])
         }
 
     people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
@@ -98,7 +98,7 @@ def create_source_index_documents(record: dict) -> list:
         "source_id": source_id,
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
-        "content_types_sm": get_content_type(record_type_id, child_record_types),
+        "content_types_sm": get_content_types(record_type_id, child_record_types),
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
@@ -129,7 +129,7 @@ def create_source_index_documents(record: dict) -> list:
     # Extended incipits have their fingerprints calculated for similarity matching.
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
-    incipits: list = get_incipits(marc_record, source_id, main_title) or []
+    incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, child_record_types) or []
 
     res: list = [source_core]
     res.extend(incipits)

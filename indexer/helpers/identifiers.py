@@ -78,7 +78,7 @@ def get_source_type(record_type_id: int) -> str:
         return "unspecified"
 
 
-def get_content_type(record_type_id: int, child_record_types: list[int]) -> list[str]:
+def get_content_types(record_type_id: int, child_record_types: list[int]) -> list[str]:
     """
     Takes all record types associated with this record, and returns a list of
     all possible content types for it.

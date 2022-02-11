@@ -356,7 +356,11 @@ MUSCAT_LINK: Pattern = re.compile(r"https?://muscat\.rism\.info/admin/sources/(\
 
 def note_links(note: str) -> str:
     """
-    Creates links in notes text
+    Creates links in notes text. Returns the note with an anchor tag around any plain links.
+
+    Skips adding an anchor if there is already one anchor tag.
+    If 'http' is not in the string, will return the note directly.
+
     :param note: The raw MARC string
     :return: A formatted string.
     """
@@ -471,24 +475,3 @@ def get_creator_name(record: pymarc.Record) -> Optional[str]:
     creator_name: str = creator_field["a"].strip()
     creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
     return f"{creator_name}{creator_dates}"
-
-
-
-def rewrite_links(note_list: list[str]) -> list[str]:
-    """
-    Processes a notes field and, if it finds a
-    :param note_list:
-    :return:
-    """
-    notes: list[str] = []
-    for note in note_list:
-        if 'opac.rism.info' in note:
-            # rewrite opac links
-            pass
-        elif 'muscat.rism.info' in note:
-            # rewrite muscat links
-            pass
-        else:
-            notes += note
-
-    return notes

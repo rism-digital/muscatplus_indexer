@@ -1,3 +1,4 @@
+import gc
 import logging
 from typing import Optional
 
@@ -23,6 +24,9 @@ source_profile: dict = yaml.full_load(open('profiles/sources.yml', 'r'))
 def create_source_index_documents(record: dict) -> list:
     source: str = record['marc_source']
     marc_record: pymarc.Record = create_marc(source)
+
+    parent_source: Optional[str] = record.get("parent_marc_source")
+    parent_marc_record: Optional[pymarc.Record] = create_marc(parent_source) if parent_source else None
 
     record_type_id: int = record['record_type']
     parent_id: Optional[int] = record.get('source_id')
@@ -52,6 +56,11 @@ def create_source_index_documents(record: dict) -> list:
     all_print_holding_sigla: list[str] = []
     all_print_holding_sigla += _create_sigla_list_from_str(record.get("holdings_org"))
     all_print_holding_sigla += _create_sigla_list_from_str(record.get("parent_holdings_org"))
+
+    all_marc_records: list[pymarc.Record] = []
+    all_marc_records += [marc_record]
+    all_marc_records += [parent_marc_record] if parent_marc_record else []
+    all_marc_records += all_print_holding_records
 
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
@@ -107,8 +116,8 @@ def create_source_index_documents(record: dict) -> list:
         "is_contents_record_b": get_is_contents_record(record_type_id, parent_id),
         "is_collection_record_b": get_is_collection_record(record_type_id, child_count),
         "is_composite_volume_b": record_type_id == 11,
-        "has_digitization_b": _get_has_digitization(marc_record, all_print_holding_records),
-        "has_iiif_manifest_b": _get_has_iiif_manifest(marc_record, all_print_holding_records),
+        "has_digitization_b": _get_has_digitization(all_marc_records),
+        "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -125,6 +134,10 @@ def create_source_index_documents(record: dict) -> list:
     res: list = [source_core]
     res.extend(incipits)
     res.extend(manuscript_holdings)
+
+    del marc_record
+    del parent_marc_record
+    del record
 
     return res
 
@@ -233,7 +246,7 @@ def _get_country_codes(mss_holdings: list[HoldingIndexDocument], all_holdings: l
     return list(codes)
 
 
-def _get_has_digitization(source_record: pymarc.Record, print_records: list[pymarc.Record]) -> bool:
+def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     """
     Looks through all records and determines whether any of them have a digitization link
     attached to them. Returns 'True' if any record is True.
@@ -241,9 +254,6 @@ def _get_has_digitization(source_record: pymarc.Record, print_records: list[pyma
     :param records: A list of records (source + holding) to check
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
-    all_records = [source_record]
-    all_records += print_records
-
     for record in all_records:
         digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources")]
         if len(digitization_links) > 0:
@@ -252,10 +262,7 @@ def _get_has_digitization(source_record: pymarc.Record, print_records: list[pyma
     return False
 
 
-def _get_has_iiif_manifest(source_record: pymarc.Record, print_records: list[pymarc.Record]) -> bool:
-    all_records = [source_record]
-    all_records += print_records
-
+def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
     for record in all_records:
         iiif_manifests: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("IIIF",)]
         if len(iiif_manifests) > 0:

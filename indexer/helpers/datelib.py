@@ -316,7 +316,7 @@ EARLIEST_YEAR_IF_MISSING: int = -2000
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 
 
-def process_date_statements(date_statements: list, record_id: str) -> Optional[list[int]]:
+def process_date_statements(date_statements: list[str], record_id: str) -> Optional[list[int]]:
     earliest_dates: list[int] = []
     latest_dates: list[int] = []
 

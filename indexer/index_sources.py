@@ -1,3 +1,4 @@
+import gc
 import logging
 from collections import deque
 from typing import Generator, List, Dict
@@ -19,7 +20,7 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
 
     curs.execute(f"""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
         child.source_id AS source_id, child.marc_source AS marc_source, child.composer AS creator_name,
-        child.created_at AS created, child.updated_at AS updated,
+        child.created_at AS created, child.updated_at AS updated, parent.marc_source AS parent_marc_source,
         child.record_type AS record_type, parent.std_title AS parent_title,
         parent.record_type AS parent_record_type,
         (SELECT COUNT(hh.id) FROM {dbname}.holdings AS hh WHERE hh.source_id = child.id) AS holdings_count,
@@ -73,6 +74,9 @@ def index_source_groups(sources: List) -> bool:
             continue
         log.debug("Appending source document")
         records_to_index.extend(docs)
+
+    del docs
+    gc.collect()
 
     check: bool = submit_to_solr(list(records_to_index))
 

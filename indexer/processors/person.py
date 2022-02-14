@@ -12,6 +12,7 @@ from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_singl
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 EARLIEST_YEAR_IF_MISSING: int = -2000
 
+
 log = logging.getLogger("muscat_indexer")
 
 

@@ -367,18 +367,6 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     return ungrouped_ext_links
 
 
-def _get_has_digitization(record: pymarc.Record) -> bool:
-    digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources")]
-
-    return len(digitization_links) > 0
-
-
-def _get_has_iiif_manifest(record: pymarc.Record) -> bool:
-    iiif_manifests: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] == "IIIF"]
-
-    return len(iiif_manifests) > 0
-
-
 # Material Group Handling
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed
 # contain the expected fields of the expected types, and serve as a point of reference to know

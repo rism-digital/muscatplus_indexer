@@ -14,12 +14,17 @@ def index_liturgical_festivals(cfg: Dict) -> bool:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"WHERE id = {cfg['id']}"
+
     curs.execute(f"""SELECT
     id,
     name,
     alternate_terms,
     notes
-    FROM {dbname}.liturgical_feasts""")
+    FROM {dbname}.liturgical_feasts
+    {id_where_clause};""")
 
     all_festivals: List[Dict] = curs._cursor.fetchall()
 

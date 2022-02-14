@@ -27,47 +27,55 @@ log = logging.getLogger("muscat_indexer")
 
 @elapsedtime
 def main(args) -> bool:
-    empt = src = ppl = plc = ins = hld = sub = fst = True
+    res = True
+
+    inc: list = []
+    if not args.include:
+        inc = ["sources", "people", "places", "institutions", "holdings", "subjects", "festivals"]
+    else:
+        inc = args.include
 
     if args.empty:
         log.info("Emptying Solr indexing core")
-        empt = empty_solr_core()
+        res |= empty_solr_core()
 
-    if args.idx_sources:
-        src = index_sources(idx_config)
-    if args.idx_people:
-        ppl = index_people(idx_config)
-    if args.idx_places:
-        plc = index_places(idx_config)
-    if args.idx_institutions:
-        ins = index_institutions(idx_config)
-    if args.idx_holdings:
-        hld = index_holdings(idx_config)
-    if args.idx_subjects:
-        sub = index_subjects(idx_config)
-    if args.idx_festivals:
-        fst = index_liturgical_festivals(idx_config)
+    if args.only_id:
+        idx_config.update({"id": args.only_id})
+
+    for record_type in inc:
+        if record_type == "sources" and "sources" not in args.exclude:
+            res |= index_sources(idx_config)
+        elif record_type == "people" and "people" not in args.exclude:
+            res |= index_people(idx_config)
+        elif record_type == "places" and "places" not in args.exclude:
+            res |= index_places(idx_config)
+        elif record_type == "institutions" and "institutions" not in args.exclude:
+            res |= index_institutions(idx_config)
+        elif record_type == "holdings" and "holdings" not in args.exclude:
+            res |= index_holdings(idx_config)
+        elif record_type == "subjects" and "subjects" not in args.exclude:
+            res |= index_subjects(idx_config)
+        elif record_type == "festivals" and "festivals" not in args.exclude:
+            res |= index_liturgical_festivals(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
 
     # force a core reload to ensure it's up-to-date
-    reload_success: bool = reload_core(idx_config['solr']['server'],
-                                       idx_config['solr']['indexing_core'])
+    res |= reload_core(idx_config['solr']['server'],
+                       idx_config['solr']['indexing_core'])
 
     # If all the previous statuses are True, then consider that indexing was successful.
-    idx_success: bool = empt and src and ppl and plc and ins and hld and sub and fst and reload_success
-
-    if idx_success and args.swap_cores:
+    if res and args.swap_cores:
         swap: bool = swap_cores(idx_config['solr']['server'],
                                 idx_config['solr']['indexing_core'],
                                 idx_config['solr']['live_core'])
-        return swap and idx_success
+        return swap and res
 
-    if not idx_success:
+    if not res:
         log.error("Indexing failed.")
     else:
         log.info("Indexing successful.")
-    return idx_success
+    return res
 
 
 if __name__ == "__main__":
@@ -75,13 +83,11 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-e", "--empty", dest="empty", action="store_true", help="Empty the core prior to indexing")
     parser.add_argument("-s", "--no-swap", dest="swap_cores", action="store_false", help="Do not swap cores (default is to swap)")
-    parser.add_argument("--no-sources", dest="idx_sources", action="store_false", help="Do not index sources (default is true)")
-    parser.add_argument("--no-people", dest="idx_people", action="store_false", help="Do not index people (default is true)")
-    parser.add_argument("--no-places", dest="idx_places", action="store_false", help="Do not index places (default is true)")
-    parser.add_argument("--no-institutions", dest="idx_institutions", action="store_false", help="Do not index institutions (default is true)")
-    parser.add_argument("--no-holdings", dest="idx_holdings", action="store_false", help="Do not index holdings (default is true)")
-    parser.add_argument("--no-subjects", dest="idx_subjects", action="store_false", help="Do not index subjects (default is true)")
-    parser.add_argument("--no-festivals", dest="idx_festivals", action="store_false", help="Do not index liturgical festivals (default is true)")
+
+    parser.add_argument("--include", action="extend", nargs="*")
+    parser.add_argument("--exclude", action="extend", nargs="*", default=[])
+
+    parser.add_argument("--id", dest="only_id", help="Only index a single ID")
 
     interval_group = parser.add_mutually_exclusive_group()
     interval_group.add_argument("-d", "--daily", action="store_true",

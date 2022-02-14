@@ -15,13 +15,17 @@ def _get_holdings_groups(cfg: Dict) -> Generator[Dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"AND holdings.id = {cfg['id']}"
+
     # The published / unpublished state is ignored for holding records, so we just take any and all holding records.
     curs.execute(f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
                            sources.std_title AS source_title, sources.composer AS creator_name, 
                            sources.record_type as record_type, sources.marc_source AS source_record_marc
                     FROM {dbname}.holdings AS holdings
                     LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
-                    WHERE sources.marc_source IS NOT NULL;""")
+                    WHERE sources.marc_source IS NOT NULL {id_where_clause};""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

@@ -108,7 +108,7 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     :param record: A pymarc.Record instance
     :param field: A string indicating the tag that should be extracted
     :param subfield: An optional subfield. If this is not provided, the full value of the field will be returned
-        as a MARC string (e.g., "$aFoo$bBar).
+        as a MARC string (e.g., $aFoo$bBar).
     :param all_fields: If True then all values will be returned, regardless of group value ($8). If False, then only
         values from fields with $801 or no $8 field will be returned.
 
@@ -356,7 +356,11 @@ MUSCAT_LINK: Pattern = re.compile(r"https?://muscat\.rism\.info/admin/sources/(\
 
 def note_links(note: str) -> str:
     """
-    Creates links in notes text
+    Creates links in notes text. Returns the note with an anchor tag around any plain links.
+
+    Skips adding an anchor if there is already one anchor tag.
+    If 'http' is not in the string, will return the note directly.
+
     :param note: The raw MARC string
     :return: A formatted string.
     """
@@ -471,24 +475,3 @@ def get_creator_name(record: pymarc.Record) -> Optional[str]:
     creator_name: str = creator_field["a"].strip()
     creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
     return f"{creator_name}{creator_dates}"
-
-
-
-def rewrite_links(note_list: list[str]) -> list[str]:
-    """
-    Processes a notes field and, if it finds a
-    :param note_list:
-    :return:
-    """
-    notes: list[str] = []
-    for note in note_list:
-        if 'opac.rism.info' in note:
-            # rewrite opac links
-            pass
-        elif 'muscat.rism.info' in note:
-            # rewrite muscat links
-            pass
-        else:
-            notes += note
-
-    return notes

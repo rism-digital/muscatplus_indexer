@@ -1,3 +1,4 @@
+import gc
 import logging
 from collections import deque
 from typing import Generator, List, Dict
@@ -17,9 +18,13 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
-    curs.execute(f"""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"AND child.id = {cfg['id']}"
+
+    sql_query: str = f"""SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
         child.source_id AS source_id, child.marc_source AS marc_source, child.composer AS creator_name,
-        child.created_at AS created, child.updated_at AS updated,
+        child.created_at AS created, child.updated_at AS updated, parent.marc_source AS parent_marc_source,
         child.record_type AS record_type, parent.std_title AS parent_title,
         parent.record_type AS parent_record_type,
         (SELECT COUNT(hh.id) FROM {dbname}.holdings AS hh WHERE hh.source_id = child.id) AS holdings_count,
@@ -42,9 +47,11 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         LEFT JOIN {dbname}.people p on sp.person_id = p.id
         LEFT JOIN {dbname}.sources_to_standard_terms sst on sst.source_id = child.id
         LEFT JOIN {dbname}.standard_terms st ON sst.standard_term_id = st.id
-        WHERE child.wf_stage = 1
+        WHERE child.wf_stage = 1 {id_where_clause}
         GROUP BY child.id
-        ORDER BY child.id desc;""")
+        ORDER BY child.id desc;"""
+
+    curs.execute(sql_query)
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows
@@ -73,6 +80,9 @@ def index_source_groups(sources: List) -> bool:
             continue
         log.debug("Appending source document")
         records_to_index.extend(docs)
+
+    del docs
+    gc.collect()
 
     check: bool = submit_to_solr(list(records_to_index))
 

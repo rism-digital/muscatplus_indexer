@@ -2,12 +2,13 @@ import logging
 from collections import namedtuple
 from typing import Dict, TypedDict, Optional, List
 
-import pymarc as pymarc
+import pymarc
 import ujson
 import verovio
 import yaml
 
 from indexer.helpers.datelib import process_date_statements
+from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
 from indexer.helpers.utilities import to_solr_single, to_solr_multi, get_creator_name
 
 log = logging.getLogger("muscat_indexer")
@@ -104,7 +105,7 @@ def _get_intervals(intvlist: list) -> dict:
     return fields
 
 
-def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source_title: str, num: int) -> IncipitIndexDocument:
+def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record_type_id: int, child_type_ids: list[int], source_title: str, num: int) -> IncipitIndexDocument:
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
 
@@ -133,7 +134,10 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
-        "source_title_s": source_title,
+        "record_type_s": get_record_type(record_type_id),
+        "source_type_s": get_source_type(record_type_id),
+        "content_types_sm": get_content_types(record_type_id, child_type_ids),
+        "main_title_s": source_title,  # using 'main_title_s' allows us to later serialize this as a source record.
         "creator_name_s": creator,
         "incipit_num_i": num,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
@@ -180,10 +184,10 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, source
     return d
 
 
-def get_incipits(record: pymarc.Record, source_id: str, source_title: str) -> Optional[List]:
+def get_incipits(record: pymarc.Record, source_id: str, source_title: str, record_type_id: int, child_type_ids: list[int]) -> Optional[List]:
     if "031" not in record:
         return None
 
     incipits: List = record.get_fields("031")
 
-    return [__incipit(f, record, source_id, source_title, num) for num, f in enumerate(incipits)]
+    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num) for num, f in enumerate(incipits)]

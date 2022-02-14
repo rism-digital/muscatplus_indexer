@@ -15,6 +15,10 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"AND p.id = {cfg['id']}"
+
     curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source,
                      p.created_at AS created, p.updated_at AS updated,
                     (SELECT COUNT(DISTINCT sp.source_id)
@@ -29,12 +33,13 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
                         AS holdings_count
                      FROM {dbname}.people AS p
                      WHERE
-                     (SELECT COUNT(DISTINCT(pi.person_id)) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
-                     (SELECT COUNT(DISTINCT(pp.person_a_id)) FROM {dbname}.people_to_people AS pp WHERE p.id = pp.person_a_id OR p.id = pp.person_b_id) > 0 OR
-                     (SELECT COUNT(DISTINCT(pl.person_id)) FROM {dbname}.people_to_places AS pl WHERE p.id = pl.person_id) > 0 OR
-                     (SELECT COUNT(DISTINCT(sp.person_id)) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
-                     (SELECT COUNT(DISTINCT(hp.person_id)) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
-                     (SELECT COUNT(DISTINCT(ip.person_id)) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0;""")
+                     (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
+                     (SELECT COUNT(pp.person_a_id) FROM {dbname}.people_to_people AS pp WHERE p.id = pp.person_a_id OR p.id = pp.person_b_id) > 0 OR
+                     (SELECT COUNT(pl.person_id) FROM {dbname}.people_to_places AS pl WHERE p.id = pl.person_id) > 0 OR
+                     (SELECT COUNT(sp.person_id) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
+                     (SELECT COUNT(hp.person_id) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
+                     (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0 
+                     {id_where_clause};""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

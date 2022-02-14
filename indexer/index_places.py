@@ -14,6 +14,10 @@ def index_places(cfg: Dict) -> bool:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"AND p.id = {cfg['id']}"
+
     curs.execute(f"""SELECT
                 p.id AS id,
                 p.name AS name,
@@ -29,10 +33,11 @@ def index_places(cfg: Dict) -> bool:
                 (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
             FROM {dbname}.places AS p
             WHERE
-                (SELECT COUNT(DISTINCT(sp.source_id)) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) > 0 OR
-                (SELECT COUNT(DISTINCT(pp.person_id)) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) > 0 OR
-                (SELECT COUNT(DISTINCT(ip.institution_id)) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) > 0 OR
-                (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0;""")
+                (SELECT COUNT(sp.source_id) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) > 0 OR
+                (SELECT COUNT(pp.person_id) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) > 0 OR
+                (SELECT COUNT(ip.institution_id) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) > 0 OR
+                (SELECT COUNT(hp.holding_id) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0 
+                {id_where_clause};""")
 
     all_places: List[Dict] = curs._cursor.fetchall()
 

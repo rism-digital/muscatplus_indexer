@@ -423,10 +423,10 @@ minimal_mss_holding_json:
   processor: "_get_minimal_manuscript_holding_data"
   json: true
 
-has_digitization_b: # 856
-  processor: "_get_has_digitization"
-has_iiif_manifest_b: # 856
-  processor: "_get_has_iiif_manifest"
+#has_digitization_b: # 856
+#  processor: "_get_has_digitization"
+#has_iiif_manifest_b: # 856
+#  processor: "_get_has_iiif_manifest"
 
 # This only contains 856 data that is defined on the source directly. Material
 # groups can have independent 856s.

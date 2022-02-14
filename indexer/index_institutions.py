@@ -16,6 +16,10 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"AND i.id = {cfg['id']}"
+
     curs.execute(f"""SELECT i.id, i.marc_source,
                         i.created_at AS created, i.updated_at AS updated,
                     (SELECT COUNT(DISTINCT si.source_id)
@@ -30,12 +34,12 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
                         AS holdings_count
                     FROM {dbname}.institutions AS i
                     WHERE i.siglum IS NOT NULL OR
-                        ((SELECT COUNT(DISTINCT(hi.holding_id)) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
-                         (SELECT COUNT(DISTINCT(ii.institution_b_id)) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
-                         (SELECT COUNT(DISTINCT(pi.person_id)) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
-                         (SELECT COUNT(DISTINCT(bi.publication_id)) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
-                         (SELECT COUNT(DISTINCT(si.source_id)) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
-                        );""")
+                        ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(ii.institution_b_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
+                         (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
+                        ) {id_where_clause};""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
         yield rows

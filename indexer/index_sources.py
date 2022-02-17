@@ -30,6 +30,7 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
         (SELECT COUNT(hh.id) FROM {dbname}.holdings AS hh WHERE hh.source_id = child.id) AS holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT GROUP_CONCAT(DISTINCT srt.record_type SEPARATOR ',') FROM {dbname}.sources AS srt WHERE srt.source_id = child.id AND srt.source_id IS NOT NULL GROUP BY srt.source_id) AS child_record_types,
+        (SELECT GROUP_CONCAT(DISTINCT srm.composer SEPARATOR '\n') FROM {dbname}.sources AS srm WHERE srm.source_id IS NOT NULL AND srm.source_id = child.id) AS child_composer_list,
         (SELECT GROUP_CONCAT(DISTINCT ins.place SEPARATOR '|') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE child.id = ssi.source_id) AS institution_places,
         GROUP_CONCAT(h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
@@ -81,12 +82,15 @@ def index_source_groups(sources: List) -> bool:
         log.debug("Appending source document")
         records_to_index.extend(docs)
 
-    del docs
-    gc.collect()
-
-    check: bool = submit_to_solr(list(records_to_index))
+    records_list: list = list(records_to_index)
+    check: bool = submit_to_solr(records_list)
 
     if not check:
         log.error("There was an error submitting to Solr!")
+
+    del sources
+    del records_to_index
+    del records_list
+    gc.collect()
 
     return check

@@ -82,12 +82,15 @@ def index_source_groups(sources: List) -> bool:
         log.debug("Appending source document")
         records_to_index.extend(docs)
 
-    del docs
-    gc.collect()
-
-    check: bool = submit_to_solr(list(records_to_index))
+    records_list: list = list(records_to_index)
+    check: bool = submit_to_solr(records_list)
 
     if not check:
         log.error("There was an error submitting to Solr!")
+
+    del sources
+    del records_to_index
+    del records_list
+    gc.collect()
 
     return check

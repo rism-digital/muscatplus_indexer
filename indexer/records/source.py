@@ -46,9 +46,9 @@ def create_source_index_documents(record: dict) -> list:
     main_title: str = record['std_title']
 
     creator_name: Optional[str] = get_creator_name(marc_record)
-    child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",")] if record.get('child_record_types') else []
-    institution_places: list[str] = [s for s in record['institution_places'].split(",")] if record.get('institution_places') else []
-    source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n")] if record.get('child_composer_list') else []
+    child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
+    institution_places: list[str] = [s for s in record['institution_places'].split(",") if s] if record.get('institution_places') else []
+    source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
     all_print_holding_records: list[pymarc.Record] = []
     all_print_holding_records += _create_marc_from_str(record.get("holdings_marc"))
@@ -105,7 +105,7 @@ def create_source_index_documents(record: dict) -> list:
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
-        "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
+        "num_holdings_i": None if num_holdings == 0 else num_holdings,  # Only show holding numbers for prints.
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,

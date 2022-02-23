@@ -5,3 +5,4 @@ muscatplus_indexer.iml
 logs/*.log*
 mp.tar.gz
 *.sql
+db_small.sql.gz

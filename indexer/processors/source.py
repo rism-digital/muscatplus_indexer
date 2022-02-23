@@ -317,6 +317,11 @@ def _get_source_membership(record: pymarc.Record) -> Optional[list]:
     return ret
 
 
+def _get_num_source_membership(record: pymarc.Record) -> Optional[list]:
+    ret: list = _get_source_membership(record) or []
+    return len(ret) or None
+
+
 def _get_country_code(record: pymarc.Record) -> Optional[str]:
     siglum: Optional[str] = to_solr_single(record, "852", "a")
     if not siglum:

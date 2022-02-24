@@ -293,13 +293,25 @@ def _get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_i
     if not parent_record:
         return None
 
-    child_record_fields: Optional[list[str]] = to_solr_multi(parent_record, "774", "w")
+    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
     if not child_record_fields:
         return None
 
-    normalized_ids: list[str] = [normalize_id(f) for f in child_record_fields if f]
-    if this_id in normalized_ids:
-        return normalized_ids.index(this_id)
+    idxs: list = []
+    for field in child_record_fields:
+        subf: list = field.get_subfields("w")
+        if len(subf) == 0:
+            continue
+
+        subf_id = subf[0]
+        if not subf_id:
+            log.error(f"Problem when searching the membership of {this_id} in {parent_record['001'].value()}.")
+            continue
+
+        idxs.append(normalize_id(subf_id))
+
+    if this_id in idxs:
+        return idxs.index(this_id)
 
     return None
 

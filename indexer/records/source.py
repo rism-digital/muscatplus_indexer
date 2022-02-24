@@ -10,7 +10,7 @@ from indexer.helpers.identifiers import get_record_type, get_source_type, get_co
     get_is_contents_record, get_is_collection_record, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name, to_solr_multi
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -100,10 +100,14 @@ def create_source_index_documents(record: dict) -> list:
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(record_type_id, child_record_types),
+
+        # The 'source membership' fields refer to the relationship between this source and a parent record, if
+        # such a relationship exists.
         "source_member_composers_sm": source_member_composers,
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
+        "source_membership_order_i": _get_parent_order_for_members(parent_marc_record, rism_id) if parent_marc_record else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
         "num_holdings_i": None if num_holdings == 0 else num_holdings,  # Only show holding numbers for prints.
         "holding_institutions_sm": holding_orgs,
@@ -253,7 +257,7 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     Looks through all records and determines whether any of them have a digitization link
     attached to them. Returns 'True' if any record is True.
 
-    :param records: A list of records (source + holding) to check
+    :param all_records: A list of records (source + holding) to check
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
     for record in all_records:
@@ -271,6 +275,33 @@ def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
             return True
 
     return False
+
+
+def _get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id: str) -> Optional[int]:
+    """
+    Returns an integer representing the order number of this source with respect to the order of the
+    child sources listed in the parent. 0-based, since we simply look up the values in a list.
+
+    If a child ID is not found in a parent record, or if the parent record is None, returns None.
+
+    The form of ID being searched is normalized, so any leading zeros are stripped, etc.
+
+    :param parent_record:
+    :param this_id:
+    :return:
+    """
+    if not parent_record:
+        return None
+
+    child_record_fields: Optional[list[str]] = to_solr_multi(parent_record, "774", "w")
+    if not child_record_fields:
+        return None
+
+    normalized_ids: list[str] = [normalize_id(f) for f in child_record_fields if f]
+    if this_id in normalized_ids:
+        return normalized_ids.index(this_id)
+
+    return None
 
 
 def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:

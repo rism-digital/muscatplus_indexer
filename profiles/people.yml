@@ -31,6 +31,10 @@ roles_sm:
   field: "550"
   subfield: "a"
   multiple: true
+place_names_sm:
+  field: "551"
+  subfield: "a"
+  multiple: true
 place_ids:
   field: "551"
   subfield: "0"

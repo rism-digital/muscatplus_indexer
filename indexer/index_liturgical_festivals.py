@@ -9,7 +9,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def index_liturgical_festivals(cfg: Dict) -> bool:
-    log.info("Indexing liturgical festivals")
+    log.info("Indexing Liturgical Festivals")
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']

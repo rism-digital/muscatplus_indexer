@@ -47,6 +47,7 @@ def create_source_index_documents(record: dict) -> list:
 
     creator_name: Optional[str] = get_creator_name(marc_record)
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
+    parent_child_record_types: list[int] = [int(s) for s in record['parent_child_record_types'].split(",")] if record.get('parent_child_record_types') else []
     institution_places: list[str] = [s for s in record['institution_places'].split(",") if s] if record.get('institution_places') else []
     source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
@@ -81,7 +82,7 @@ def create_source_index_documents(record: dict) -> list:
             "main_title": record.get("parent_title"),
             "record_type": get_record_type(parent_record_type_id),
             "source_type": get_source_type(parent_record_type_id),
-            "content_types": get_content_types(parent_record_type_id, child_record_types)
+            "content_types": get_content_types(parent_record_type_id, parent_child_record_types)
         }
 
     people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []

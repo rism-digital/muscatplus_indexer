@@ -9,7 +9,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def index_subjects(cfg: Dict) -> bool:
-    log.info("Indexing subjects")
+    log.info("Indexing Subjects")
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']

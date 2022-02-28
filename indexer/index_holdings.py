@@ -42,7 +42,7 @@ def index_holdings(cfg: Dict) -> bool:
 
 
 def index_holdings_groups(holdings: List) -> bool:
-    log.info("Indexing holdings")
+    log.info("Indexing Holdings")
     records_to_index: deque = deque()
 
     for record in holdings:

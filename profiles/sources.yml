@@ -395,6 +395,8 @@ additional_titles_json:
 
 source_members_sm:  # 774
   processor: "_get_source_membership"
+num_source_members_i: # Number of 774 entries
+  processor: "_get_num_source_membership"
 
 # 775 is a strange beast. Not really sure what to do with it, but we
 # can index it here and figure that bit out later.

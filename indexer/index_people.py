@@ -36,7 +36,6 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
                      (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
                      (SELECT COUNT(pp1.person_a_id) FROM {dbname}.people_to_people AS pp1 WHERE p.id = pp1.person_a_id) > 0 OR
                      (SELECT COUNT(pp2.person_b_id) FROM {dbname}.people_to_people AS pp2 WHERE p.id = pp2.person_b_id) > 0 OR
-                     (SELECT COUNT(pl.person_id) FROM {dbname}.people_to_places AS pl WHERE p.id = pl.person_id) > 0 OR
                      (SELECT COUNT(sp.person_id) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
                      (SELECT COUNT(hp.person_id) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
                      (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0 

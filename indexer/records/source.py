@@ -10,7 +10,7 @@ from indexer.helpers.identifiers import get_record_type, get_source_type, get_co
     get_is_contents_record, get_is_collection_record, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name, to_solr_multi
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -46,9 +46,10 @@ def create_source_index_documents(record: dict) -> list:
     main_title: str = record['std_title']
 
     creator_name: Optional[str] = get_creator_name(marc_record)
-    child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",")] if record.get('child_record_types') else []
-    institution_places: list[str] = [s for s in record['institution_places'].split(",")] if record.get('institution_places') else []
-    source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split()] if record.get('child_composer_list') else []
+    child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
+    parent_child_record_types: list[int] = [int(s) for s in record['parent_child_record_types'].split(",")] if record.get('parent_child_record_types') else []
+    institution_places: list[str] = [s for s in record['institution_places'].split(",") if s] if record.get('institution_places') else []
+    source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
     all_print_holding_records: list[pymarc.Record] = []
     all_print_holding_records += _create_marc_from_str(record.get("holdings_marc"))
@@ -81,7 +82,7 @@ def create_source_index_documents(record: dict) -> list:
             "main_title": record.get("parent_title"),
             "record_type": get_record_type(parent_record_type_id),
             "source_type": get_source_type(parent_record_type_id),
-            "content_types": get_content_types(parent_record_type_id, [])
+            "content_types": get_content_types(parent_record_type_id, parent_child_record_types)
         }
 
     people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
@@ -100,12 +101,16 @@ def create_source_index_documents(record: dict) -> list:
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(record_type_id, child_record_types),
+
+        # The 'source membership' fields refer to the relationship between this source and a parent record, if
+        # such a relationship exists.
         "source_member_composers_sm": source_member_composers,
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
+        "source_membership_order_i": _get_parent_order_for_members(parent_marc_record, rism_id) if parent_marc_record else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
-        "num_holdings_i": 1 if num_holdings == 0 else num_holdings,  # every source has at least one exemplar
+        "num_holdings_i": None if num_holdings == 0 else num_holdings,  # Only show holding numbers for prints.
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
@@ -253,11 +258,11 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     Looks through all records and determines whether any of them have a digitization link
     attached to them. Returns 'True' if any record is True.
 
-    :param records: A list of records (source + holding) to check
+    :param all_records: A list of records (source + holding) to check
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
     for record in all_records:
-        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources")]
+        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources", "Digitized")]
         if len(digitization_links) > 0:
             return True
 
@@ -266,11 +271,50 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
 
 def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
     for record in all_records:
-        iiif_manifests: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("IIIF",)]
+        iiif_manifests: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")]
         if len(iiif_manifests) > 0:
             return True
 
     return False
+
+
+def _get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id: str) -> Optional[int]:
+    """
+    Returns an integer representing the order number of this source with respect to the order of the
+    child sources listed in the parent. 0-based, since we simply look up the values in a list.
+
+    If a child ID is not found in a parent record, or if the parent record is None, returns None.
+
+    The form of ID being searched is normalized, so any leading zeros are stripped, etc.
+
+    :param parent_record:
+    :param this_id:
+    :return:
+    """
+    if not parent_record:
+        return None
+
+    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
+    if not child_record_fields:
+        return None
+
+    idxs: list = []
+    for field in child_record_fields:
+        subf: list = field.get_subfields("w")
+        if len(subf) == 0:
+            continue
+
+        subf_id = subf[0]
+        if not subf_id:
+            log.error(f"Problem when searching the membership of {this_id} in {parent_record['001'].value()}.")
+            continue
+
+        idxs.append(normalize_id(subf_id))
+
+    if this_id in idxs:
+        return idxs.index(this_id)
+
+    return None
 
 
 def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:

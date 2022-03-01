@@ -39,7 +39,7 @@ class PersonIndexDocument(TypedDict):
     external_resources_json: Optional[str]
 
 
-def create_person_index_document(record: dict) -> dict:
+def create_person_index_document(record: dict, cfg: dict) -> dict:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
     rism_id: str = to_solr_single_required(marc_record, '001')
     person_id: str = f"person_{rism_id}"

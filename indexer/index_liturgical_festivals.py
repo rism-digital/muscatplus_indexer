@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, List
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
@@ -8,7 +7,7 @@ from indexer.records.liturgical_festival import LiturgicalFestivalIndexDocument,
 log = logging.getLogger("muscat_indexer")
 
 
-def index_liturgical_festivals(cfg: Dict) -> bool:
+def index_liturgical_festivals(cfg: dict) -> bool:
     log.info("Indexing Liturgical Festivals")
     conn = mysql_pool.connection()
     curs = conn.cursor()
@@ -26,12 +25,12 @@ def index_liturgical_festivals(cfg: Dict) -> bool:
     FROM {dbname}.liturgical_feasts
     {id_where_clause};""")
 
-    all_festivals: List[Dict] = curs._cursor.fetchall()
+    all_festivals: list[dict] = curs._cursor.fetchall()
 
-    records_to_index: List = []
+    records_to_index: list = []
 
     for festival in all_festivals:
-        doc: LiturgicalFestivalIndexDocument = create_liturgical_festival_document(festival)
+        doc: LiturgicalFestivalIndexDocument = create_liturgical_festival_document(festival, cfg)
         records_to_index.append(doc)
 
     check: bool = submit_to_solr(records_to_index)

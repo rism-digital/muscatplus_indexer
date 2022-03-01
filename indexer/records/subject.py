@@ -1,4 +1,4 @@
-from typing import TypedDict, Dict, List, Optional
+from typing import TypedDict, Optional
 
 from indexer.helpers.utilities import clean_multivalued
 
@@ -7,11 +7,11 @@ class SubjectIndexDocument(TypedDict):
     id: str
     type: str
     term_s: str
-    alternate_terms_sm: Optional[List[str]]
-    notes_sm: Optional[List[str]]
+    alternate_terms_sm: Optional[list[str]]
+    notes_sm: Optional[list[str]]
 
 
-def create_subject_index_document(subject: Dict) -> SubjectIndexDocument:
+def create_subject_index_document(subject: dict, cfg: dict) -> SubjectIndexDocument:
     d: SubjectIndexDocument = {
         "id": f"subject_{subject.get('id')}",
         "type": "subject",

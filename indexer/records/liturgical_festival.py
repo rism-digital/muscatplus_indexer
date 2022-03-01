@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional, List, Dict
+from typing import TypedDict, Optional
 
 from indexer.helpers.utilities import clean_multivalued
 
@@ -7,11 +7,11 @@ class LiturgicalFestivalIndexDocument(TypedDict):
     id: str
     type: str
     name_s: str
-    alternate_terms_sm: Optional[List[str]]
-    notes_sm: Optional[List[str]]
+    alternate_terms_sm: Optional[list[str]]
+    notes_sm: Optional[list[str]]
 
 
-def create_liturgical_festival_document(festival: Dict) -> LiturgicalFestivalIndexDocument:
+def create_liturgical_festival_document(festival: dict, cfg: dict) -> LiturgicalFestivalIndexDocument:
     d: LiturgicalFestivalIndexDocument = {
         "id": f"festival_{festival.get('id')}",
         "type": "liturgical_festival",

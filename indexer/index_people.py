@@ -1,6 +1,6 @@
 import logging
 from collections import deque
-from typing import List, Generator, Dict
+from typing import Generator
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
@@ -10,7 +10,7 @@ from indexer.records.person import create_person_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
+def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
@@ -48,19 +48,19 @@ def _get_people_groups(cfg: Dict) -> Generator[Dict, None, None]:
     conn.close()
 
 
-def index_people(cfg: Dict) -> bool:
+def index_people(cfg: dict) -> bool:
     people_groups = _get_people_groups(cfg)
-    parallelise(people_groups, index_people_groups)
+    parallelise(people_groups, index_people_groups, cfg)
 
     return True
 
 
-def index_people_groups(people: List) -> bool:
+def index_people_groups(people: list, cfg: dict) -> bool:
     log.info("Indexing People")
     records_to_index: deque = deque()
 
     for record in people:
-        doc = create_person_index_document(record)
+        doc = create_person_index_document(record, cfg)
         records_to_index.append(doc)
 
     check: bool = submit_to_solr(list(records_to_index))

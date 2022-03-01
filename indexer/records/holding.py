@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict, Optional, List, Dict
+from typing import TypedDict, Optional
 
 import pymarc
 import yaml
@@ -11,7 +11,7 @@ from indexer.helpers.utilities import get_creator_name
 from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
-holding_profile: Dict = yaml.full_load(open('profiles/holdings.yml', 'r'))
+holding_profile: dict = yaml.full_load(open('profiles/holdings.yml', 'r'))
 
 
 class HoldingIndexDocument(TypedDict):
@@ -25,21 +25,21 @@ class HoldingIndexDocument(TypedDict):
     country_code_s: Optional[str]
     institution_s: Optional[str]
     institution_id: Optional[str]
-    provenance_sm: Optional[List[str]]
+    provenance_sm: Optional[list[str]]
     shelfmark_s: Optional[str]
-    former_shelfmarks_sm: Optional[List[str]]
-    material_held_sm: Optional[List[str]]
-    local_numbers_sm: Optional[List[str]]
+    former_shelfmarks_sm: Optional[list[str]]
+    material_held_sm: Optional[list[str]]
+    local_numbers_sm: Optional[list[str]]
     acquisition_note_s: Optional[str]
     acquisition_date_s: Optional[str]
     acquisition_method_s: Optional[str]
     accession_number_s: Optional[str]
-    access_restrictions_sm: Optional[List[str]]
-    provenance_notes_sm: Optional[List[str]]
+    access_restrictions_sm: Optional[list[str]]
+    provenance_notes_sm: Optional[list[str]]
     external_resources_json: Optional[str]
 
 
-def create_holding_index_document(record: Dict) -> HoldingIndexDocument:
+def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocument:
     record_id: str = f"{record['id']}"
     membership_id: str = f"source_{record['source_id']}"
     marc_record: pymarc.Record = create_marc(record['marc_source'])
@@ -75,7 +75,7 @@ def holding_index_document(marc_record: pymarc.Record,
     :return: A holding index document.
     """
 
-    holding_core: Dict = {
+    holding_core: dict = {
         "id": holding_id,
         "type": "holding",
         "source_id": membership_id,
@@ -87,7 +87,7 @@ def holding_index_document(marc_record: pymarc.Record,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
     }
 
-    additional_fields: Dict = process_marc_profile(holding_profile, holding_id, marc_record, holding_processor)
+    additional_fields: dict = process_marc_profile(holding_profile, holding_id, marc_record, holding_processor)
     holding_core.update(additional_fields)
 
     return holding_core

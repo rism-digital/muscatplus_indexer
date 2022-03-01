@@ -1,7 +1,7 @@
 import gc
 import logging
 from collections import deque
-from typing import Generator, List, Dict
+from typing import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
@@ -12,7 +12,7 @@ from indexer.records.source import create_source_index_documents
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
+def _get_sources(cfg: dict) -> Generator[dict, None, None]:
     log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
@@ -62,21 +62,21 @@ def _get_sources(cfg: Dict) -> Generator[Dict, None, None]:
     conn.close()
 
 
-def index_sources(cfg: Dict) -> bool:
+def index_sources(cfg: dict) -> bool:
     log.info("Indexing sources")
     source_groups = _get_sources(cfg)
-    parallelise(source_groups, index_source_groups)
+    parallelise(source_groups, index_source_groups, cfg)
 
     return True
 
 
-def index_source_groups(sources: List) -> bool:
+def index_source_groups(sources: list, cfg: dict) -> bool:
     log.info("Indexing Source Group")
     records_to_index: deque = deque()
 
     for record in sources:
         try:
-            docs = create_source_index_documents(record)
+            docs = create_source_index_documents(record, cfg)
         except RequiredFieldException:
             log.critical("Could not index source %s", record["id"])
             continue

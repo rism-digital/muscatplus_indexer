@@ -1,6 +1,5 @@
 import logging.config
 import sys
-from typing import Dict
 import argparse
 import yaml
 
@@ -18,8 +17,8 @@ import faulthandler
 
 faulthandler.enable()
 
-log_config: Dict = yaml.full_load(open('logging.yml', 'r'))
-idx_config: Dict = yaml.full_load(open('index_config.yml', 'r'))
+log_config: dict = yaml.full_load(open('logging.yml', 'r'))
+idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 
 logging.config.dictConfig(log_config)
 log = logging.getLogger("muscat_indexer")

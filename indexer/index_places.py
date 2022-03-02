@@ -1,5 +1,4 @@
 import logging
-from typing import List, Dict
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
@@ -8,7 +7,7 @@ from indexer.records.place import PlaceIndexDocument, create_place_index_documen
 log = logging.getLogger("muscat_indexer")
 
 
-def index_places(cfg: Dict) -> bool:
+def index_places(cfg: dict) -> bool:
     log.info("Indexing Places")
     conn = mysql_pool.connection()
     curs = conn.cursor()
@@ -39,11 +38,11 @@ def index_places(cfg: Dict) -> bool:
                 (SELECT COUNT(hp.holding_id) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0 
                 {id_where_clause};""")
 
-    all_places: List[Dict] = curs._cursor.fetchall()
+    all_places: list[dict] = curs._cursor.fetchall()
 
-    records_to_index: List = []
+    records_to_index: list = []
     for place in all_places:
-        doc: PlaceIndexDocument = create_place_index_document(place)
+        doc: PlaceIndexDocument = create_place_index_document(place, cfg)
         records_to_index.append(doc)
 
     check: bool = submit_to_solr(records_to_index)

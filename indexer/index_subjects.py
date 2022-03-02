@@ -1,5 +1,4 @@
 import logging
-from typing import List, Dict
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
@@ -8,7 +7,7 @@ from indexer.records.subject import SubjectIndexDocument, create_subject_index_d
 log = logging.getLogger("muscat_indexer")
 
 
-def index_subjects(cfg: Dict) -> bool:
+def index_subjects(cfg: dict) -> bool:
     log.info("Indexing Subjects")
     conn = mysql_pool.connection()
     curs = conn.cursor()
@@ -26,11 +25,11 @@ def index_subjects(cfg: Dict) -> bool:
         FROM {dbname}.standard_terms 
         {id_where_clause};""")
 
-    all_subjects: List[Dict] = curs._cursor.fetchall()
+    all_subjects: list[dict] = curs._cursor.fetchall()
 
-    records_to_index: List = []
+    records_to_index: list = []
     for subject in all_subjects:
-        doc: SubjectIndexDocument = create_subject_index_document(subject)
+        doc: SubjectIndexDocument = create_subject_index_document(subject, cfg)
         records_to_index.append(doc)
 
     check: bool = submit_to_solr(records_to_index)

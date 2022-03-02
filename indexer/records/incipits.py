@@ -1,6 +1,6 @@
 import logging
 from collections import namedtuple
-from typing import Dict, TypedDict, Optional, List
+from typing import TypedDict, Optional
 
 import pymarc
 import ujson
@@ -9,10 +9,10 @@ import yaml
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
-from indexer.helpers.utilities import to_solr_single, to_solr_multi, get_creator_name
+from indexer.helpers.utilities import to_solr_multi, get_creator_name
 
 log = logging.getLogger("muscat_indexer")
-index_config: Dict = yaml.full_load(open("index_config.yml", "r"))
+index_config: dict = yaml.full_load(open("index_config.yml", "r"))
 
 RenderedPAE = namedtuple('RenderedPAE', ['svg', 'midi', 'features'])
 verovio.enableLog(False)
@@ -57,16 +57,16 @@ class IncipitIndexDocument(TypedDict):
     timesig_s: Optional[str]
     clef_s: Optional[str]
     is_mensural_b: bool
-    general_notes_sm: Optional[List[str]]
-    scoring_sm: Optional[List[str]]
+    general_notes_sm: Optional[list[str]]
+    scoring_sm: Optional[list[str]]
 
 
-def _incipit_to_pae(incipit: Dict) -> str:
+def _incipit_to_pae(incipit: dict) -> str:
     """
     :param incipit: A Dict result object for an incipit.
     :return: A string formatted as Plaine and Easie code
     """
-    pae_code: List = []
+    pae_code: list = []
 
     if clef := incipit.get("clef_s"):
         pae_code.append(f"@clef:{clef}")
@@ -130,7 +130,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         record_id: str = record['001'].value()
         source_dates = process_date_statements(date_statements, record_id)
 
-    d: Dict = {
+    d: dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
@@ -184,10 +184,10 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     return d
 
 
-def get_incipits(record: pymarc.Record, source_id: str, source_title: str, record_type_id: int, child_type_ids: list[int]) -> Optional[List]:
+def get_incipits(record: pymarc.Record, source_id: str, source_title: str, record_type_id: int, child_type_ids: list[int]) -> Optional[list]:
     if "031" not in record:
         return None
 
-    incipits: List = record.get_fields("031")
+    incipits: list = record.get_fields("031")
 
     return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num) for num, f in enumerate(incipits)]

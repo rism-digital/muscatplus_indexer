@@ -1,6 +1,6 @@
 import logging
 from collections import deque
-from typing import Dict, Tuple, Generator, List
+from typing import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
@@ -11,7 +11,7 @@ from indexer.records.institution import InstitutionIndexDocument, create_institu
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
+def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
@@ -48,20 +48,20 @@ def _get_institution_groups(cfg: Dict) -> Generator[Tuple, None, None]:
     conn.close()
 
 
-def index_institutions(cfg: Dict) -> bool:
+def index_institutions(cfg: dict) -> bool:
     institution_groups = _get_institution_groups(cfg)
-    parallelise(institution_groups, index_institution_groups)
+    parallelise(institution_groups, index_institution_groups, cfg)
 
     return True
 
 
-def index_institution_groups(institutions: List) -> bool:
+def index_institution_groups(institutions: list, cfg: dict) -> bool:
     log.info("Indexing Institutions")
     records_to_index: deque = deque()
 
     for record in institutions:
         try:
-            doc: InstitutionIndexDocument = create_institution_index_document(record)
+            doc: InstitutionIndexDocument = create_institution_index_document(record, cfg)
         except RequiredFieldException:
             log.error("A required field was not found, so this document was not indexed.")
             continue

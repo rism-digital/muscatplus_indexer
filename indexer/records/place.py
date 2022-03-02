@@ -1,4 +1,4 @@
-from typing import TypedDict, Dict, Optional, List
+from typing import TypedDict, Optional
 
 from indexer.helpers.utilities import clean_multivalued
 
@@ -10,12 +10,12 @@ class PlaceIndexDocument(TypedDict):
     rism_id: str
     country_s: Optional[str]
     district_s: Optional[str]
-    alternate_terms_sm: Optional[List[str]]
-    topic_sm: Optional[List[str]]
-    subtopic_sm: Optional[List[str]]
+    alternate_terms_sm: Optional[list[str]]
+    topic_sm: Optional[list[str]]
+    subtopic_sm: Optional[list[str]]
 
 
-def create_place_index_document(place: Dict) -> PlaceIndexDocument:
+def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
     """
     Places are not stored as MARC records, so the dictionary that is returned from the
     MySQL query is indexed directly.

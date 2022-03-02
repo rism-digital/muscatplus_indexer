@@ -21,7 +21,7 @@ index_config: dict = yaml.full_load(open("index_config.yml", "r"))
 source_profile: dict = yaml.full_load(open('profiles/sources.yml', 'r'))
 
 
-def create_source_index_documents(record: dict) -> list:
+def create_source_index_documents(record: dict, cfg: dict) -> list:
     source: str = record['marc_source']
     marc_record: pymarc.Record = create_marc(source)
 
@@ -136,6 +136,7 @@ def create_source_index_documents(record: dict) -> list:
     # Extended incipits have their fingerprints calculated for similarity matching.
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
+
     incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, child_record_types) or []
 
     res: list = [source_core]

@@ -31,7 +31,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                         LEFT JOIN {dbname}.holdings AS hh ON hp.holding_id = hh.id
                         WHERE hp.person_id = p.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
                         AS holdings_count,
-                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cmp') SEPARATOR ',') 
+                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cre') SEPARATOR ',') 
                         FROM {dbname}.sources_to_people AS ssp 
                         WHERE p.id = ssp.person_id) 
                         AS source_relationships

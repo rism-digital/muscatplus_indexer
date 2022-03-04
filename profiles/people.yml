@@ -27,7 +27,7 @@ variant_names_json:
   processor: "_get_name_variant_data"
   json: true
 
-roles_sm:
+profession_function_sm:
   field: "550"
   subfield: "a"
   multiple: true

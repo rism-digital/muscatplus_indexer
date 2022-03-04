@@ -19,7 +19,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
     if "id" in cfg:
         id_where_clause = f"AND p.id = {cfg['id']}"
 
-    curs.execute(f"""SELECT p.id AS id, p.marc_source AS marc_source,
+    sql_statement = f"""SELECT p.id AS id, p.marc_source AS marc_source,
                      p.created_at AS created, p.updated_at AS updated,
                     (SELECT COUNT(DISTINCT sp.source_id)
                         FROM {dbname}.sources_to_people AS sp
@@ -30,16 +30,22 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                         FROM {dbname}.holdings_to_people AS hp
                         LEFT JOIN {dbname}.holdings AS hh ON hp.holding_id = hh.id
                         WHERE hp.person_id = p.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
-                        AS holdings_count
+                        AS holdings_count,
+                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cmp') SEPARATOR ',') 
+                        FROM {dbname}.sources_to_people AS ssp 
+                        WHERE p.id = ssp.person_id) 
+                        AS source_relationships
                      FROM {dbname}.people AS p
                      WHERE
-                     (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
+                     ((SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
                      (SELECT COUNT(pp1.person_a_id) FROM {dbname}.people_to_people AS pp1 WHERE p.id = pp1.person_a_id) > 0 OR
                      (SELECT COUNT(pp2.person_b_id) FROM {dbname}.people_to_people AS pp2 WHERE p.id = pp2.person_b_id) > 0 OR
                      (SELECT COUNT(sp.person_id) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
                      (SELECT COUNT(hp.person_id) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
-                     (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0 
-                     {id_where_clause};""")
+                     (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0)
+                     {id_where_clause};"""
+
+    curs.execute(sql_statement)
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

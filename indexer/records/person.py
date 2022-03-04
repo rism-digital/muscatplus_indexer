@@ -43,6 +43,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
     rism_id: str = to_solr_single_required(marc_record, '001')
     person_id: str = f"person_{rism_id}"
+    roles: list[str] = [s.strip() for s in record['source_relationships'].split(",") if s] if record.get("source_relationships") else []
 
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
@@ -51,6 +52,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "id": person_id,
         "person_id": person_id,
         "rism_id": rism_id,
+        "roles_sm": roles,
         "source_count_i": record['source_count'] if rism_id != "30004985" else 0,
         "holdings_count_i": record['holdings_count'],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),

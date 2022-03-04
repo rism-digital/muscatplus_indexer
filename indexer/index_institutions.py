@@ -20,7 +20,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     if "id" in cfg:
         id_where_clause = f"AND i.id = {cfg['id']}"
 
-    curs.execute(f"""SELECT i.id, i.marc_source,
+    curs.execute(f"""SELECT i.id, i.marc_source, i.siglum,
                         i.created_at AS created, i.updated_at AS updated,
                     (SELECT COUNT(DISTINCT si.source_id)
                        FROM {dbname}.sources_to_institutions AS si

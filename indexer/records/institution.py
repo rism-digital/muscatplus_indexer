@@ -41,6 +41,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
         "type": "institution",
         "institution_id": institution_id,
         "rism_id": rism_id,
+        "has_siglum_b": True if record.get("siglum") else False,
         "source_count_i": record['source_count'],
         "holdings_count_i": record['holdings_count'],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),

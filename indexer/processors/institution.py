@@ -3,7 +3,8 @@ from typing import Optional
 import logging
 import pymarc
 
-from indexer.helpers.identifiers import country_code_from_siglum, KALLIOPE_MAPPING, COUNTRY_CODE_MAPPING
+from indexer.helpers.identifiers import country_code_from_siglum, KALLIOPE_MAPPING, COUNTRY_CODE_MAPPING, \
+    ISO3166_TO_SIGLUM_MAPPING
 from indexer.helpers.utilities import to_solr_single_required, to_solr_single, normalize_id, get_related_people, \
     get_related_institutions, get_related_places, external_resource_data
 
@@ -27,15 +28,23 @@ def _get_country_codes(record: pymarc.Record) -> Optional[list[str]]:
 
 
 def _get_country_code(record: pymarc.Record) -> Optional[str]:
-    if '110' not in record:
+    if '110' not in record or '043' not in record:
         return None
 
     siglum: Optional[str] = to_solr_single(record, "110", "g")
 
-    if not siglum:
-        return None
+    # If we have a siglum, prefer this.
+    if siglum:
+        return country_code_from_siglum(siglum)
 
-    return country_code_from_siglum(siglum)
+    iso_country_code: Optional[str] = to_solr_single(record, "043", "c")
+    if iso_country_code:
+        # look up the siglum prefix from the country code mapping
+        # Also returns None if not found
+        return ISO3166_TO_SIGLUM_MAPPING.get(iso_country_code)
+
+    # If the above fails, we can't assign a country.
+    return None
 
 
 def _get_country_names(record: pymarc.Record) -> Optional[list]:

@@ -70,6 +70,14 @@ has_incipits_b:
   processor: "_get_has_incipits"
 num_incipits_i:
   processor: "_get_num_incipits"
+incipit_title_sm:
+  field: "031"
+  subfield: "d"
+  multiple: true
+incipit_text_sm:
+  field: "031"
+  subfield: "t"
+  multiple: true
 
 local_number_sm:
   field: "035"

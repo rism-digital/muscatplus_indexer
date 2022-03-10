@@ -1,5 +1,6 @@
 import logging.config
 import sys
+import os.path
 import argparse
 import yaml
 
@@ -18,7 +19,6 @@ import faulthandler
 faulthandler.enable()
 
 log_config: dict = yaml.full_load(open('logging.yml', 'r'))
-idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 
 logging.config.dictConfig(log_config)
 log = logging.getLogger("muscat_indexer")
@@ -26,9 +26,23 @@ log = logging.getLogger("muscat_indexer")
 
 @elapsedtime
 def main(args) -> bool:
+    cfg_filename: str
+
+    if not args.config:
+        cfg_filename = "./index_config.yml"
+    else:
+        cfg_filename = args.config
+
+    log.info("Using %s as the index configuration file.")
+
+    if not os.path.exists(cfg_filename):
+        log.fatal("Could not find config file %s.")
+        return False
+    idx_config: dict = yaml.full_load(open(cfg_filename, 'r'))
+
     res = True
 
-    inc: list = []
+    inc: list
     if not args.include:
         inc = ["sources", "people", "places", "institutions", "holdings", "subjects", "festivals"]
     else:
@@ -82,6 +96,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-e", "--empty", dest="empty", action="store_true", help="Empty the core prior to indexing")
     parser.add_argument("-s", "--no-swap", dest="swap_cores", action="store_false", help="Do not swap cores (default is to swap)")
+    parser.add_argument("-c", "--config", dest="config", help="Path to an index config file; default is ./index_config.yml.")
 
     parser.add_argument("--include", action="extend", nargs="*")
     parser.add_argument("--exclude", action="extend", nargs="*", default=[])

@@ -173,12 +173,14 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         d.update(intvfields)
 
         # Index the incipit features
-        d["intervals_mh"] = " ".join(intervals) if intervals else None
+        d["intervals_bi"] = " ".join(intervals) if intervals else None
         d["intervals_im"] = [int(i) for i in intervals] if intervals else None
+        d["intervals_len_i"] = len(intervals) if intervals else None
         d["interval_ids_json"] = ujson.dumps(interval_ids) if interval_ids else None
 
-        d["pitches_mh"] = " ".join(pitches) if pitches else None
+        d["pitches_bi"] = " ".join(pitches) if pitches else None
         d["pitches_sm"] = pitches if pitches else None
+        d["pitches_len_i"] = len(pitches) if pitches else None
         d["pitches_ids_json"] = ujson.dumps(pitch_ids) if pitch_ids else None
 
     return d

@@ -33,10 +33,10 @@ def main(args) -> bool:
     else:
         cfg_filename = args.config
 
-    log.info("Using %s as the index configuration file.")
+    log.info("Using %s as the index configuration file.", cfg_filename)
 
     if not os.path.exists(cfg_filename):
-        log.fatal("Could not find config file %s.")
+        log.fatal("Could not find config file %s.", cfg_filename)
         return False
     idx_config: dict = yaml.full_load(open(cfg_filename, 'r'))
 

@@ -130,6 +130,15 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         record_id: str = record['001'].value()
         source_dates = process_date_statements(date_statements, record_id)
 
+    time_signature_data: Optional[str] = field['o']
+    tsig_components: list = []
+    if time_signature_data and ";" in time_signature_data:
+        tsig_components = [s.strip() for s in time_signature_data.split(";") if s]
+
+    # Take the first value if our list of possible time signatures is greater than 0, else take the
+    # original field value. This may also be None if field['o'] is None.
+    time_sig: Optional[str] = tsig_components[0] if len(tsig_components) > 0 else time_signature_data
+
     d: dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
@@ -150,7 +159,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "work_num_s": work_number,
         "key_mode_s": field['r'],
         "key_s": field['n'],
-        "timesig_s": field['o'],
+        "timesig_s": time_sig,
         "clef_s": field['g'],
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),

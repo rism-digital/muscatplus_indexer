@@ -15,7 +15,7 @@ ujson = "^5.0.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
 python-simhash = {git = "https://github.com/scrapinghub/python-simhash"}
 httpx = "^0.21.0"
-verovio = {version = "^3.6.0", allow-prereleases = true}
+verovio = {version = "^3.9.0", allow-prereleases = true}
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.18.1"

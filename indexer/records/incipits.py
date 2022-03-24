@@ -84,25 +84,22 @@ def _incipit_to_pae(incipit: dict) -> str:
     return "\n".join(pae_code)
 
 
-def _render_pae(pae: str) -> dict:
+def _get_pae_features(pae: str) -> dict:
     vrv_tk.loadData(pae)
     # Verovio is set to render PAE to features
     features: str = vrv_tk.getDescriptiveFeatures("{}")
-    # svg: str = vrv_tk.renderToSVG()
-    # midi: str = vrv_tk.renderToMIDI()
-    # b64midi: str = f"data:audio/midi;base64,{midi}"
     feat_output: dict = ujson.loads(features)
 
     return feat_output
 
 
-def _get_intervals(intvlist: list) -> dict:
-    fields: dict = {}
-    for intn, intv in enumerate(intvlist[:12], 1):
-        intv_n = int(intv)
-        fields[f"interval{intn}_i"] = intv_n
-
-    return fields
+# def _get_intervals(intvlist: list) -> dict:
+#     fields: dict = {}
+#     for intn, intv in enumerate(intvlist[:12], 1):
+#         intv_n = int(intv)
+#         fields[f"interval{intn}_i"] = intv_n
+#
+#     return fields
 
 
 def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record_type_id: int, child_type_ids: list[int], source_title: str, num: int) -> IncipitIndexDocument:
@@ -168,28 +165,35 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
     d["original_pae_sni"] = pae_code
 
-    # If extended indexing is enabled, run the PAE through Verovio
+    # Run the PAE through Verovio
     if pae_code:
-        feat = _render_pae(pae_code)
-        intervals: Optional[list] = feat.get("intervals")
-        pitches: Optional[list] = feat.get("pitches")
-        interval_ids: Optional[list] = feat.get("intervalsIds")
-        pitch_ids: Optional[list] = feat.get("pitchesIds")
+        feat = _get_pae_features(pae_code)
+        intervals: list = feat.get("intervalsChromatic", [])
+        intervals_diat: list = feat.get("intervalsDiatonic", [])
+        pitches: list = feat.get("pitchesChromatic", [])
+        pitches_diat: list = feat.get("pitchesDiatonic", [])
+        interval_ids: list = feat.get("intervalsIds", [])
+        pitch_ids: list = feat.get("pitchesIds", [])
 
         # Index the 12 interval fields separately; used for scoring and ranking the document
-        intvfields: dict = _get_intervals(intervals) if intervals else {}
-
-        d.update(intvfields)
+        # intvfields: dict = _get_intervals(intervals) if intervals else {}
+        # d.update(intvfields)
 
         # Index the incipit features
         d["intervals_bi"] = " ".join(intervals) if intervals else None
+        d["intervals_diat_bi"] = " ".join(intervals_diat) if intervals_diat else None
         d["intervals_im"] = [int(i) for i in intervals] if intervals else None
+        d["intervals_diat_im"] = [int(i) for i in intervals_diat] if intervals_diat else None
         d["intervals_len_i"] = len(intervals) if intervals else None
+        d["intervals_diat_len_i"] = len(intervals_diat) if intervals_diat else None
         d["interval_ids_json"] = ujson.dumps(interval_ids) if interval_ids else None
 
         d["pitches_bi"] = " ".join(pitches) if pitches else None
+        d["pitches_diat_bi"] = " ".join(pitches_diat) if pitches_diat else None
         d["pitches_sm"] = pitches if pitches else None
+        d["pitches_diat_sm"] = pitches_diat if pitches_diat else None
         d["pitches_len_i"] = len(pitches) if pitches else None
+        d["pitches_diat_len_i"] = len(pitches_diat) if pitches_diat else None
         d["pitches_ids_json"] = ujson.dumps(pitch_ids) if pitch_ids else None
 
     return d

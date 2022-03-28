@@ -9,7 +9,7 @@ import yaml
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
-from indexer.helpers.utilities import to_solr_multi, get_creator_name
+from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id
 
 log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml", "r"))
@@ -103,6 +103,7 @@ def _get_pae_features(pae: str) -> dict:
 
 
 def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record_type_id: int, child_type_ids: list[int], source_title: str, num: int) -> IncipitIndexDocument:
+    record_id: str = normalize_id(record['001'].value())
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
 
@@ -124,7 +125,6 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
 
     source_dates: list = []
     if date_statements:
-        record_id: str = record['001'].value()
         source_dates = process_date_statements(date_statements, record_id)
 
     time_signature_data: Optional[str] = field['o']
@@ -140,6 +140,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
+        "rism_id": record_id,  # index the raw source id to support incipit lookups by source
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(record_type_id, child_type_ids),

@@ -50,6 +50,8 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
             else:
                 continue
 
+    now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup)
+
     institution_core: dict = {
         "id": institution_id,
         "type": "institution",
@@ -58,7 +60,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
         "has_siglum_b": True if record.get("siglum") else False,
         "source_count_i": record['source_count'],
         "holdings_count_i": record['holdings_count'],
-        "now_in_json": ujson.dumps(_get_now_in_json(marc_record, inst_lookup)),
+        "now_in_json": ujson.dumps(now_in) if now_in else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

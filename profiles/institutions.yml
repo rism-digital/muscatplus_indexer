@@ -31,10 +31,6 @@ country_names_sm:
 institution_types_sm:  # 368
   processor: "_get_institution_types"
 
-countries_sm:
-  field: "371"
-  subfield: "d"
-  multiple: true
 headquarters_sm:
   field: "370"
   subfield: "e"
@@ -44,9 +40,34 @@ other_places_sm:
   subfield: "f"
   multiple: true
 
-website_s:
+street_address_sm:
+  field: "371"
+  subfield: "a"
+  multiple: true
+city_address_sm:
+  field: "371"
+  subfield: "b"
+  multiple: true
+country_address_sm:
+  field: "371"
+  subfield: "d"
+  multiple: true
+postcode_address_sm:
+  field: "371"
+  subfield: "e"
+  multiple: true
+email_address_sm:
+  field: "371"
+  subfield: "m"
+  multiple: true
+website_address_sm:
   field: "371"
   subfield: "u"
+  multiple: true
+public_note_address_sm:
+  field: "371"
+  subfield: "z"
+  multiple: true
 
 alternate_names_sm:
   field: "410"

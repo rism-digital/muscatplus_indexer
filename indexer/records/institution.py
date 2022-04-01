@@ -37,6 +37,10 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
     rism_id: str = to_solr_single_required(marc_record, '001')
     institution_id: str = f"institution_{rism_id}"
 
+    source_count: int = record.get("source_count", 0)
+    holdings_count: int = record.get("holdings_count", 0)
+    total_count: int = source_count + holdings_count
+
     related_institutions = record.get("related_institutions")
     inst_lookup: dict = {}
     if related_institutions:
@@ -58,8 +62,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
         "institution_id": institution_id,
         "rism_id": rism_id,
         "has_siglum_b": True if record.get("siglum") else False,
-        "source_count_i": record['source_count'] if rism_id != "40009305" else 0,
-        "holdings_count_i": record['holdings_count'],
+        "source_count_i": source_count if rism_id != "40009305" else 0,
+        "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
+        "total_holdings_i": total_count if rism_id != "40009305" else 0,
         "now_in_json": ujson.dumps(now_in) if now_in else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")

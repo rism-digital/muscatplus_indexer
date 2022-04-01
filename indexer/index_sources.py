@@ -84,7 +84,7 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
         records_to_index.extend(docs)
 
     records_list: list = list(records_to_index)
-    check: bool = submit_to_solr(records_list)
+    check: bool = submit_to_solr(records_list, cfg)
 
     if not check:
         log.error("There was an error submitting to Solr!")

@@ -73,7 +73,7 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
 
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(list(records_to_index))
+    check: bool = submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting institutions to Solr")

@@ -70,7 +70,7 @@ def index_people_groups(people: list, cfg: dict) -> bool:
         doc = create_person_index_document(record, cfg)
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(list(records_to_index))
+    check: bool = submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting to Solr")

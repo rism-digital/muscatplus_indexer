@@ -50,7 +50,7 @@ def main(args) -> bool:
 
     if args.empty:
         log.info("Emptying Solr indexing core")
-        res |= empty_solr_core()
+        res |= empty_solr_core(idx_config)
 
     if args.only_id:
         idx_config.update({"id": args.only_id})

@@ -32,7 +32,7 @@ def index_subjects(cfg: dict) -> bool:
         doc: SubjectIndexDocument = create_subject_index_document(subject, cfg)
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(records_to_index)
+    check: bool = submit_to_solr(records_to_index, cfg)
 
     if not check:
         log.error("There was an error submitting subjects to Solr")

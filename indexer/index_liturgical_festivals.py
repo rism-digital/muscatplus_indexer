@@ -33,7 +33,7 @@ def index_liturgical_festivals(cfg: dict) -> bool:
         doc: LiturgicalFestivalIndexDocument = create_liturgical_festival_document(festival, cfg)
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(records_to_index)
+    check: bool = submit_to_solr(records_to_index, cfg)
 
     if not check:
         log.error("There was an error submitting festivals to Solr")

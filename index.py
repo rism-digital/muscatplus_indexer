@@ -33,10 +33,10 @@ def main(args) -> bool:
     else:
         cfg_filename = args.config
 
-    log.info("Using %s as the index configuration file.")
+    log.info("Using %s as the index configuration file.", cfg_filename)
 
     if not os.path.exists(cfg_filename):
-        log.fatal("Could not find config file %s.")
+        log.fatal("Could not find config file %s.", cfg_filename)
         return False
     idx_config: dict = yaml.full_load(open(cfg_filename, 'r'))
 
@@ -50,7 +50,7 @@ def main(args) -> bool:
 
     if args.empty:
         log.info("Emptying Solr indexing core")
-        res |= empty_solr_core()
+        res |= empty_solr_core(idx_config)
 
     if args.only_id:
         idx_config.update({"id": args.only_id})

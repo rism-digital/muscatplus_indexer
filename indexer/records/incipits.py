@@ -9,7 +9,7 @@ import yaml
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
-from indexer.helpers.utilities import to_solr_multi, get_creator_name
+from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id
 
 log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml", "r"))
@@ -84,28 +84,26 @@ def _incipit_to_pae(incipit: dict) -> str:
     return "\n".join(pae_code)
 
 
-def _render_pae(pae: str) -> dict:
+def _get_pae_features(pae: str) -> dict:
     vrv_tk.loadData(pae)
     # Verovio is set to render PAE to features
     features: str = vrv_tk.getDescriptiveFeatures("{}")
-    # svg: str = vrv_tk.renderToSVG()
-    # midi: str = vrv_tk.renderToMIDI()
-    # b64midi: str = f"data:audio/midi;base64,{midi}"
     feat_output: dict = ujson.loads(features)
 
     return feat_output
 
 
-def _get_intervals(intvlist: list) -> dict:
-    fields: dict = {}
-    for intn, intv in enumerate(intvlist[:12], 1):
-        intv_n = int(intv)
-        fields[f"interval{intn}_i"] = intv_n
-
-    return fields
+# def _get_intervals(intvlist: list) -> dict:
+#     fields: dict = {}
+#     for intn, intv in enumerate(intvlist[:12], 1):
+#         intv_n = int(intv)
+#         fields[f"interval{intn}_i"] = intv_n
+#
+#     return fields
 
 
 def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record_type_id: int, child_type_ids: list[int], source_title: str, num: int) -> IncipitIndexDocument:
+    record_id: str = normalize_id(record['001'].value())
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
 
@@ -127,13 +125,22 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
 
     source_dates: list = []
     if date_statements:
-        record_id: str = record['001'].value()
         source_dates = process_date_statements(date_statements, record_id)
+
+    time_signature_data: Optional[str] = field['o']
+    tsig_components: list = []
+    if time_signature_data and ";" in time_signature_data:
+        tsig_components = [s.strip() for s in time_signature_data.split(";") if s]
+
+    # Take the first value if our list of possible time signatures is greater than 0, else take the
+    # original field value. This may also be None if field['o'] is None.
+    time_sig: Optional[str] = tsig_components[0] if len(tsig_components) > 0 else time_signature_data
 
     d: dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
         "source_id": source_id,
+        "rism_id": record_id,  # index the raw source id to support incipit lookups by source
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(record_type_id, child_type_ids),
@@ -150,7 +157,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "work_num_s": work_number,
         "key_mode_s": field['r'],
         "key_s": field['n'],
-        "timesig_s": field['o'],
+        "timesig_s": time_sig,
         "clef_s": field['g'],
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
@@ -159,28 +166,35 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
     d["original_pae_sni"] = pae_code
 
-    # If extended indexing is enabled, run the PAE through Verovio
+    # Run the PAE through Verovio
     if pae_code:
-        feat = _render_pae(pae_code)
-        intervals: Optional[list] = feat.get("intervals")
-        pitches: Optional[list] = feat.get("pitches")
-        interval_ids: Optional[list] = feat.get("intervalsIds")
-        pitch_ids: Optional[list] = feat.get("pitchesIds")
+        feat = _get_pae_features(pae_code)
+        intervals: list = feat.get("intervalsChromatic", [])
+        intervals_diat: list = feat.get("intervalsDiatonic", [])
+        pitches: list = feat.get("pitchesChromatic", [])
+        pitches_diat: list = feat.get("pitchesDiatonic", [])
+        interval_ids: list = feat.get("intervalsIds", [])
+        pitch_ids: list = feat.get("pitchesIds", [])
 
         # Index the 12 interval fields separately; used for scoring and ranking the document
-        intvfields: dict = _get_intervals(intervals) if intervals else {}
-
-        d.update(intvfields)
+        # intvfields: dict = _get_intervals(intervals) if intervals else {}
+        # d.update(intvfields)
 
         # Index the incipit features
         d["intervals_bi"] = " ".join(intervals) if intervals else None
+        d["intervals_diat_bi"] = " ".join(intervals_diat) if intervals_diat else None
         d["intervals_im"] = [int(i) for i in intervals] if intervals else None
+        d["intervals_diat_im"] = [int(i) for i in intervals_diat] if intervals_diat else None
         d["intervals_len_i"] = len(intervals) if intervals else None
+        d["intervals_diat_len_i"] = len(intervals_diat) if intervals_diat else None
         d["interval_ids_json"] = ujson.dumps(interval_ids) if interval_ids else None
 
         d["pitches_bi"] = " ".join(pitches) if pitches else None
+        d["pitches_diat_bi"] = " ".join(pitches_diat) if pitches_diat else None
         d["pitches_sm"] = pitches if pitches else None
+        d["pitches_diat_sm"] = pitches_diat if pitches_diat else None
         d["pitches_len_i"] = len(pitches) if pitches else None
+        d["pitches_diat_len_i"] = len(pitches_diat) if pitches_diat else None
         d["pitches_ids_json"] = ujson.dumps(pitch_ids) if pitch_ids else None
 
     return d

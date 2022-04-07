@@ -7,12 +7,13 @@ import yaml
 log = logging.getLogger("muscat_indexer")
 
 idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
-solr_address = idx_config['solr']['server']
-solr_idx_core = idx_config['solr']['indexing_core']
-solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 
 
-def empty_solr_core() -> bool:
+def empty_solr_core(cfg: dict) -> bool:
+    solr_address = cfg['solr']['server']
+    solr_idx_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
+
     res = httpx.post(f"{solr_idx_server}/update?commit=true",
                      content=ujson.dumps({"delete": {"query": "*:*"}}),
                      headers={"Content-Type": "application/json"})
@@ -23,13 +24,18 @@ def empty_solr_core() -> bool:
     return False
 
 
-def submit_to_solr(records: list) -> bool:
+def submit_to_solr(records: list, cfg: dict) -> bool:
     """
     Submits a set of records to a Solr server.
 
     :param records: A list of Solr records to index
+    :param cfg a config object
     :return: True if successful, false if not.
     """
+    solr_address = cfg['solr']['server']
+    solr_idx_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
+
     log.debug("Indexing records to Solr")
     res = httpx.post(f"{solr_idx_server}/update",
                      content=ujson.dumps(records),
@@ -45,7 +51,11 @@ def submit_to_solr(records: list) -> bool:
     return False
 
 
-def commit_changes():
+def commit_changes(cfg: dict):
+    solr_address = cfg['solr']['server']
+    solr_idx_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
+
     log.info("Committing changes")
     res = httpx.get(f"{solr_idx_server}/update?commit=true",
                     timeout=None)

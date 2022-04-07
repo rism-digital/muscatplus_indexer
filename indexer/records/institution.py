@@ -2,6 +2,7 @@ import logging
 from typing import TypedDict, Optional
 
 import pymarc
+import ujson
 import yaml
 
 from indexer.helpers.marc import create_marc
@@ -36,14 +37,35 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
     rism_id: str = to_solr_single_required(marc_record, '001')
     institution_id: str = f"institution_{rism_id}"
 
+    source_count: int = record.get("source_count", 0)
+    holdings_count: int = record.get("holdings_count", 0)
+    total_count: int = source_count + holdings_count
+
+    related_institutions = record.get("related_institutions")
+    inst_lookup: dict = {}
+    if related_institutions:
+        all_related_institutions: list = related_institutions.split("\n")
+        for inst in all_related_institutions:
+            components: list = inst.split("|")
+            if len(components) == 2:
+                inst_lookup[components[0]] = {"name": components[1]}
+            elif len(components) == 3:
+                inst_lookup[components[0]] = {"name": components[2], "siglum": components[1]}
+            else:
+                continue
+
+    now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup)
+
     institution_core: dict = {
         "id": institution_id,
         "type": "institution",
         "institution_id": institution_id,
         "rism_id": rism_id,
         "has_siglum_b": True if record.get("siglum") else False,
-        "source_count_i": record['source_count'],
-        "holdings_count_i": record['holdings_count'],
+        "source_count_i": source_count if rism_id != "40009305" else 0,
+        "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
+        "total_holdings_i": total_count if rism_id != "40009305" else 0,
+        "now_in_json": ujson.dumps(now_in) if now_in else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -52,3 +74,37 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
     institution_core.update(additional_fields)
 
     return institution_core
+
+
+def _get_now_in_json(record: pymarc.Record, related_institutions: dict) -> Optional[list[dict]]:
+    now_in_fields: list[pymarc.Field] = record.get_fields("580")
+    if not now_in_fields:
+        return None
+
+    all_entries: list = []
+
+    for entry in now_in_fields:
+        institution_id = entry["0"]
+        if not institution_id:
+            log.warning(f"Got a 'now in' record with no identifier.")
+            continue
+
+        if institution_id not in related_institutions:
+            log.warning("Could not find a 'now in' institution for %s", institution_id)
+            continue
+
+        institution_info: dict = related_institutions.get(institution_id)
+        now_in: dict = {
+            "institution_id": f"institution_{institution_id}",
+            "name": f"{institution_info.get('name')}",
+            "relationship": "now-in"
+        }
+
+        if "siglum" in institution_info:
+            now_in["siglum"] = institution_info.get("siglum")
+
+        all_entries.append(now_in)
+
+    return all_entries
+
+

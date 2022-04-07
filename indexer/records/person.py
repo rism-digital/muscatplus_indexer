@@ -45,6 +45,10 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     person_id: str = f"person_{rism_id}"
     roles: list[str] = [s.strip() for s in record['source_relationships'].split(",") if s] if record.get("source_relationships") else []
 
+    source_count: int = record.get("source_count", 0)
+    holdings_count: int = record.get("holdings_count", 0)
+    total_count: int = source_count + holdings_count
+
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
     core_person: dict = {
@@ -53,8 +57,9 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "person_id": person_id,
         "rism_id": rism_id,
         "roles_sm": roles,
-        "source_count_i": record['source_count'] if rism_id != "30004985" else 0,
-        "holdings_count_i": record['holdings_count'],
+        "source_count_i": source_count if rism_id != "30004985" else 0,
+        "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
+        "total_sources_i": total_count if rism_id != "30004985" else 0,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

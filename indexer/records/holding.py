@@ -7,7 +7,7 @@ import yaml
 from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import get_creator_name
+from indexer.helpers.utilities import get_creator_name, to_solr_single
 from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -23,7 +23,7 @@ class HoldingIndexDocument(TypedDict):
     siglum_s: Optional[str]
     department_s: Optional[str]
     country_code_s: Optional[str]
-    institution_s: Optional[str]
+    institution_name_s: Optional[str]
     institution_id: Optional[str]
     provenance_sm: Optional[list[str]]
     shelfmark_s: Optional[str]
@@ -52,7 +52,24 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     creator_name: Optional[str] = get_creator_name(source_marc_record)
     record_type_id: int = record['record_type']
 
-    return holding_index_document(marc_record, holding_id, record_id, membership_id, main_title, creator_name, record_type_id)
+    idx_document: HoldingIndexDocument = holding_index_document(marc_record, holding_id, record_id, membership_id, main_title, creator_name, record_type_id)
+
+    if c := record.get('institution_record_marc'):
+        institution_marc_record: pymarc.Record = create_marc(c)
+        additional_institution_fields: Optional[dict] = _index_additional_institution_fields(institution_marc_record)
+        idx_document.update(additional_institution_fields)
+
+    return idx_document
+
+
+def _index_additional_institution_fields(record: pymarc.Record) -> dict:
+    ret: dict = {}
+
+    city_field: Optional[str] = to_solr_single(record, "110", "c")
+    if city_field:
+        ret["city_s"] = city_field
+
+    return ret
 
 
 def holding_index_document(marc_record: pymarc.Record,

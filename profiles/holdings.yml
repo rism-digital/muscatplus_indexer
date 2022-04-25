@@ -88,7 +88,7 @@ former_shelfmarks_sm:
   field: "852"
   subfield: "d"
   multiple: true
-institution_s:
+institution_name_s:
   field: "852"
   subfield: "e"
 material_held_sm:

@@ -136,6 +136,14 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     # original field value. This may also be None if field['o'] is None.
     time_sig: Optional[str] = tsig_components[0] if len(tsig_components) > 0 else time_signature_data
 
+    key_sig: str
+    # If there is a value for the key signature field (and it's not an empty string) then
+    # put an 'n' in place so that people can filter for incipits with no key signature.
+    if field['n'] and field['n'].strip():
+        key_sig = field['n']
+    else:
+        key_sig = "n"
+
     d: dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
@@ -156,7 +164,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "role_s": field['e'],
         "work_num_s": work_number,
         "key_mode_s": field['r'],
-        "key_s": field['n'],
+        "key_s": key_sig,
         "timesig_s": time_sig,
         "clef_s": field['g'],
         "is_mensural_b": is_mensural,

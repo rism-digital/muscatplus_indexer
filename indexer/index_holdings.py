@@ -22,10 +22,13 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
     # The published / unpublished state is ignored for holding records, so we just take any and all holding records.
     curs.execute(f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
                            sources.std_title AS source_title, sources.composer AS creator_name, 
-                           sources.record_type as record_type, sources.marc_source AS source_record_marc
+                           sources.record_type as record_type, sources.marc_source AS source_record_marc,
+                           institution.marc_source AS institution_record_marc
                     FROM {dbname}.holdings AS holdings
                     LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
-                    WHERE sources.marc_source IS NOT NULL {id_where_clause};""")
+                    LEFT JOIN {dbname}.holdings_to_institutions AS hi on hi.holding_id = holdings.id
+                    LEFT JOIN {dbname}.institutions AS institution ON hi.institution_id = institution.id
+                    WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause};""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
         yield rows

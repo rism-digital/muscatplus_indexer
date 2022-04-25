@@ -225,7 +225,7 @@ def _get_full_holding_identifiers(mss_holdings: list[HoldingIndexDocument], all_
 
     for mss in mss_holdings:
         institution_sig: str = mss.get("siglum_s", "")
-        institution_name: str = mss.get("institution_s", "")
+        institution_name: str = mss.get("institution_name_s", "")
         institution_shelfmark: str = mss.get("shelfmark_s", "")
         ids.add(f"{institution_name} {institution_sig} {institution_shelfmark}")
 

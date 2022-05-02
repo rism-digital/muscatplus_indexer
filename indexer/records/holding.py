@@ -51,8 +51,9 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     # For consistency it's better to store the creator name with the dates attached!
     creator_name: Optional[str] = get_creator_name(source_marc_record)
     record_type_id: int = record['record_type']
+    holding_record_id = f"{record['id']}h-{record['id']}"
 
-    idx_document: HoldingIndexDocument = holding_index_document(marc_record, holding_id, record_id, membership_id, main_title, creator_name, record_type_id)
+    idx_document: HoldingIndexDocument = holding_index_document(marc_record, holding_id, holding_record_id, membership_id, main_title, creator_name, record_type_id)
 
     if c := record.get('institution_record_marc'):
         institution_marc_record: pymarc.Record = create_marc(c)

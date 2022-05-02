@@ -584,6 +584,7 @@ def _get_material_groups(record: pymarc.Record) -> Optional[list[dict]]:
         field_group = defaultdict(list)
         base_group: dict = {
             "id": f"mg_{gpnum}",
+            "type": "material-group",
             "group_num": f"{gpnum}",
             "source_id": source_id
         }

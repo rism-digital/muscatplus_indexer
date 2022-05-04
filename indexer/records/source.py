@@ -263,7 +263,7 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
     for record in all_records:
-        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources", "Digitized")]
+        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources", "Digitized", "IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")]
         if len(digitization_links) > 0:
             return True
 

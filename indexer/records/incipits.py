@@ -188,22 +188,25 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         # intvfields: dict = _get_intervals(intervals) if intervals else {}
         # d.update(intvfields)
 
-        # Index the incipit features
-        d["intervals_bi"] = " ".join(intervals) if intervals else None
-        d["intervals_diat_bi"] = " ".join(intervals_diat) if intervals_diat else None
-        d["intervals_im"] = [int(i) for i in intervals] if intervals else None
-        d["intervals_diat_im"] = [int(i) for i in intervals_diat] if intervals_diat else None
-        d["intervals_len_i"] = len(intervals) if intervals else None
-        d["intervals_diat_len_i"] = len(intervals_diat) if intervals_diat else None
-        d["interval_ids_json"] = ujson.dumps(interval_ids) if interval_ids else None
+        rend: dict = {
+            "intervals_bi": " ".join(intervals) if intervals else None,
+            "intervals_diat_bi": " ".join(intervals_diat) if intervals_diat else None,
+            "intervals_im": [int(i) for i in intervals] if intervals else None,
+            "intervals_diat_im": [int(i) for i in intervals_diat] if intervals_diat else None,
+            "intervals_len_i": len(intervals) if intervals else None,
+            "intervals_diat_len_i": len(intervals_diat) if intervals_diat else None,
+            "interval_ids_json": ujson.dumps(interval_ids) if interval_ids else None,
+            "pitches_bi": " ".join(pitches) if pitches else None,
+            "pitches_diat_bi": " ".join(pitches_diat) if pitches_diat else None,
+            "pitches_sm": pitches if pitches else None,
+            "pitches_diat_sm": pitches_diat if pitches_diat else None,
+            "pitches_len_i": len(pitches) if pitches else None,
+            "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
+            "pitches_ids_json": ujson.dumps(pitch_ids) if pitch_ids else None
+        }
 
-        d["pitches_bi"] = " ".join(pitches) if pitches else None
-        d["pitches_diat_bi"] = " ".join(pitches_diat) if pitches_diat else None
-        d["pitches_sm"] = pitches if pitches else None
-        d["pitches_diat_sm"] = pitches_diat if pitches_diat else None
-        d["pitches_len_i"] = len(pitches) if pitches else None
-        d["pitches_diat_len_i"] = len(pitches_diat) if pitches_diat else None
-        d["pitches_ids_json"] = ujson.dumps(pitch_ids) if pitch_ids else None
+        # update the record with the verovio features
+        d.update(rend)
 
     return d
 

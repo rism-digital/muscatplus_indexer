@@ -213,6 +213,7 @@ def external_resource_data(field: pymarc.Field) -> Optional[ExternalResourceDocu
 class PersonRelationshipIndexDocument(TypedDict):
     id: str
     name: Optional[str]
+    type: str
     relationship: Optional[str]
     qualifier: Optional[str]
     date_statement: Optional[str]
@@ -241,6 +242,7 @@ def related_person(field: pymarc.Field, this_id: str, this_type: str, relationsh
     d: PersonRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "name": field['a'],
+        "type": "person",
         # sources use $4 for relationship info; others use $i. Will ultimately return None if neither are found.
         "relationship": field['4'] if '4' in field else field['i'],
         "qualifier": field['j'],
@@ -283,6 +285,7 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
 class PlaceRelationshipIndexDocument(TypedDict):
     id: str
     name: Optional[str]
+    type: str
     relationship: Optional[str]
     place_id: str
     this_id: str
@@ -292,6 +295,7 @@ class PlaceRelationshipIndexDocument(TypedDict):
 def __related_place(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> PlaceRelationshipIndexDocument:
     d: PlaceRelationshipIndexDocument = {
         "id": f"{relationship_number}",
+        "type": "place",
         "this_id": this_id,
         "this_type": this_type,
         "name": field["a"],
@@ -316,6 +320,7 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     this_id: str
     this_type: str
     name: Optional[str]
+    type: str
     department: Optional[str]
     institution_id: Optional[str]
     relationship: Optional[str]
@@ -325,6 +330,7 @@ class InstitutionRelationshipIndexDocument(TypedDict):
 def related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> InstitutionRelationshipIndexDocument:
     d: InstitutionRelationshipIndexDocument = {
         "id": f"{relationship_number}",
+        "type": "institution",
         "this_id": this_id,
         "this_type": this_type,
         "name": field["a"],

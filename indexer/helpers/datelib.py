@@ -13,9 +13,9 @@ log = logging.getLogger("muscat_indexer")
 edtf.appsettings.DAY_FIRST = True
 
 # The simplest single year match
-SIMPLE_SINGLE_YEAR_REGEX: Pattern = re.compile("(?P<year>\d{4})")
+SIMPLE_SINGLE_YEAR_REGEX: Pattern = re.compile("^(?P<year>\d{4})$")
 # The simplest date range -- 1234-1256
-SIMPLE_RANGE_REGEX: Pattern = re.compile("(?P<first>\d{4})-(?P<second>\d{4})")
+SIMPLE_RANGE_REGEX: Pattern = re.compile("^(?P<first>\d{4})-(?P<second>\d{4})$")
 
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
 DOT_DIVIDED_REGEX: Pattern = re.compile(r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?")
@@ -124,6 +124,9 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
     if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "[s.d.]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "[o.J]", "o.J", "[s.n.]", "(s. d.)"):
         return None, None
+
+    if "\u200f" in date_statement:
+        log.warning("A right-to-left unicode character was detected in %s", date_statement)
 
     # Fast path: If we have a single date of four digits, don't bother doing any additional processing.
     if simplest_single_match := SIMPLE_SINGLE_YEAR_REGEX.match(date_statement):

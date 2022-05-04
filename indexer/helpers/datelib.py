@@ -125,6 +125,9 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
     if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "[s.d.]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "[o.J]", "o.J", "[s.n.]", "(s. d.)"):
         return None, None
 
+    if "\u200f" in date_statement:
+        log.warning("A right-to-left unicode character was detected in %s", date_statement)
+
     # Fast path: If we have a single date of four digits, don't bother doing any additional processing.
     if simplest_single_match := SIMPLE_SINGLE_YEAR_REGEX.match(date_statement):
         year: int = int(simplest_single_match.group("year"))

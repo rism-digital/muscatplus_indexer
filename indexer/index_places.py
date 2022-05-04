@@ -45,7 +45,10 @@ def index_places(cfg: dict) -> bool:
         doc: PlaceIndexDocument = create_place_index_document(place, cfg)
         records_to_index.append(doc)
 
-    check: bool = submit_to_solr(records_to_index, cfg)
+    if cfg["dry"]:
+        check = True
+    else:
+        check = submit_to_solr(records_to_index, cfg)
 
     if not check:
         log.error("There was an error submitting places to Solr")

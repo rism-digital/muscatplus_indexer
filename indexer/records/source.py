@@ -263,13 +263,11 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
     for record in all_records:
-        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources", "Digitized")]
+        digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources", "Digitized", "IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")]
         if len(digitization_links) > 0:
             return True
 
-    # if the previous check doesn't return, check if there are IIIF manifests. If there are, this will return True;
-    # if not, the 'False' result will confirm that there are no digitized images available.
-    return _get_has_iiif_manifest(all_records)
+    return False
 
 
 def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:

@@ -267,7 +267,9 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
         if len(digitization_links) > 0:
             return True
 
-    return False
+    # if the previous check doesn't return, check if there are IIIF manifests. If there are, this will return True;
+    # if not, the 'False' result will confirm that there are no digitized images available.
+    return _get_has_iiif_manifest(all_records)
 
 
 def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:

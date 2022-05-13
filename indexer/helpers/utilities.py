@@ -337,7 +337,7 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
         "department": field["d"],
         "institution_id": f"institution_{field['0']}",
         "relationship": field['4'] if '4' in field else field['i'],
-        "qualifier": field['j'],
+        "qualifier": field['g'],
     }
 
     return {k: v for k, v in d.items() if v}

@@ -4,7 +4,7 @@ from typing import Optional, TypedDict, Pattern, Set
 import pymarc
 import logging
 
-MARC_LINE_REGEX: Pattern = re.compile(r'^=(?P<idtag>001)\s{2}(?P<ident>.*)|(?P<tag>\d{3})\s{2}(?P<indicators>[0-9#|]{2})(?P<subfields>.*)', re.S)
+MARC_LINE_REGEX: Pattern = re.compile(r'^=(?P<idtag>001)\s{2}(?P<ident>.*)|(?P<tag>\d{3})\s{2}(?P<indicators>[0-9#| ]{2})(?P<subfields>.*)', re.S)
 
 MarcSubField = list[str]
 

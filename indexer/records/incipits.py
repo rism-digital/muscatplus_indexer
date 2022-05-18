@@ -130,7 +130,7 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     time_signature_data: Optional[str] = field['o']
     tsig_components: list = []
     if time_signature_data and ";" in time_signature_data:
-        tsig_components = [s.strip() for s in time_signature_data.split(";") if s]
+        tsig_components = [s.strip() for s in time_signature_data.split(";") if s and s.strip()]
 
     # Take the first value if our list of possible time signatures is greater than 0, else take the
     # original field value. This may also be None if field['o'] is None.

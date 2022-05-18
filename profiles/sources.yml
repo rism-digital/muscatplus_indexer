@@ -369,11 +369,11 @@ works_catalogue_json:  # 690
   processor: "_get_works_catalogue_data"
   json: true
 
-bibliographic_references_json: # 691
-  processor: "_get_bibliographic_reference_data"
-  json: true
-secondary_literature_identifiers_sm:
-  processor: "_get_secondary_literature_identifiers"
+#bibliographic_references_json: # 691
+#  processor: "_get_bibliographic_reference_data"
+#  json: true
+#secondary_literature_identifiers_sm:
+#  processor: "_get_secondary_literature_identifiers"
 
 related_people_json:
   processor: "_get_related_people_data"

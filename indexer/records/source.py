@@ -1,4 +1,3 @@
-import gc
 import logging
 from typing import Optional
 
@@ -10,7 +9,7 @@ from indexer.helpers.identifiers import get_record_type, get_source_type, get_co
     get_is_contents_record, get_is_collection_record, country_code_from_siglum
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name, to_solr_multi
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -90,6 +89,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_people_ids: list = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
 
     variant_standard_terms: Optional[list] = _get_variant_standard_terms(record.get("alt_standard_terms"))
+    publication_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
+    bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, publication_entries)
 
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
@@ -125,6 +126,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "is_composite_volume_b": record_type_id == 11,
         "has_digitization_b": _get_has_digitization(all_marc_records),
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
+        "bibliographic_references_json": ujson.dumps(bibliographic_references) if bibliographic_references else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -336,3 +338,34 @@ def _create_marc_from_str(marc_records: Optional[str]) -> list[pymarc.Record]:
     :return: A list of pymarc.Record objects
     """
     return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
+
+
+def _get_bibliographic_references_json(record: pymarc.Record, references: Optional[list[str]]) -> Optional[list[dict]]:
+    if not references:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields("691")
+    if not fields:
+        return None
+
+    refs: dict = {}
+    for r in references:
+        # This is a unique field delimiter (hopefully!)
+        rid, rest = r.split("|:| ")
+        refs[rid] = rest
+
+    outp: list = []
+
+    for field in fields:
+        fid: str = field["0"]
+        literature_id: str = f"institution_{fid}"
+        r = {
+            "id": literature_id,
+            "formatted": refs[fid],
+        }
+        if p := field["n"]:
+            r["pages"] = p
+
+        outp.append(r)
+
+    return outp

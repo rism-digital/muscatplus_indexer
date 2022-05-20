@@ -127,13 +127,20 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     if date_statements:
         source_dates = process_date_statements(date_statements, record_id)
 
+    # Take the first value if our list of possible time signatures is greater than 0, else take the
+    # original field value. This may also be None if field['o'] is None.
     time_signature_data: Optional[str] = field['o']
+
+    # if we have more than two space characters in the string, collapse excessive ones into a since space
+    # by splitting on space characters and then joining with a single space.
+    if isinstance(time_signature_data, str) and time_signature_data.count(" ") > 2:
+        log.warning("Excessive spaces in incipit for source %s. Collapsing them.", record_id)
+        time_signature_data = " ".join(time_signature_data.split())
+
     tsig_components: list = []
     if time_signature_data and ";" in time_signature_data:
         tsig_components = [s.strip() for s in time_signature_data.split(";") if s and s.strip()]
 
-    # Take the first value if our list of possible time signatures is greater than 0, else take the
-    # original field value. This may also be None if field['o'] is None.
     time_sig: Optional[str] = tsig_components[0] if len(tsig_components) > 0 else time_signature_data
 
     key_sig: str
@@ -165,12 +172,13 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "work_num_s": work_number,
         "key_mode_s": field['r'],
         "key_s": key_sig,
-        "timesig_s": time_sig,
+        "timesig_s": time_sig if time_sig and len(time_sig) > 0 else None,
         "clef_s": field['g'],
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
         "scoring_sm": field.get_subfields('z'),
     }
+
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
     d["original_pae_sni"] = pae_code
 

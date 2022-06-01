@@ -1,4 +1,7 @@
 ---
+common:
+  version: "development"
+
 solr:
   server: http://localhost:8983/solr
   indexing_core: muscatplus_indexing

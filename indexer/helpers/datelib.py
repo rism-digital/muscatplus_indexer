@@ -309,7 +309,7 @@ def parse_date_metadata(date_statements: list[str], start_year: Optional[int],
                 end_year = max(end_years)
 
     if start_year is not None and end_year is not None and start_year > end_year:
-        log.error('Error parsing date: start %s is greater than end %s', start_year, end_year)
+        log.warning('Error parsing date: start %s is greater than end %s', start_year, end_year)
         return None, None
 
     return start_year, end_year
@@ -332,7 +332,7 @@ def process_date_statements(date_statements: list[str], record_id: str) -> Optio
         except Exception as e:  # noqa
             # The breadth of errors mean we could spend all day catching things, so in this case we use
             # a blanket exception catch and then log the statement to be fixed so that we might fix it later.
-            log.error("Error parsing date statement %s: %s", statement, e)
+            log.warning("Error parsing date statement %s: %s", statement, e)
             return None
 
         if earliest is None and latest is None:

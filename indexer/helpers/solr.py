@@ -2,11 +2,8 @@ import logging
 
 import httpx
 import ujson
-import yaml
 
 log = logging.getLogger("muscat_indexer")
-
-idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 
 
 def empty_solr_core(cfg: dict) -> bool:

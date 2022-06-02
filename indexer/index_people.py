@@ -76,6 +76,6 @@ def index_people_groups(people: list, cfg: dict) -> bool:
         check = submit_to_solr(list(records_to_index), cfg)
 
     if not check:
-        log.error("There was an error submitting to Solr")
+        log.error("There was an error submitting people to Solr")
 
     return check

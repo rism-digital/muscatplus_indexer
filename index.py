@@ -1,11 +1,16 @@
-import logging.config
-import sys
-import os.path
 import argparse
+import faulthandler
+import logging.config
+import os.path
+import sys
+import timeit
+
+import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
 
+from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
 from indexer.helpers.utilities import elapsedtime
-from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
 from indexer.index_liturgical_festivals import index_liturgical_festivals
@@ -13,8 +18,6 @@ from indexer.index_people import index_people
 from indexer.index_places import index_places
 from indexer.index_sources import index_sources
 from indexer.index_subjects import index_subjects
-import faulthandler
-
 
 faulthandler.enable()
 
@@ -24,8 +27,26 @@ logging.config.dictConfig(log_config)
 log = logging.getLogger("muscat_indexer")
 
 
+def index_indexer(cfg: dict, start: float, end: float) -> bool:
+    version: str = cfg["common"]["version"]
+
+    # The 'indexed' and 'id' fields are added automatically by Solr.
+    idx_record: dict = {
+        "type": "indexer",
+        "indexer_version_sni": version,
+        "index_start_fp": start,
+        "index_end_fp": end,
+    }
+
+    check: bool = submit_to_solr([idx_record], cfg)
+
+    return check
+
+
 @elapsedtime
 def main(args) -> bool:
+    idx_start: float = timeit.default_timer()
+
     cfg_filename: str
 
     if not args.config:
@@ -39,6 +60,18 @@ def main(args) -> bool:
         log.fatal("Could not find config file %s.", cfg_filename)
         return False
     idx_config: dict = yaml.full_load(open(cfg_filename, 'r'))
+
+    # Set up sentry logging
+    sentry_logging = LoggingIntegration(
+        level=logging.ERROR,        # Capture info and above as breadcrumbs
+        event_level=logging.ERROR   # Send errors as events
+    )
+
+    sentry_sdk.init(
+        dsn=idx_config["sentry"]["dsn"],
+        environment=idx_config["sentry"]["environment"],
+        integrations=[sentry_logging]
+    )
 
     res = True
 
@@ -75,22 +108,29 @@ def main(args) -> bool:
             res |= index_liturgical_festivals(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
+    idx_end: float = timeit.default_timer()
 
-    # force a core reload to ensure it's up-to-date
-    res |= reload_core(idx_config['solr']['server'],
-                       idx_config['solr']['indexing_core'])
+    if res and not args.dry:
+        # Add a single record that records some metadata about this index run
+        log.info("Adding indexer record.")
+        res |= index_indexer(idx_config, idx_start, idx_end)
+
+        # force a core reload to ensure it's up-to-date
+        res |= reload_core(idx_config['solr']['server'],
+                           idx_config['solr']['indexing_core'])
 
     # If all the previous statuses are True, then consider that indexing was successful.
     if res and args.swap_cores and not args.dry:
         swap: bool = swap_cores(idx_config['solr']['server'],
                                 idx_config['solr']['indexing_core'],
                                 idx_config['solr']['live_core'])
-        return swap and res
+        res |= swap
 
     if not res:
         log.error("Indexing failed.")
     else:
         log.info("Indexing successful.")
+
     return res
 
 

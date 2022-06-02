@@ -30,7 +30,7 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             fn_exists = hasattr(processors, fn_name)
 
             if not fn_exists:
-                log.error("Could not process Solr field %s for record %s; %s is a function that does not exist.", solr_field, doc_id, fn_name)
+                log.warning("Could not process Solr field %s for record %s; %s is a function that does not exist.", solr_field, doc_id, fn_name)
                 continue
 
             processor_fn: Callable = getattr(processors, fn_name)
@@ -105,7 +105,7 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
                     solr_document[solr_field] = prefixed_value
                 else:
                     value_type = type(field_result)
-                    log.error("A value prefix was configured for %s on %s, but %s cannot be prefixed!", solr_field, doc_id, value_type)
+                    log.warning("A value prefix was configured for %s on %s, but %s cannot be prefixed!", solr_field, doc_id, value_type)
                     continue
             else:
                 solr_document[solr_field] = field_result

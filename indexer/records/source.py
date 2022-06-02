@@ -309,7 +309,7 @@ def _get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_i
 
         subf_id = subf[0]
         if not subf_id:
-            log.error(f"Problem when searching the membership of {this_id} in {parent_record['001'].value()}.")
+            log.warning(f"Problem when searching the membership of {this_id} in {parent_record['001'].value()}.")
             continue
 
         idxs.append(normalize_id(subf_id))

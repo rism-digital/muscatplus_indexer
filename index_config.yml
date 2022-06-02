@@ -1,4 +1,11 @@
 ---
+common:
+  version: "development"
+
+sentry:
+  dsn: "https://ae8a3840b7754a1d93f704b3e8157e7e@o1117873.ingest.sentry.io/6464231"
+  environment: "development"
+
 solr:
   server: http://localhost:8983/solr
   indexing_core: muscatplus_indexing

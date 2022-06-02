@@ -1,13 +1,16 @@
-import logging.config
-import sys
-import os.path
 import argparse
+import faulthandler
+import logging.config
+import os.path
+import sys
 import timeit
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
 
-from indexer.helpers.utilities import elapsedtime
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
+from indexer.helpers.utilities import elapsedtime
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
 from indexer.index_liturgical_festivals import index_liturgical_festivals
@@ -15,8 +18,6 @@ from indexer.index_people import index_people
 from indexer.index_places import index_places
 from indexer.index_sources import index_sources
 from indexer.index_subjects import index_subjects
-import faulthandler
-
 
 faulthandler.enable()
 
@@ -59,6 +60,18 @@ def main(args) -> bool:
         log.fatal("Could not find config file %s.", cfg_filename)
         return False
     idx_config: dict = yaml.full_load(open(cfg_filename, 'r'))
+
+    # Set up sentry logging
+    sentry_logging = LoggingIntegration(
+        level=logging.ERROR,        # Capture info and above as breadcrumbs
+        event_level=logging.ERROR   # Send errors as events
+    )
+
+    sentry_sdk.init(
+        dsn=idx_config["sentry"]["dsn"],
+        environment=idx_config["sentry"]["environment"],
+        integrations=[sentry_logging]
+    )
 
     res = True
 

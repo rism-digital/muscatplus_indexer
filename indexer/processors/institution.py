@@ -63,7 +63,7 @@ def _get_location(record: pymarc.Record) -> Optional[str]:
             _ = float(lon)
             _ = float(lat)
         except ValueError:
-            log.error("Problem with the following values lat,lon %s,%s: %s", lat, lon, record["001"].value())
+            log.warning("Problem with the following values lat,lon %s,%s: %s", lat, lon, record["001"].value())
             return None
 
         return f"{lat},{lon}"

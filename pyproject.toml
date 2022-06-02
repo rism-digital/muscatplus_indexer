@@ -16,6 +16,7 @@ edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performa
 python-simhash = {git = "https://github.com/scrapinghub/python-simhash"}
 httpx = "^0.22.0"
 verovio = {version = "^3.9.0", allow-prereleases = true}
+sentry-sdk = "^1.5.12"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.0"

@@ -1,7 +1,7 @@
 import MySQLdb
 import yaml
 from MySQLdb.cursors import SSDictCursor, SSCursor
-from DBUtils.PooledDB import PooledDB
+from dbutils.pooled_db import PooledDB
 
 idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 

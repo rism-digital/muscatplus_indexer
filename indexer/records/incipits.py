@@ -93,15 +93,6 @@ def _get_pae_features(pae: str) -> dict:
     return feat_output
 
 
-# def _get_intervals(intvlist: list) -> dict:
-#     fields: dict = {}
-#     for intn, intv in enumerate(intvlist[:12], 1):
-#         intv_n = int(intv)
-#         fields[f"interval{intn}_i"] = intv_n
-#
-#     return fields
-
-
 def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record_type_id: int, child_type_ids: list[int], source_title: str, num: int) -> IncipitIndexDocument:
     record_id: str = normalize_id(record['001'].value())
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"

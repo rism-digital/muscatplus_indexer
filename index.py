@@ -110,6 +110,8 @@ def main(args) -> bool:
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()
 
+    # If, so far, all the results have been successful and we're not in a dry run, then
+    # add the final index record and reload the core.
     if res and not args.dry:
         # Add a single record that records some metadata about this index run
         log.info("Adding indexer record.")
@@ -119,7 +121,8 @@ def main(args) -> bool:
         res |= reload_core(idx_config['solr']['server'],
                            idx_config['solr']['indexing_core'])
 
-    # If all the previous statuses are True, then consider that indexing was successful.
+    # Finally, if all the previous statuses are True, we're supposed to swap the cores, and we're not in a dry run,
+    # then consider that indexing was successful and swap the indexer core with the live core.
     if res and args.swap_cores and not args.dry:
         swap: bool = swap_cores(idx_config['solr']['server'],
                                 idx_config['solr']['indexing_core'],

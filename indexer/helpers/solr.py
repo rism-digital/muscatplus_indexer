@@ -48,7 +48,7 @@ def submit_to_solr(records: list, cfg: dict) -> bool:
     return False
 
 
-def commit_changes(cfg: dict):
+def commit_changes(cfg: dict) -> bool:
     solr_address = cfg['solr']['server']
     solr_idx_core = cfg['solr']['indexing_core']
     solr_idx_server: str = f"{solr_address}/{solr_idx_core}"

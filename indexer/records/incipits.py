@@ -165,9 +165,10 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "key_s": key_sig,
         "timesig_s": time_sig if time_sig and len(time_sig) > 0 else None,
         "clef_s": field['g'],
+        "voice_instrument_s": field["m"],
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
-        "scoring_sm": field.get_subfields('z'),
+        "scoring_sm": field.get_subfields('z')
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None

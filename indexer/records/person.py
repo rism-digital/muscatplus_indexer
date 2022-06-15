@@ -67,4 +67,11 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     additional_fields: dict = process_marc_profile(person_profile, person_id, marc_record, person_processor)
     core_person.update(additional_fields)
 
+    # This avoids another long lookup in the date statement processor.
+    if "date_ranges_im" in core_person and isinstance(core_person.get("date_ranges_im"), list):
+        dates: list[int] = core_person["date_ranges_im"]
+        core_person.update({
+            "earliest_date_i": dates[0]
+        })
+
     return core_person

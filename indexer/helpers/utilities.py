@@ -165,10 +165,12 @@ def normalize_id(identifier: str) -> str:
     :return: A normalized identifier
     """
 
-    if not (m := re.match(r"[\d]+", identifier)):
+    try:
+        idval: int = int(identifier)
+    except ValueError:
         raise MalformedIdentifierException(f"The identifier {identifier} is not well-formed.")
 
-    return f"{int(m.group())}"
+    return f"{idval}"
 
 
 def clean_multivalued(fields: dict, field_name: str) -> Optional[list[str]]:

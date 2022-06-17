@@ -5,8 +5,14 @@ import pymarc
 import ujson
 import yaml
 
-from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types, \
-    get_is_contents_record, get_is_collection_record, country_code_from_siglum
+from indexer.helpers.identifiers import (
+    get_record_type,
+    get_source_type,
+    get_content_types,
+    get_is_contents_record,
+    get_is_collection_record,
+    country_code_from_siglum
+)
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
@@ -166,7 +172,7 @@ def _get_manuscript_holdings(record: pymarc.Record,
     if "852" not in record:
         return None
 
-    source_num: str = record['001'].value()
+    source_num: str = normalize_id(record['001'].value())
     holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
     # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
     # should result in a unique identifier for this holding record.
@@ -309,7 +315,7 @@ def _get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_i
 
         subf_id = subf[0]
         if not subf_id:
-            log.warning(f"Problem when searching the membership of {this_id} in {parent_record['001'].value()}.")
+            log.warning(f"Problem when searching the membership of {this_id} in {normalize_id(parent_record['001'].value())}.")
             continue
 
         idxs.append(normalize_id(subf_id))

@@ -37,7 +37,9 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             field_result: Any = processor_fn(marc)
 
             if required is True and field_result is None:
-                raise RequiredFieldException(f"{solr_field} requires a value, but one was not found for {doc_id}.")
+                log.critical("%s requires a value, but one was not found for %s. Skipping this field.", solr_field, doc_id)
+                continue
+                # raise RequiredFieldException(f"{solr_field} requires a value, but one was not found for {doc_id}.")
 
             if field_result is None:
                 # don't bother to add this to the result, since it would
@@ -69,7 +71,12 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
                 processor_fn = to_solr_single
 
             # This will raise an error if the processors encounter unexpected data.
-            field_result = processor_fn(marc, marc_field, marc_subfield, all_fields)
+            try:
+                field_result = processor_fn(marc, marc_field, marc_subfield, all_fields)
+            except RequiredFieldException:
+                log.critical("%s requires a value, but one was not found for %s. Skipping this field.", solr_field, doc_id)
+                continue
+
             if field_result is None:
                 # For values of 'None' we would expect this field to not appear in the
                 # document anyway, so we just skip any further processing or adding

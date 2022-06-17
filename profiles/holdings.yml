@@ -96,6 +96,7 @@ material_held_sm:
   subfield: "q"
   multiple: true
 institution_id:
+  required: true
   field: "852"
   subfield: "x"
   value_prefix: "institution_"

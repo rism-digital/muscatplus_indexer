@@ -6,8 +6,15 @@ from typing import Optional
 import pymarc
 
 from indexer.helpers.datelib import process_date_statements
-from indexer.helpers.utilities import to_solr_multi, normalize_id, to_solr_single_required, get_related_people, \
-    get_related_institutions, get_related_places, external_resource_data, tokenize_variants
+from indexer.helpers.utilities import (
+    to_solr_multi,
+    normalize_id,
+    get_related_people,
+    get_related_institutions,
+    get_related_places,
+    external_resource_data,
+    tokenize_variants
+)
 
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 EARLIEST_YEAR_IF_MISSING: int = -2000
@@ -30,7 +37,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     if not date_statements:
         return None
 
-    record_id: str = record['001'].value()
+    record_id: str = normalize_id(record['001'].value())
 
     return process_date_statements(date_statements, record_id)
 
@@ -65,21 +72,24 @@ def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
-    person_id: str = f"person_{normalize_id(to_solr_single_required(record, '001'))}"
+    record_id: str = normalize_id(record["001"].value())
+    person_id: str = f"person_{record_id}"
     people: Optional[list] = get_related_people(record, person_id, "person", ungrouped=True)
 
     return people
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
-    person_id: str = f"person_{normalize_id(record['001'].value())}"
+    record_id: str = normalize_id(record['001'].value())
+    person_id: str = f"person_{record_id}"
     institutions: Optional[list] = get_related_institutions(record, person_id, "person", ungrouped=True)
 
     return institutions
 
 
 def _get_related_places_data(record: pymarc.Record) -> Optional[list]:
-    person_id: str = f"person_{normalize_id(record['001'].value())}"
+    record_id: str = normalize_id(record['001'].value())
+    person_id: str = f"person_{record_id}"
     places: Optional[list] = get_related_places(record, person_id, "person")
 
     return places

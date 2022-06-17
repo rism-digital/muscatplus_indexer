@@ -92,7 +92,7 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
     values: Optional[list[str]] = to_solr_multi(record, field, subfield, all_fields)
 
     if not values:
-        record_id = record['001']
+        record_id: str = normalize_id(record['001'].value())
         log.error("%s requires a value, but one was not found for %s.", field, record_id)
         raise RequiredFieldException(f"{field} requires a value, but one was not found for {record_id}.")
 
@@ -147,7 +147,7 @@ def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional
     ret: Optional[list[str]] = to_solr_multi(record, field, subfield, all_fields)
 
     if ret is None:
-        record_id = record['001']
+        record_id: str = normalize_id(record['001'].value())
         log.error("%s, %s requires a value, but one was not found for %s", field, subfield, record_id)
         raise RequiredFieldException(f"{field}, {subfield} requires a value, but one was not found for {record_id}.")
 

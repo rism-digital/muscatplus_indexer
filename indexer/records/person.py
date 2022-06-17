@@ -6,9 +6,7 @@ import yaml
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import (
-    to_solr_single_required
-)
+from indexer.helpers.utilities import normalize_id
 from indexer.processors import person as person_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -41,7 +39,7 @@ class PersonIndexDocument(TypedDict):
 
 def create_person_index_document(record: dict, cfg: dict) -> dict:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
-    rism_id: str = to_solr_single_required(marc_record, '001')
+    rism_id: str = normalize_id(marc_record["001"].value())
     person_id: str = f"person_{rism_id}"
     roles: list[str] = [s.strip() for s in record['source_relationships'].split(",") if s] if record.get("source_relationships") else []
 

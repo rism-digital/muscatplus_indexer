@@ -7,7 +7,7 @@ import yaml
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import to_solr_single_required
+from indexer.helpers.utilities import normalize_id
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -34,7 +34,7 @@ class InstitutionIndexDocument(TypedDict):
 
 def create_institution_index_document(record: dict, cfg: dict) -> InstitutionIndexDocument:
     marc_record: pymarc.Record = create_marc(record['marc_source'])
-    rism_id: str = to_solr_single_required(marc_record, '001')
+    rism_id: str = normalize_id(marc_record["001"].value())
     institution_id: str = f"institution_{rism_id}"
 
     source_count: int = record.get("source_count", 0)

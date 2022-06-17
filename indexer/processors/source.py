@@ -12,7 +12,6 @@ from indexer.helpers.utilities import (
     normalize_id,
     to_solr_multi,
     external_resource_data,
-    to_solr_single_required,
     get_related_people,
     get_related_institutions,
     get_related_places,
@@ -45,7 +44,8 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
 
 
 def _get_creator_data(record: pymarc.Record) -> Optional[list]:
-    source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
+    record_id: str = normalize_id(record['001'].value())
+    source_id: str = f"source_{record_id}"
     creator = get_related_people(record, source_id, "source", fields=("100",))
     if not creator:
         return None
@@ -130,7 +130,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     if not date_statements:
         return None
 
-    record_id: str = record['001'].value()
+    record_id: str = normalize_id(record['001'].value())
 
     return process_date_statements(date_statements, record_id)
 
@@ -205,7 +205,8 @@ def _get_rism_series_data(record: pymarc.Record) -> Optional[list[dict]]:
 
 
 def _get_location_performance_data(record: pymarc.Record) -> Optional[list]:
-    source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
+    record_id: str = normalize_id(record["001"].value())
+    source_id: str = f"source_{record_id}"
     places = get_related_places(record, source_id, "source", fields=("651",))
     if not places:
         return None
@@ -537,7 +538,8 @@ def _get_material_groups(record: pymarc.Record) -> Optional[list[dict]]:
     :return: A list of MaterialGroupIndexDocument instances
     """
     log.debug("Indexing material groups")
-    source_id: str = f"source_{normalize_id(to_solr_single_required(record, '001'))}"
+    record_id: str = normalize_id(record["001"].value())
+    source_id: str = f"source_{record_id}"
 
     # Set the mapping between the MARC field and a function to handle processing that field
     # for the material group. Each function takes the field as the only argument, producing

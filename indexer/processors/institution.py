@@ -3,10 +3,20 @@ from typing import Optional
 import logging
 import pymarc
 
-from indexer.helpers.identifiers import country_code_from_siglum, KALLIOPE_MAPPING, COUNTRY_CODE_MAPPING, \
+from indexer.helpers.identifiers import (
+    country_code_from_siglum,
+    KALLIOPE_MAPPING,
+    COUNTRY_CODE_MAPPING,
     ISO3166_TO_SIGLUM_MAPPING
-from indexer.helpers.utilities import to_solr_single_required, to_solr_single, normalize_id, get_related_people, \
-    get_related_institutions, get_related_places, external_resource_data
+)
+from indexer.helpers.utilities import (
+    to_solr_single,
+    normalize_id,
+    get_related_people,
+    get_related_institutions,
+    get_related_places,
+    external_resource_data
+)
 
 
 log = logging.getLogger("muscat_indexer")
@@ -96,21 +106,24 @@ def _get_institution_types(record: pymarc.Record) -> list[str]:
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
-    institution_id: str = f"institution_{normalize_id(record['001'].value())}"
+    record_id: str = normalize_id(record['001'].value())
+    institution_id: str = f"institution_{record_id}"
     people: Optional[list] = get_related_people(record, institution_id, "institution", ungrouped=True)
 
     return people
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
-    institution_id: str = f"institution_{normalize_id(record['001'].value())}"
+    record_id: str = normalize_id(record['001'].value())
+    institution_id: str = f"institution_{record_id}"
     institutions: Optional[list] = get_related_institutions(record, institution_id, "institution", fields=('710',))
 
     return institutions
 
 
 def _get_related_places_data(record: pymarc.Record) -> Optional[list]:
-    institution_id: str = f"institution_{normalize_id(record['001'].value())}"
+    record_id: str = normalize_id(record['001'].value())
+    institution_id: str = f"institution_{record_id}"
     places: Optional[list] = get_related_places(record, institution_id, "institution")
 
     return places

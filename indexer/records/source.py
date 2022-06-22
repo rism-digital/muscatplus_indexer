@@ -15,7 +15,7 @@ from indexer.helpers.identifiers import (
 )
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name, to_solr_multi
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -82,9 +82,14 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_json: Optional[dict] = None
     if parent_record_type_id:
+        parent_material_group_types: Optional[list] = to_solr_multi(parent_marc_record, "593", "a")
+
         source_membership_json = {
             "source_id": f"source_{membership_id}",
             "main_title": record.get("parent_title"),
+            "shelfmark": record.get("parent_shelfmark"),
+            "siglum": record.get("parent_siglum"),
+            "material_types": parent_material_group_types,
             "record_type": get_record_type(parent_record_type_id),
             "source_type": get_source_type(parent_record_type_id),
             "content_types": get_content_types(parent_record_type_id, parent_child_record_types)

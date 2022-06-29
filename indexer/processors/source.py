@@ -239,42 +239,6 @@ def __secondary_literature_data(field: pymarc.Field) -> dict:
     return {k: v for k, v in d.items() if v}
 
 
-def _get_works_catalogue_data(record: pymarc.Record) -> Optional[list[dict]]:
-    fields: list[pymarc.Field] = record.get_fields("690")
-    if not fields:
-        return None
-
-    return [__secondary_literature_data(f) for f in fields]
-
-
-def _get_bibliographic_reference_data(record: pymarc.Record) -> Optional[list[dict]]:
-    fields: list[pymarc.Field] = record.get_fields("691")
-    if not fields:
-        return None
-
-    return [__secondary_literature_data(f) for f in fields]
-
-
-def _get_secondary_literature_identifiers(record: pymarc.Record) -> Optional[list]:
-    fields: list[pymarc.Field] = record.get_fields("691")
-    if not fields:
-        return None
-
-    ret: list = []
-    for field in fields:
-        stmt: str = ""
-        if ref := field['a']:
-            stmt += ref
-        if num := field['n']:
-            stmt += f" {num}"
-
-        # ensure we strip leading and trailing spaces
-        if chomped := stmt.strip():
-            ret.append(chomped)
-
-    return ret
-
-
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     source_id: str = f"source_{normalize_id(record['001'].value())}"
     people = get_related_people(record, source_id, "source", fields=("700",), ungrouped=True)

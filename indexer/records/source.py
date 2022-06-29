@@ -15,7 +15,7 @@ from indexer.helpers.identifiers import (
 )
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name
+from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name, to_solr_multi
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -82,9 +82,14 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_json: Optional[dict] = None
     if parent_record_type_id:
+        parent_material_group_types: Optional[list] = to_solr_multi(parent_marc_record, "593", "a")
+
         source_membership_json = {
             "source_id": f"source_{membership_id}",
             "main_title": record.get("parent_title"),
+            "shelfmark": record.get("parent_shelfmark"),
+            "siglum": record.get("parent_siglum"),
+            "material_types": parent_material_group_types,
             "record_type": get_record_type(parent_record_type_id),
             "source_type": get_source_type(parent_record_type_id),
             "content_types": get_content_types(parent_record_type_id, parent_child_record_types)
@@ -95,8 +100,10 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_people_ids: list = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
 
     variant_standard_terms: Optional[list] = _get_variant_standard_terms(record.get("alt_standard_terms"))
+
     publication_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
-    bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, publication_entries)
+    bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "691", publication_entries)
+    works_catalogue: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "690", publication_entries)
 
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
@@ -118,6 +125,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "source_membership_order_i": _get_parent_order_for_members(parent_marc_record, rism_id) if parent_marc_record else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
         "num_holdings_i": None if num_holdings == 0 else num_holdings,  # Only show holding numbers for prints.
+        "num_holdings_s": _get_num_holdings_facet(num_holdings),
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
@@ -133,6 +141,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "has_digitization_b": _get_has_digitization(all_marc_records),
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "bibliographic_references_json": ujson.dumps(bibliographic_references) if bibliographic_references else None,
+        "works_catalogue_json": ujson.dumps(works_catalogue) if works_catalogue else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -346,11 +355,11 @@ def _create_marc_from_str(marc_records: Optional[str]) -> list[pymarc.Record]:
     return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
 
 
-def _get_bibliographic_references_json(record: pymarc.Record, references: Optional[list[str]]) -> Optional[list[dict]]:
+def _get_bibliographic_references_json(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[dict]]:
     if not references:
         return None
 
-    fields: list[pymarc.Field] = record.get_fields("691")
+    fields: list[pymarc.Field] = record.get_fields(field)
     if not fields:
         return None
 
@@ -364,7 +373,7 @@ def _get_bibliographic_references_json(record: pymarc.Record, references: Option
 
     for field in fields:
         fid: str = field["0"]
-        literature_id: str = f"institution_{fid}"
+        literature_id: str = f"literature_{fid}"
         r = {
             "id": literature_id,
             "formatted": refs[fid],
@@ -375,3 +384,16 @@ def _get_bibliographic_references_json(record: pymarc.Record, references: Option
         outp.append(r)
 
     return outp
+
+
+def _get_num_holdings_facet(num: int) -> Optional[str]:
+    if num == 0:
+        return None
+    elif num == 1:
+        return "1"
+    elif 2 <= num <= 10:
+        return "2 to 10"
+    elif 11 <= num <= 100:
+        return "11 to 100"
+    else:
+        return "more than 100"

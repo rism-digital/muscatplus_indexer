@@ -154,7 +154,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
 
-    incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, child_record_types) or []
+    incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, child_record_types, country_codes) or []
 
     res: list = [source_core]
     res.extend(incipits)

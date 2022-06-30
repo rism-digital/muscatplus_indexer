@@ -93,7 +93,14 @@ def _get_pae_features(pae: str) -> dict:
     return feat_output
 
 
-def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record_type_id: int, child_type_ids: list[int], source_title: str, num: int) -> IncipitIndexDocument:
+def __incipit(field: pymarc.Field,
+              record: pymarc.Record,
+              source_id: str,
+              record_type_id: int,
+              child_type_ids: list[int],
+              source_title: str,
+              num: int,
+              country_codes: list[str]) -> IncipitIndexDocument:
     record_id: str = normalize_id(record['001'].value())
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
@@ -168,7 +175,8 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
         "voice_instrument_s": field["m"],
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
-        "scoring_sm": field.get_subfields('z')
+        "scoring_sm": field.get_subfields('z'),
+        "country_codes_sm": country_codes
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
@@ -211,10 +219,15 @@ def __incipit(field: pymarc.Field, record: pymarc.Record, source_id: str, record
     return d
 
 
-def get_incipits(record: pymarc.Record, source_id: str, source_title: str, record_type_id: int, child_type_ids: list[int]) -> Optional[list]:
+def get_incipits(record: pymarc.Record,
+                 source_id: str,
+                 source_title: str,
+                 record_type_id: int,
+                 child_type_ids: list[int],
+                 country_codes: list[str]) -> Optional[list]:
     if "031" not in record:
         return None
 
     incipits: list = record.get_fields("031")
 
-    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num) for num, f in enumerate(incipits)]
+    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num, country_codes) for num, f in enumerate(incipits)]

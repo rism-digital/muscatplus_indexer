@@ -39,7 +39,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
 
     source_count: int = record.get("source_count", 0)
     holdings_count: int = record.get("holdings_count", 0)
-    total_count: int = source_count + holdings_count
+    total_count: int = record.get("total_source_count", 0)
 
     related_institutions = record.get("related_institutions")
     inst_lookup: dict = {}

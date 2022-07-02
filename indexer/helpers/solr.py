@@ -13,7 +13,8 @@ def empty_solr_core(cfg: dict) -> bool:
 
     res = httpx.post(f"{solr_idx_server}/update?commit=true",
                      content=ujson.dumps({"delete": {"query": "*:*"}}),
-                     headers={"Content-Type": "application/json"})
+                     headers={"Content-Type": "application/json"},
+                     timeout=None)
 
     if 200 <= res.status_code < 400:
         log.debug("Deletion was successful")

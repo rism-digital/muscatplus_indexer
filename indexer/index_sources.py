@@ -38,16 +38,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(DISTINCT hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
         GROUP_CONCAT(DISTINCT CONCAT_WS('', p.full_name, NULLIF( CONCAT(' (', p.life_dates, ')'), '')) SEPARATOR '\n') AS people_names,
-        GROUP_CONCAT(
-               DISTINCT CONCAT(pub.id, '|:|', CONCAT_WS(' ',
-                  IF( NULLIF(pub.author, NULL), CONCAT(pub.author, '.'), ''),
-                  NULLIF( CONCAT(pub.description, ','), ''),
-                  IF( NULLIF(pub.journal, NULL), CONCAT(pub.journal, '.'), ''),
-                  IF( NULLIF(pub.date, NULL), CONCAT(pub.date, '.'), ''),
-                  IF( NULLIF(pub.place, NULL), CONCAT(pub.place, '.'), ''),
-                  NULLIF( CONCAT('(', pub.short_name, ').'), ''))
-               )
-               SEPARATOR '\n') AS publication_entries,
+        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.description, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries,
         GROUP_CONCAT(DISTINCT p.alternate_names SEPARATOR '\n') AS alt_people_names,
         GROUP_CONCAT(DISTINCT st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
         GROUP_CONCAT(DISTINCT p.id SEPARATOR '\n') AS people_ids

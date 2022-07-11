@@ -355,6 +355,31 @@ def _create_marc_from_str(marc_records: Optional[str]) -> list[pymarc.Record]:
     return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
 
 
+def _format_reference(ref: list) -> str:
+    author, description, journal, date, place, short = ref
+    res: str = ""
+
+    if author:
+        res += f"{author.strip()}{' ' if author.endswith('.') else '. ' }"
+
+    if description:
+        res += f"{description.strip()}{' ' if description.endswith('.') else '. ' }"
+
+    if journal:
+        res += f"{journal.strip()}, "
+
+    if date:
+        res += f"{date.strip()}. "
+
+    if place:
+        res += f"{place.strip()} "
+
+    if short:
+        res += f"({short.strip()})"
+
+    return res
+
+
 def _get_bibliographic_references_json(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[dict]]:
     if not references:
         return None
@@ -365,9 +390,9 @@ def _get_bibliographic_references_json(record: pymarc.Record, field: str, refere
 
     refs: dict = {}
     for r in references:
-        # This is a unique field delimiter (hopefully!)
-        rid, rest = r.split("|:| ")
-        refs[rid] = rest
+        # |:| is a unique field delimiter
+        rid, *rest = r.split("|:|")
+        refs[rid] = _format_reference(rest)
 
     outp: list = []
 

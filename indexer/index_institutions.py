@@ -22,6 +22,21 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
 
     curs.execute(f"""SELECT i.id, i.marc_source, i.siglum,
                         i.created_at AS created, i.updated_at AS updated,
+                    (SELECT COUNT(DISTINCT allids)
+                        FROM (
+                            SELECT DISTINCT ss.id AS allids
+                                FROM {dbname}.sources_to_institutions AS si
+                                LEFT JOIN {dbname}.sources AS ss on si.source_id = ss.id
+                                WHERE si.institution_id = i.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+                            UNION SELECT DISTINCT hi.source_id AS allids
+                                  FROM {dbname}.holdings AS hi
+                                  LEFT JOIN {dbname}.sources AS hs ON hi.source_id = hs.id
+                                  WHERE hi.lib_siglum = i.siglum AND (hs.wf_stage IS NULL OR hs.wf_stage = 1)
+                            UNION SELECT DISTINCT hs.id AS allids
+                                FROM {dbname}.sources AS hs
+                                LEFT JOIN {dbname}.holdings AS hd ON hs.source_id = hd.source_id
+                                WHERE hd.lib_siglum = i.siglum AND (hs.wf_stage IS NULL OR hs.wf_stage = 1)
+                        ) AS derived) AS total_source_count,
                     (SELECT COUNT(DISTINCT si.source_id)
                        FROM {dbname}.sources_to_institutions AS si
                        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id

@@ -67,10 +67,17 @@ def main(args) -> bool:
         event_level=logging.ERROR   # Send errors as events
     )
 
+    version: str = idx_config["common"]["version"]
+    release: str = version
+
+    if version.startswith("v"):
+        release = version[1:]
+
     sentry_sdk.init(
         dsn=idx_config["sentry"]["dsn"],
         environment=idx_config["sentry"]["environment"],
-        integrations=[sentry_logging]
+        integrations=[sentry_logging],
+        release=f"muscatplus_indexer@{release}"
     )
 
     res = True

@@ -105,6 +105,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "691", publication_entries)
     works_catalogue: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "690", publication_entries)
 
+    num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: dict = {
@@ -124,8 +126,9 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
         "source_membership_order_i": _get_parent_order_for_members(parent_marc_record, rism_id) if parent_marc_record else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
-        "num_holdings_i": None if num_holdings == 0 else num_holdings,  # Only show holding numbers for prints.
+        "num_holdings_i": num_holdings if num_holdings > 0 else None,  # Only show holding numbers for prints.
         "num_holdings_s": _get_num_holdings_facet(num_holdings),
+        "num_physical_copies_i": num_physical_copies if num_physical_copies > 0 else None,
         "holding_institutions_sm": holding_orgs,
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,

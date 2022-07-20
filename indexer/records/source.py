@@ -191,7 +191,7 @@ def _get_manuscript_holdings(record: pymarc.Record,
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
     holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
-    return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title, creator_name, record_type_id)]
+    return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title, creator_name, record_type_id, mss_profile=True)]
 
 
 def _get_variant_people_names(variant_names: Optional[str]) -> Optional[list]:

@@ -10,7 +10,9 @@ general_notes_sm:
   field: "500"
   subfield: "a"
   multiple: true
+  sorted: false
   breaks: true
+  links: true
 
 access_restrictions_sm:
   field: "506"

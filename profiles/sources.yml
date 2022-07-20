@@ -10,11 +10,15 @@
 #    required: true | false (default); i.e.: will raise an exception if XXX$n is `None`)
 #    multiple: true | false (default); NB: solr field must allow multiple values!)
 #    value_prefix: foo_  (optional); All values will be prefixed with this string.)
-#    all_fields: true (default) | false; when true will select all fields; when false, will select
-#      only those that are not part of a material group
 #    breaks: true | false (default); Will additionally process the field values to handle "{{brk}}",
 #      particularly used in notes fields.
 #    links: true | false (default); Will additional process a field for URLs to handle creating links.
+#    sorted: true | false; will either sort the output alphabetically, or keep it in the record order.
+#       In both cases duplicates are removed.
+#    grouping: true | false | none (default); chooses how the values will be selected from the record.
+#       None will choose all values, ignoring the $8.
+#       True will only choose the subfield values that have a $8 field defined.
+#       False will select only the values where there is no $8 subfield.
 #    -- or --
 #    processor: _function_name (string; must exist in the corresponding processor module)
 #    required: true | false (default)
@@ -206,7 +210,9 @@ general_notes_sm:
   field: "500"
   subfield: "a"
   multiple: true
+  sorted: false
   breaks: true
+
 # For notes directly defined on the source we store them. We do not
 # need to index them since they will be caught in the field above,
 # so we just need a separate field for display.
@@ -214,7 +220,8 @@ source_general_notes_smni:
   field: "500"
   subfield: "a"
   multiple: true
-  ungrouped: true
+  grouping: false
+  sorted: false
   breaks: true
   links: true
 
@@ -224,6 +231,7 @@ contents_notes_sm:
   multiple: true
   breaks: true
   links: true
+  sorted: false
 
 access_restrictions_sm:
   field: "506"
@@ -342,7 +350,7 @@ subjects_sm:
   field: "650"
   subfield: "a"
   multiple: true
-  ungrouped: true
+
 subjects_json:
   processor: "_get_subjects"
   json: true

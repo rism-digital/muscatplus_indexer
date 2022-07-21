@@ -1,6 +1,6 @@
 import logging
 import types
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 import pymarc
 import ujson
@@ -51,9 +51,11 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
 
             solr_document[solr_field] = field_result
         else:
-            all_fields: bool = field_config.get("all_fields", True)
             breaks: bool = field_config.get("breaks", False)
             links: bool = field_config.get("links", False)
+            # Values are True, False, and None. Default is None.
+            grouping: Optional[bool] = field_config.get("grouping")
+            sortout: bool = field_config.get("sorted", True)
 
             # these will explode if the configuration is not correct.
             marc_field = field_config['field']
@@ -72,7 +74,7 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
 
             # This will raise an error if the processors encounter unexpected data.
             try:
-                field_result = processor_fn(marc, marc_field, marc_subfield, all_fields)
+                field_result = processor_fn(marc, marc_field, marc_subfield, grouping, sortout)
             except RequiredFieldException:
                 log.critical("%s requires a value, but one was not found for %s. Skipping this field.", solr_field, doc_id)
                 continue

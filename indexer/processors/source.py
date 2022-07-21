@@ -420,9 +420,16 @@ def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
 
 def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
     # 590
+    parts_held: list[str] = field.get_subfields('a')
+    parts_extent: list[str] = field.get_subfields('b')
+
+    part_held: str = parts_held[0] if len(parts_held) > 0 else ""
+    part_extent: str = parts_extent[0] if len(parts_extent) > 0 else ""
+
     res: MaterialGroupFields = {
-        "parts_held": field.get_subfields('a'),
-        "parts_extent": e if (e := field.get_subfields('b')) else []
+        "parts_held": parts_held,
+        "parts_extent": parts_extent,
+        "parts_held_extent": [f"{part_held}: {part_extent}"]
     }
     return res
 

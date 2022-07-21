@@ -56,19 +56,14 @@ def parallelise(records: Iterable, func: Callable, *args, **kwargs) -> None:
             f.result()
 
 
-def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> Optional[str]:
+def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = None, sortout: Optional[bool] = True) -> Optional[str]:
     """
     Extracts a single value from the MARC record. Always takes the first instance of the
     tag, and the first instance of the subfield within that tag.
 
-    :param record: A pymarc.Record instance
-    :param field: A string indicating the tag that should be extracted.
-    :param subfield: An optional subfield. If this is None, then the full value of the field will be returned.
-    :param all_fields: If True then all values will be returned. If False, then only values from fields with $801 or
-        no $8 field will be returned.
-    :return: A string value, or None if not found.
+    Uses to_solr_multi under the hood; see the comments there to know how this works.
     """
-    values: Optional[list[str]] = to_solr_multi(record, field, subfield, all_fields)
+    values: Optional[list[str]] = to_solr_multi(record, field, subfield, ungrouped, sortout)
 
     if not values:
         return None
@@ -76,20 +71,13 @@ def to_solr_single(record: pymarc.Record, field: str, subfield: Optional[str] = 
     return values[0]
 
 
-def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> str:
+def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = None, sortout: Optional[bool] = True) -> str:
     """
-    Same operations as the to_solr_single, but raises an exception if the value returned
-    is None. This is used for indicating an error in the MARC record where there should
-    be a required value but it is missing, and so processing cannot continue.
+    Same operations as the to_solr_single, but raises an exception if the value is not found.
 
-    :param record: A pymarc.Record instance
-    :param field: A string indicating the tag that should be extracted.
-    :param subfield: An optional subfield. If this is None, then the full value of the field will be returned.
-    :param all_fields: If True then all values will be returned. If False, then only values from fields with $801 or
-        no $8 field will be returned.
-    :return: A string. A RequiredFieldException will be raised if the field is not found.
+    Uses to_solr_multi under the hood; see the comments there to know how this works.
     """
-    values: Optional[list[str]] = to_solr_multi(record, field, subfield, all_fields)
+    values: Optional[list[str]] = to_solr_multi(record, field, subfield, ungrouped, sortout)
 
     if not values:
         record_id: str = normalize_id(record['001'].value())
@@ -99,7 +87,7 @@ def to_solr_single_required(record: pymarc.Record, field: str, subfield: Optiona
     return values[0]
 
 
-def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> Optional[list[str]]:
+def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = None, grouped: Optional[bool] = None, sortout: Optional[bool] = True) -> Optional[list[str]]:
     """
     Returns all the values for a given field and subfield. Extracting this data from the
     field is done by creating an OrderedDict from the keys, and then casting it back to a list. This removes
@@ -109,10 +97,15 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     :param field: A string indicating the tag that should be extracted
     :param subfield: An optional subfield. If this is not provided, the full value of the field will be returned
         as a MARC string (e.g., $aFoo$bBar).
-    :param all_fields: If True then all values will be returned, regardless of group value ($8). If False, then only
-        values from fields with $801 or no $8 field will be returned.
+    :param grouped: Controls the inclusion / exclusion of fields based on the $8 value. See the note below for more
+        details.
+    :param sortout: If True then the output will be sorted; if False then it will be in record order.
+    :return: A list of strings, or None if there wasn't a subfield that was found that matched the parameters.
 
-    :return: A sorted list of strings, or None if not found.
+    "grouped" is a tri-value binary. "True" means get only those values that have a $8 defined. "False" means
+    get only those values that do *not* have a $8 defined. "None" means ignore the $8 altogether and get all values.
+    Default is "None"
+
     """
     fields: list[pymarc.Field] = record.get_fields(field)
     if not fields:
@@ -124,27 +117,37 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     # Treat the subfields as a list of lists, and flatten their values. `get_subfields` returns a list,
     # and we are dealing with a list of fields, so we iterate twice here: Once over the fields, and then
     # over the values in each field.
-    # Note that this function considers group 01 to be 'ungrouped'!
-    retval: set[str] = set()
+    retval: list[str] = []
 
-    for field in fields:
-        for subf in field.get_subfields(subfield):
-            if all_fields is True and subf and subf.strip():
-                # If all fields are to be collected, then just ignore anything else and add this to the list.
-                retval.add(subf.strip())
-            elif all_fields is False and (field['8'] is None or field['8'] == "01"):
-                # if we only want the $801 or fields without $8 then guard that
-                retval.add(subf.strip())
+    for fl in fields:
+        if grouped is True and fl["8"] is not None:
+            retval += [subf.strip() for subf in fl.get_subfields(subfield)]
+        elif grouped is False and fl["8"] is None:
+            retval += [subf.strip() for subf in fl.get_subfields(subfield)]
+        elif grouped is None:
+            retval += [subf.strip() for subf in fl.get_subfields(subfield)]
+        else:
+            # Skip anything else and don't do anything.
+            continue
 
-    return sorted(list(retval))
+    if not retval:
+        return None
+
+    # We want to remove duplicate values, but need to be careful about ordering.
+    if sortout:
+        # using a set is simpler, but order is not guaranteed.
+        return sorted(list(set(retval)))
+
+    # Creating a dictionary guarantees insertion order.
+    return list(dict.fromkeys(retval))
 
 
-def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, all_fields: Optional[bool] = True) -> list[str]:
+def to_solr_multi_required(record: pymarc.Record, field: str, subfield: Optional[str] = None, ungrouped: Optional[bool] = None, sortout: Optional[bool] = True) -> list[str]:
     """
     The same operation as to_solr_multi, except this function must return at least one value otherwise it
     will raise an exception.
     """
-    ret: Optional[list[str]] = to_solr_multi(record, field, subfield, all_fields)
+    ret: Optional[list[str]] = to_solr_multi(record, field, subfield, ungrouped, sortout)
 
     if ret is None:
         record_id: str = normalize_id(record['001'].value())
@@ -409,7 +412,10 @@ def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[list[p
     return catalogue_numbers
 
 
-def __title(field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]]) -> dict:
+def __title(field: pymarc.Field,
+            catalogue_fields: Optional[list[pymarc.Field]],
+            holding: Optional[pymarc.Field],
+            materialgroup: Optional[pymarc.Field]) -> dict:
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
@@ -423,6 +429,20 @@ def __title(field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]])
     scoring_summary_f: str = field['m']
     if scoring_summary_f:
         d['scoring_summary'] = list({val.strip() for val in scoring_summary_f.split(",") if val and val.strip()})
+
+    if holding:
+        siglum = holding["a"]
+        shelfmark = holding["c"]
+
+        d.update({
+            "holding_siglum": siglum,
+            "holding_shelfmark": shelfmark
+        })
+
+    if materialgroup:
+        d.update({
+            "material_group": materialgroup["a"]
+        })
 
     return {k: v for k, v in d.items() if v}
 
@@ -440,10 +460,17 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
         return None
 
     c: Optional[list[pymarc.Field]] = None
+    h: Optional[pymarc.Field] = None
+    y: Optional[pymarc.Field] = None
     if field == "240":
         c = record.get_fields("383", "690")
+        if "852" in record:
+            h = record["852"]
 
-    return [__title(t, c) for t in titles if t]
+        if "593" in record:
+            y = record["593"]
+
+    return [__title(t, c, h, y) for t in titles if t]
 
 
 def tokenize_variants(variants: list[str]) -> list[str]:

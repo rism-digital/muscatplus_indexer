@@ -12,6 +12,7 @@ from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
 holding_profile: dict = yaml.full_load(open('profiles/holdings.yml', 'r'))
+mss_holding_profile: dict = yaml.full_load(open('profiles/holdingsmss.yml', 'r'))
 
 
 class HoldingIndexDocument(TypedDict):
@@ -53,7 +54,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     record_type_id: int = record['record_type']
     holding_record_id = f"{record['id']}h-{record['id']}"
 
-    idx_document: HoldingIndexDocument = holding_index_document(marc_record, holding_id, holding_record_id, membership_id, main_title, creator_name, record_type_id)
+    idx_document: HoldingIndexDocument = holding_index_document(marc_record, holding_id, holding_record_id, membership_id, main_title, creator_name, record_type_id, mss_profile=False)
 
     if c := record.get('institution_record_marc'):
         institution_marc_record: pymarc.Record = create_marc(c)
@@ -79,7 +80,8 @@ def holding_index_document(marc_record: pymarc.Record,
                            membership_id: str,
                            main_title: str,
                            creator_name: Optional[str],
-                           record_type_id: int) -> HoldingIndexDocument:
+                           record_type_id: int,
+                           mss_profile: bool) -> HoldingIndexDocument:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.
@@ -105,7 +107,11 @@ def holding_index_document(marc_record: pymarc.Record,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
     }
 
-    additional_fields: dict = process_marc_profile(holding_profile, holding_id, marc_record, holding_processor)
+    if mss_profile:
+        additional_fields = process_marc_profile(mss_holding_profile, holding_id, marc_record, holding_processor)
+    else:
+        additional_fields = process_marc_profile(holding_profile, holding_id, marc_record, holding_processor)
+
     holding_core.update(additional_fields)
 
     return holding_core

@@ -126,8 +126,14 @@ standard_title_s:
 subheading_s:
   field: "240"
   subfield: "k"
-scoring_summary_sm:  # $m; split the fields and ensure each instrument is listed separately.
-  processor: "_get_scoring_summary"
+#scoring_summary_sm:  # $m; split the fields and ensure each instrument is listed separately.
+#  processor: "_get_scoring_summary"
+scoring_summary_sm:
+  field: "240"
+  subfield: "m"
+  multiple: true
+  sorted: false
+
 # $n is deprecated and is omitted.
 arrangement_s:
   field: "240"

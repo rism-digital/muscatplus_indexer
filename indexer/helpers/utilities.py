@@ -412,7 +412,10 @@ def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[list[p
     return catalogue_numbers
 
 
-def __title(field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]]) -> dict:
+def __title(field: pymarc.Field,
+            catalogue_fields: Optional[list[pymarc.Field]],
+            holding: Optional[pymarc.Field],
+            materialgroup: Optional[pymarc.Field]) -> dict:
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
@@ -426,6 +429,20 @@ def __title(field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]])
     scoring_summary_f: str = field['m']
     if scoring_summary_f:
         d['scoring_summary'] = list({val.strip() for val in scoring_summary_f.split(",") if val and val.strip()})
+
+    if holding:
+        siglum = holding["a"]
+        shelfmark = holding["c"]
+
+        d.update({
+            "holding_siglum": siglum,
+            "holding_shelfmark": shelfmark
+        })
+
+    if materialgroup:
+        d.update({
+            "material_group": materialgroup["a"]
+        })
 
     return {k: v for k, v in d.items() if v}
 
@@ -443,10 +460,17 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
         return None
 
     c: Optional[list[pymarc.Field]] = None
+    h: Optional[pymarc.Field] = None
+    y: Optional[pymarc.Field] = None
     if field == "240":
         c = record.get_fields("383", "690")
+        if "852" in record:
+            h = record["852"]
 
-    return [__title(t, c) for t in titles if t]
+        if "593" in record:
+            y = record["593"]
+
+    return [__title(t, c, h, y) for t in titles if t]
 
 
 def tokenize_variants(variants: list[str]) -> list[str]:

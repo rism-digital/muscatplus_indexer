@@ -429,7 +429,7 @@ def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
     res: MaterialGroupFields = {
         "parts_held": parts_held,
         "parts_extent": parts_extent,
-        "parts_held_extent": [f"{part_held}, {part_extent}"]
+        "parts_held_extent": [f"{part_held}: {part_extent}"]
     }
     return res
 

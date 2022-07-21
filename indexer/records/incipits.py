@@ -9,7 +9,7 @@ import yaml
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
-from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id
+from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id, get_titles
 
 log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml", "r"))
@@ -149,6 +149,8 @@ def __incipit(field: pymarc.Field,
     else:
         key_sig = "n"
 
+    standard_title_json = get_titles(record, "240")
+
     d: dict = {
         "id": f"{source_id}_incipit_{num}",
         "type": "incipit",
@@ -176,7 +178,8 @@ def __incipit(field: pymarc.Field,
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
         "scoring_sm": field.get_subfields('z'),
-        "country_codes_sm": country_codes
+        "country_codes_sm": country_codes,
+        "standard_titles_json": ujson.dumps(standard_title_json) if standard_title_json else None
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None

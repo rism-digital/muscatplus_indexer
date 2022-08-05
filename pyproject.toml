@@ -14,7 +14,7 @@ uvloop = "^0.16.0"
 ujson = "^5.0.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
 httpx = "^0.23.0"
-verovio = { version = "^3.11.0.dev85", allow-prereleases = true }
+verovio = { version = "^3.11.0", allow-prereleases = true }
 sentry-sdk = "^1.5.12"
 
 [tool.poetry.dev-dependencies]

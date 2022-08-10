@@ -15,7 +15,14 @@ from indexer.helpers.identifiers import (
 )
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id, to_solr_single, tokenize_variants, get_creator_name, to_solr_multi
+from indexer.helpers.utilities import (
+    normalize_id,
+    to_solr_single,
+    tokenize_variants,
+    get_creator_name,
+    to_solr_multi,
+    get_titles
+)
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
@@ -100,6 +107,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_people_ids: list = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
 
     variant_standard_terms: Optional[list] = _get_variant_standard_terms(record.get("alt_standard_terms"))
+    related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
 
     publication_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
     bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "691", publication_entries)
@@ -144,6 +152,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "has_digitization_b": _get_has_digitization(all_marc_records),
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "bibliographic_references_json": ujson.dumps(bibliographic_references) if bibliographic_references else None,
+        "related_sources_json": ujson.dumps(_get_related_sources(t, related_source_fields)) if (t := record.get("related_sources")) else None,
         "works_catalogue_json": ujson.dumps(works_catalogue) if works_catalogue else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -378,7 +387,7 @@ def _format_reference(ref: list) -> str:
         res += f"{place.strip()} "
 
     if short:
-        res += f"({short.strip()})"
+        res += f"({short.strip()})."
 
     return res
 
@@ -425,3 +434,57 @@ def _get_num_holdings_facet(num: int) -> Optional[str]:
         return "11 to 100"
     else:
         return "more than 100"
+
+
+def _get_related_sources(related: str, relationship_fields: list[pymarc.Field]) -> Optional[list[dict]]:
+    """
+    Combines the MARC source from related sources and the 787 entries from a record to create a JSON
+    field for the related sources.
+
+    :param related: A string containing the record IDs and MARC entries, delimited by "|~|" between the related sources
+        and by "|:|" between the ID and MARC.
+    :param relationship_fields: A list of 787 fields from the source MARC. Needed because this is the only place any
+        notes about the relationship are stored.
+    :return: A list of related sources in JSON format.
+    """
+    # =787  0#$nT p: Solo and Chorus ... From Cantata of "Daniel" ... Copied from the Sabbath Bell by / S[amuel] F[rederick] Van Vleck. organist / Nov. 22 1878.$w1001125501$4rdau:P60311
+    notes: dict = {}
+
+    for relfield in relationship_fields:
+        sid = relfield["w"]
+        snote = relfield["n"]
+        notes[sid] = snote
+
+    # The related sources are first separated by "|~|" delineations between records, and then
+    # "|:|" between fields in that record.
+    all_records: list[str] = related.split("|~|")
+    related_entries: list = []
+    for individual_record in all_records:
+        relator_code, relmarc_source = individual_record.split("|:|")
+        rel_marc_record: Optional[pymarc.Record] = create_marc(relmarc_source) if relmarc_source else None
+        if not rel_marc_record:
+            log.error("Could not load foreign MARC record")
+            continue
+
+        record_id = normalize_id(rel_marc_record['001'].value())
+
+        source_id: str = f"source_{record_id}"
+        title: Optional[list[str]] = get_titles(rel_marc_record, "240")
+
+        note: Optional[str] = None
+        if record_id in notes:
+            note = notes[record_id]
+
+        d = {
+            "source_id": source_id,
+            "relationship": relator_code,
+            "title": title,
+            "note": note
+        }
+
+        related_entries.append({k: v for k, v in d.items() if v})
+
+    return related_entries
+
+
+

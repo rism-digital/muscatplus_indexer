@@ -73,12 +73,14 @@ def main(args) -> bool:
     if version.startswith("v"):
         release = version[1:]
 
-    sentry_sdk.init(
-        dsn=idx_config["sentry"]["dsn"],
-        environment=idx_config["sentry"]["environment"],
-        integrations=[sentry_logging],
-        release=f"muscatplus_indexer@{release}"
-    )
+    debug_mode: bool = idx_config["common"]["debug"]
+    if debug_mode is False:
+        sentry_sdk.init(
+            dsn=idx_config["sentry"]["dsn"],
+            environment=idx_config["sentry"]["environment"],
+            integrations=[sentry_logging],
+            release=f"muscatplus_indexer@{release}"
+        )
 
     res = True
 

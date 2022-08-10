@@ -1,5 +1,6 @@
 ---
 common:
+  debug: yes
   version: "development"
 
 sentry:

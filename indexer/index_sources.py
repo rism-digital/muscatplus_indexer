@@ -33,6 +33,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         (SELECT GROUP_CONCAT(DISTINCT parent_srt.record_type SEPARATOR ',') FROM {dbname}.sources AS parent_srt WHERE parent_srt.source_id = parent.id) AS parent_child_record_types,
         (SELECT GROUP_CONCAT(DISTINCT srm.composer SEPARATOR '\n') FROM {dbname}.sources AS srm WHERE srm.source_id IS NOT NULL AND srm.source_id = child.id) AS child_composer_list,
         (SELECT GROUP_CONCAT(DISTINCT ins.place SEPARATOR '|') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE child.id = ssi.source_id) AS institution_places,
+        (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', stos.relator_code, sours.marc_source) SEPARATOR '|~|') FROM {dbname}.sources_to_sources AS stos LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id WHERE marc_tag = '787' AND source_a_id = child.id) AS related_sources,
         GROUP_CONCAT(DISTINCT h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(DISTINCT hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,

@@ -7,7 +7,7 @@ from indexer.helpers.utilities import (
     to_solr_single,
     external_resource_data,
     get_related_people,
-    get_related_institutions, normalize_id,
+    get_related_institutions, normalize_id, get_titles,
 )
 
 
@@ -60,3 +60,7 @@ def _has_external_resources(record: pymarc.Record) -> bool:
     :return:
     """
     return '856' in record
+
+
+def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
+    return get_titles(record, "240")

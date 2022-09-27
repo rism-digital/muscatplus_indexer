@@ -1,6 +1,10 @@
 ---
 # If you are unsure of how this file should be structured, read the
 # comment on the top of the 'sources.yml' profile.
+standard_titles_json:
+  processor: "_get_standard_titles_data"
+  json: true
+
 siglum_s:
   field: "852"
   subfield: "a"

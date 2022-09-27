@@ -6,6 +6,10 @@ local_numbers_sm:
   subfield: "a"
   multiple: true
 
+standard_titles_json:
+  processor: "_get_standard_titles_data"
+  json: true
+
 general_notes_sm:
   field: "500"
   subfield: "a"
@@ -120,3 +124,4 @@ external_resources_json:
   json: true
 has_external_resources_b:
   processor: "_has_external_resources"
+

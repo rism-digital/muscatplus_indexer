@@ -297,7 +297,10 @@ source_of_description_notes_sm:
   breaks: true
   links: true
 
-# 590 is indexed in the material groups.
+parts_held_sm:
+  field: "590"
+  subfield: "a"
+  multiple: true
 
 other_shelfmarks_sm:
   field: "591"

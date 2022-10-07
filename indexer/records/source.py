@@ -111,7 +111,9 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     publication_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
     bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "691", publication_entries)
+    bibliographic_reference_titles: Optional[list[str]] = _get_bibliographic_reference_titles(marc_record, "691", publication_entries)
     works_catalogue: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "690", publication_entries)
+    works_catalogue_titles: Optional[list[dict]] = _get_bibliographic_reference_titles(marc_record, "690", publication_entries)
 
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
 
@@ -152,6 +154,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "has_digitization_b": _get_has_digitization(all_marc_records),
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "bibliographic_references_json": ujson.dumps(bibliographic_references) if bibliographic_references else None,
+        "bibliographic_references_sm": bibliographic_reference_titles,
+        "works_catalogue_sm": works_catalogue_titles,
         "related_sources_json": ujson.dumps(_get_related_sources(t, related_source_fields)) if (t := record.get("related_sources")) else None,
         "works_catalogue_json": ujson.dumps(works_catalogue) if works_catalogue else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -421,6 +425,23 @@ def _get_bibliographic_references_json(record: pymarc.Record, field: str, refere
         outp.append(r)
 
     return outp
+
+
+def _get_bibliographic_reference_titles(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[str]]:
+    if not references:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields(field)
+    if not fields:
+        return None
+
+    ret: list = []
+    for r in references:
+        # |:| is a unique field delimiter
+        rid, *rest = r.split("|:|")
+        ret.append(_format_reference(rest))
+
+    return ret
 
 
 def _get_num_holdings_facet(num: int) -> Optional[str]:

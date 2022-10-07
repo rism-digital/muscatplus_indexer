@@ -320,9 +320,14 @@ watermark_notes_sm:
 # different types in material groups will produce a list of all source types
 # associated with this source. So a source with mixed MS and print contents
 # would have both types. Useful for filtering / faceting.
-material_group_types_sm:
+material_source_types_sm:
   field: "593"
   subfield: "a"
+  multiple: true
+
+material_content_types_sm:
+  field: "593"
+  subfield: "b"
   multiple: true
 
 scoring_sm:

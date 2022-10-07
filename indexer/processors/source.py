@@ -449,7 +449,8 @@ def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
     # 593
     # removes duplicate values
     res: MaterialGroupFields = {
-        "material_group_types": list(set(field.get_subfields('a')))
+        "material_source_types": list(set(field.get_subfields('a'))),
+        "material_content_types": list(set(field.get_subfields('b')))
     }
 
     return res

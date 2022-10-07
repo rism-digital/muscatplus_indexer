@@ -4,10 +4,10 @@ from typing import TypedDict, Optional
 import pymarc
 import yaml
 
-from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
+from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import get_creator_name, to_solr_single
+from indexer.helpers.utilities import get_creator_name, to_solr_single, get_content_types
 from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -101,7 +101,7 @@ def holding_index_document(marc_record: pymarc.Record,
         "source_id": membership_id,
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
-        "content_types_sm": get_content_types(record_type_id, []),
+        "content_types_sm": get_content_types(marc_record),
         "main_title_s": main_title,
         "creator_name_s": creator_name,
         "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.

@@ -8,8 +8,8 @@ import verovio
 import yaml
 
 from indexer.helpers.datelib import process_date_statements
-from indexer.helpers.identifiers import get_record_type, get_source_type, get_content_types
-from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id, get_titles
+from indexer.helpers.identifiers import get_record_type, get_source_type
+from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id, get_titles, get_content_types
 
 log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml", "r"))
@@ -158,7 +158,7 @@ def __incipit(field: pymarc.Field,
         "rism_id": record_id,  # index the raw source id to support incipit lookups by source
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
-        "content_types_sm": get_content_types(record_type_id, child_type_ids),
+        "content_types_sm": get_content_types(record),
         "main_title_s": source_title,  # using 'main_title_s' allows us to later serialize this as a source record.
         "creator_name_s": creator,
         "incipit_num_i": num,

@@ -1,8 +1,10 @@
 import concurrent.futures
+import dataclasses
 import logging
 import re
 import timeit
 from collections import OrderedDict
+from enum import unique, Enum
 from functools import wraps
 from typing import Iterable, Optional, TypedDict, Pattern, Callable
 
@@ -415,7 +417,7 @@ def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[list[p
 def __title(field: pymarc.Field,
             catalogue_fields: Optional[list[pymarc.Field]],
             holding: Optional[pymarc.Field],
-            materialgroup: Optional[pymarc.Field]) -> dict:
+            source_type: Optional[pymarc.Field]) -> dict:
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
@@ -439,9 +441,9 @@ def __title(field: pymarc.Field,
             "holding_shelfmark": shelfmark
         })
 
-    if materialgroup:
+    if source_type:
         d.update({
-            "material_group": materialgroup["a"]
+            "source_type": source_type["a"]
         })
 
     return {k: v for k, v in d.items() if v}
@@ -510,3 +512,43 @@ def get_creator_name(record: pymarc.Record) -> Optional[str]:
     creator_name: str = creator_field["a"].strip()
     creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
     return f"{creator_name}{creator_dates}"
+
+
+@dataclasses.dataclass
+class ContentTypes:
+    NOTATED_MUSIC = "Notated music"
+    LIBRETTO = "Libretto"
+    TREATISE = "Treatise"
+    OTHER = "Other"
+
+
+def get_content_types(record: pymarc.Record) -> list[str]:
+    """
+    Takes all record types associated with this record, and returns a list of
+    all possible content types for it.
+
+    Checks if two sets have an intersection set (that they have members overlapping).
+
+    :param record: A pymarc Record field
+    :return: A list of index values containing the content types.
+    """
+    all_content_types: Optional[list[str]] = to_solr_multi(record, "593", "b")
+    ret: list = []
+
+    if not all_content_types:
+        return []
+
+    all_types: set = set(all_content_types)
+    if all_types & {ContentTypes.LIBRETTO}:
+        ret.append("libretto")
+
+    if all_types & {ContentTypes.TREATISE}:
+        ret.append("treatise")
+
+    if all_types & {ContentTypes.NOTATED_MUSIC}:
+        ret.append("musical")
+
+    if all_types & {ContentTypes.OTHER}:
+        ret.append("other")
+
+    return ret

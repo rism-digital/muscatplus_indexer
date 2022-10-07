@@ -8,7 +8,6 @@ import yaml
 from indexer.helpers.identifiers import (
     get_record_type,
     get_source_type,
-    get_content_types,
     get_is_contents_record,
     get_is_collection_record,
     country_code_from_siglum
@@ -21,7 +20,7 @@ from indexer.helpers.utilities import (
     tokenize_variants,
     get_creator_name,
     to_solr_multi,
-    get_titles
+    get_titles, get_content_types
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
@@ -89,17 +88,19 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_json: Optional[dict] = None
     if parent_record_type_id:
-        parent_material_group_types: Optional[list] = to_solr_multi(parent_marc_record, "593", "a")
+        parent_material_source_types: Optional[list] = to_solr_multi(parent_marc_record, "593", "a")
+        parent_material_content_types: Optional[list] = to_solr_multi(parent_marc_record, "593", "b")
 
         source_membership_json = {
             "source_id": f"source_{membership_id}",
             "main_title": record.get("parent_title"),
             "shelfmark": record.get("parent_shelfmark"),
             "siglum": record.get("parent_siglum"),
-            "material_types": parent_material_group_types,
             "record_type": get_record_type(parent_record_type_id),
             "source_type": get_source_type(parent_record_type_id),
-            "content_types": get_content_types(parent_record_type_id, parent_child_record_types)
+            "content_types_sm": get_content_types(parent_marc_record),
+            "material_source_types": parent_material_source_types,
+            "material_content_types": parent_material_content_types
         }
 
     people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
@@ -126,8 +127,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "source_id": source_id,
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
-        "content_types_sm": get_content_types(record_type_id, child_record_types),
-
+        "content_types_sm": get_content_types(marc_record),
         # The 'source membership' fields refer to the relationship between this source and a parent record, if
         # such a relationship exists.
         "source_member_composers_sm": source_member_composers,

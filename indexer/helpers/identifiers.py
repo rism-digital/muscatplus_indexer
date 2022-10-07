@@ -78,41 +78,6 @@ def get_source_type(record_type_id: int) -> str:
         return "unspecified"
 
 
-def get_content_types(record_type_id: int, child_record_types: list[int]) -> list[str]:
-    """
-    Takes all record types associated with this record, and returns a list of
-    all possible content types for it.
-
-    Checks if two sets have an intersection set (that they have members overlapping).
-
-    :param record_type_id: The record type id of the source record
-    :param child_record_types: The record type ids of all child records
-    :return: A list of index values containing the content types.
-    """
-    all_types: set = set([record_type_id] + child_record_types)
-    ret: list = []
-
-    if all_types & {RecordTypes.LIBRETTO_EDITION_CONTENT,
-                    RecordTypes.LIBRETTO_EDITION,
-                    RecordTypes.LIBRETTO_SOURCE}:
-        ret.append("libretto")
-
-    if all_types & {RecordTypes.THEORETICA_EDITION_CONTENT,
-                    RecordTypes.THEORETICA_EDITION,
-                    RecordTypes.THEORETICA_SOURCE}:
-        ret.append("treatise")
-
-    if all_types & {RecordTypes.SOURCE,
-                    RecordTypes.EDITION,
-                    RecordTypes.EDITION_CONTENT}:
-        ret.append("musical")
-
-    if all_types & {RecordTypes.COMPOSITE_VOLUME}:
-        ret.append("composite_content")
-
-    return ret
-
-
 def get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
     if record_type_id in (
             RecordTypes.EDITION_CONTENT,

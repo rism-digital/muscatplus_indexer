@@ -20,7 +20,7 @@ from indexer.helpers.utilities import (
     tokenize_variants,
     get_creator_name,
     to_solr_multi,
-    get_titles, get_content_types
+    get_titles, get_content_types, get_parent_order_for_members
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
@@ -134,7 +134,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
         "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
-        "source_membership_order_i": _get_parent_order_for_members(parent_marc_record, rism_id) if parent_marc_record else None,
+        "source_membership_order_i": get_parent_order_for_members(parent_marc_record, source_id) if parent_marc_record else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
         "num_holdings_i": num_holdings if num_holdings > 0 else None,  # Only show holding numbers for prints.
         "num_holdings_s": _get_num_holdings_facet(num_holdings),
@@ -310,45 +310,6 @@ def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
             return True
 
     return False
-
-
-def _get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id: str) -> Optional[int]:
-    """
-    Returns an integer representing the order number of this source with respect to the order of the
-    child sources listed in the parent. 0-based, since we simply look up the values in a list.
-
-    If a child ID is not found in a parent record, or if the parent record is None, returns None.
-
-    The form of ID being searched is normalized, so any leading zeros are stripped, etc.
-
-    :param parent_record:
-    :param this_id:
-    :return:
-    """
-    if not parent_record:
-        return None
-
-    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
-    if not child_record_fields:
-        return None
-
-    idxs: list = []
-    for field in child_record_fields:
-        subf: list = field.get_subfields("w")
-        if len(subf) == 0:
-            continue
-
-        subf_id = subf[0]
-        if not subf_id:
-            log.warning(f"Problem when searching the membership of {this_id} in {normalize_id(parent_record['001'].value())}.")
-            continue
-
-        idxs.append(normalize_id(subf_id))
-
-    if this_id in idxs:
-        return idxs.index(this_id)
-
-    return None
 
 
 def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:

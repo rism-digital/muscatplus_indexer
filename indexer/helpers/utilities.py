@@ -4,7 +4,6 @@ import logging
 import re
 import timeit
 from collections import OrderedDict
-from enum import unique, Enum
 from functools import wraps
 from typing import Iterable, Optional, TypedDict, Pattern, Callable
 
@@ -552,3 +551,47 @@ def get_content_types(record: pymarc.Record) -> list[str]:
         ret.append("other")
 
     return ret
+
+
+def get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id: str) -> Optional[int]:
+    """
+    Returns an integer representing the order number of this source with respect to the order of the
+    child sources listed in the parent. 0-based, since we simply look up the values in a list.
+
+    If a child ID is not found in a parent record, or if the parent record is None, returns None.
+
+    The form of ID being searched is normalized, so any leading zeros are stripped, etc.
+
+    :param parent_record: The parent record containing the order of the child sources
+    :param this_id: The ID of the child to look for in the list. This should have a "source_" or "holding_" prefix.
+    :return: An order number as an int, or None if it was not found.
+    """
+    if not parent_record:
+        return None
+
+    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
+    if not child_record_fields:
+        return None
+
+    idxs: list = []
+    for field in child_record_fields:
+        subf: list = field.get_subfields("w")
+
+        if len(subf) == 0:
+            continue
+
+        subf_id = subf[0]
+        if not subf_id:
+            log.warning(f"Problem when searching the membership of {this_id} in {normalize_id(parent_record['001'].value())}.")
+            continue
+
+        pfx: str = "source_"
+        if "4" in field and field["4"] == "holding":
+            pfx = "holding_"
+
+        idxs.append(f"{pfx}{normalize_id(subf_id)}")
+
+    if this_id in idxs:
+        return idxs.index(this_id)
+
+    return None

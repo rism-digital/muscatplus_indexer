@@ -7,7 +7,7 @@ import yaml
 from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import get_creator_name, to_solr_single, get_content_types
+from indexer.helpers.utilities import get_creator_name, to_solr_single, get_content_types, get_parent_order_for_members
 from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -38,6 +38,7 @@ class HoldingIndexDocument(TypedDict):
     access_restrictions_sm: Optional[list[str]]
     provenance_notes_sm: Optional[list[str]]
     external_resources_json: Optional[str]
+    source_membership_order_i: Optional[int]
 
 
 def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocument:
@@ -54,7 +55,22 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     record_type_id: int = record['record_type']
     holding_record_id = f"{record['id']}h-{record['id']}"
 
-    idx_document: HoldingIndexDocument = holding_index_document(marc_record, holding_id, holding_record_id, membership_id, main_title, creator_name, record_type_id, mss_profile=False)
+    idx_document: HoldingIndexDocument = holding_index_document(marc_record,
+                                                                holding_id,
+                                                                holding_record_id,
+                                                                membership_id,
+                                                                main_title,
+                                                                creator_name,
+                                                                record_type_id,
+                                                                mss_profile=False)
+
+    if composite_record := record.get("comp_marc"):
+        # We can do this here since we don't need to worry about the case where a fake holding record for a MS
+        # is needed. (We're indexing "real" holding records here, not making "fake" ones from the MS source record).
+        composite_marc: Optional[pymarc.Record] = create_marc(composite_record) if composite_record else None
+        idx_document.update({
+            "source_membership_order_i": get_parent_order_for_members(composite_marc, holding_id) if composite_marc else None
+        }),
 
     if c := record.get('institution_record_marc'):
         institution_marc_record: pymarc.Record = create_marc(c)
@@ -94,7 +110,6 @@ def holding_index_document(marc_record: pymarc.Record,
     :param creator_name: The name of the composer / author of the source. This is stored primarily for display.
     :return: A holding index document.
     """
-
     holding_core: dict = {
         "id": holding_id,
         "type": "holding",

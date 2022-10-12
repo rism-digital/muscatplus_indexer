@@ -442,6 +442,10 @@ former_shelfmarks_sm:
   field: "852"
   subfield: "d"
   multiple: true
+provenance_sm:
+  field: "852"
+  subfield: "z"
+  multiple: true
 country_code_s:  # segments the country code from the siglum.
   processor: "_get_country_code"
 minimal_mss_holding_json:

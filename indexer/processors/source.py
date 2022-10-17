@@ -315,7 +315,8 @@ def _get_minimal_manuscript_holding_data(record: pymarc.Record) -> Optional[list
         d = {
             "siglum": field['a'],
             "holding_institution_name": field['e'],
-            "holding_institution_id": f"institution_{field['x']}"
+            "holding_institution_id": f"institution_{field['x']}",
+            "provenance": field['z']
         }
         filtd: dict = {k: v for k, v in d.items() if v}
         ret.append(filtd)
@@ -449,7 +450,8 @@ def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
     # 593
     # removes duplicate values
     res: MaterialGroupFields = {
-        "material_group_types": list(set(field.get_subfields('a')))
+        "material_source_types": list(set(field.get_subfields('a'))),
+        "material_content_types": list(set(field.get_subfields('b')))
     }
 
     return res

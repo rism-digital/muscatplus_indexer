@@ -1,4 +1,5 @@
 import concurrent.futures
+import dataclasses
 import logging
 import re
 import timeit
@@ -415,7 +416,7 @@ def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[list[p
 def __title(field: pymarc.Field,
             catalogue_fields: Optional[list[pymarc.Field]],
             holding: Optional[pymarc.Field],
-            materialgroup: Optional[pymarc.Field]) -> dict:
+            source_type: Optional[pymarc.Field]) -> dict:
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
@@ -439,9 +440,9 @@ def __title(field: pymarc.Field,
             "holding_shelfmark": shelfmark
         })
 
-    if materialgroup:
+    if source_type:
         d.update({
-            "material_group": materialgroup["a"]
+            "source_type": source_type["a"]
         })
 
     return {k: v for k, v in d.items() if v}
@@ -510,3 +511,87 @@ def get_creator_name(record: pymarc.Record) -> Optional[str]:
     creator_name: str = creator_field["a"].strip()
     creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
     return f"{creator_name}{creator_dates}"
+
+
+@dataclasses.dataclass
+class ContentTypes:
+    NOTATED_MUSIC = "Notated music"
+    LIBRETTO = "Libretto"
+    TREATISE = "Treatise"
+    OTHER = "Other"
+
+
+def get_content_types(record: pymarc.Record) -> list[str]:
+    """
+    Takes all record types associated with this record, and returns a list of
+    all possible content types for it.
+
+    Checks if two sets have an intersection set (that they have members overlapping).
+
+    :param record: A pymarc Record field
+    :return: A list of index values containing the content types.
+    """
+    all_content_types: Optional[list[str]] = to_solr_multi(record, "593", "b")
+    ret: list = []
+
+    if not all_content_types:
+        return []
+
+    all_types: set = set(all_content_types)
+    if all_types & {ContentTypes.LIBRETTO}:
+        ret.append("libretto")
+
+    if all_types & {ContentTypes.TREATISE}:
+        ret.append("treatise")
+
+    if all_types & {ContentTypes.NOTATED_MUSIC}:
+        ret.append("musical")
+
+    if all_types & {ContentTypes.OTHER}:
+        ret.append("other")
+
+    return ret
+
+
+def get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id: str) -> Optional[int]:
+    """
+    Returns an integer representing the order number of this source with respect to the order of the
+    child sources listed in the parent. 0-based, since we simply look up the values in a list.
+
+    If a child ID is not found in a parent record, or if the parent record is None, returns None.
+
+    The form of ID being searched is normalized, so any leading zeros are stripped, etc.
+
+    :param parent_record: The parent record containing the order of the child sources
+    :param this_id: The ID of the child to look for in the list. This should have a "source_" or "holding_" prefix.
+    :return: An order number as an int, or None if it was not found.
+    """
+    if not parent_record:
+        return None
+
+    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
+    if not child_record_fields:
+        return None
+
+    idxs: list = []
+    for field in child_record_fields:
+        subf: list = field.get_subfields("w")
+
+        if len(subf) == 0:
+            continue
+
+        subf_id = subf[0]
+        if not subf_id:
+            log.warning(f"Problem when searching the membership of {this_id} in {normalize_id(parent_record['001'].value())}.")
+            continue
+
+        pfx: str = "source_"
+        if "4" in field and field["4"] == "holding":
+            pfx = "holding_"
+
+        idxs.append(f"{pfx}{normalize_id(subf_id)}")
+
+    if this_id in idxs:
+        return idxs.index(this_id)
+
+    return None

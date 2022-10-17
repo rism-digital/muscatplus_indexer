@@ -297,7 +297,10 @@ source_of_description_notes_sm:
   breaks: true
   links: true
 
-# 590 is indexed in the material groups.
+parts_held_sm:
+  field: "590"
+  subfield: "a"
+  multiple: true
 
 other_shelfmarks_sm:
   field: "591"
@@ -317,9 +320,14 @@ watermark_notes_sm:
 # different types in material groups will produce a list of all source types
 # associated with this source. So a source with mixed MS and print contents
 # would have both types. Useful for filtering / faceting.
-material_group_types_sm:
+material_source_types_sm:
   field: "593"
   subfield: "a"
+  multiple: true
+
+material_content_types_sm:
+  field: "593"
+  subfield: "b"
   multiple: true
 
 scoring_sm:
@@ -433,6 +441,10 @@ shelfmark_s:
 former_shelfmarks_sm:
   field: "852"
   subfield: "d"
+  multiple: true
+provenance_sm:
+  field: "852"
+  subfield: "z"
   multiple: true
 country_code_s:  # segments the country code from the siglum.
   processor: "_get_country_code"

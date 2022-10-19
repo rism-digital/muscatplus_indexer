@@ -59,7 +59,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     creator_name: Optional[str] = get_creator_name(marc_record)
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
     parent_child_record_types: list[int] = [int(s) for s in record['parent_child_record_types'].split(",")] if record.get('parent_child_record_types') else []
-    institution_places: list[str] = [s for s in record['institution_places'].split(",") if s] if record.get('institution_places') else []
+    institution_places: list[str] = [s for s in record['institution_places'].split("|") if s] if record.get('institution_places') else []
     source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
     all_print_holding_records: list[pymarc.Record] = []
@@ -78,7 +78,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
     # id on the sources, regardless of whether they have a holding record, or they are a MS.
-    manuscript_holdings: list = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name, record_type_id) or []
+    manuscript_holdings: list = _get_manuscript_holdings(marc_record, source_id, main_title, creator_name, record_type_id, institution_places) or []
     holding_orgs: list = _get_holding_orgs(manuscript_holdings, all_print_holding_sigla) or []
     holding_orgs_ids: list = _get_holding_orgs_ids(manuscript_holdings, all_print_holding_records) or []
 
@@ -187,7 +187,8 @@ def _get_manuscript_holdings(record: pymarc.Record,
                              source_id: str,
                              main_title: str,
                              creator_name: Optional[str],
-                             record_type_id: int) -> Optional[list[HoldingIndexDocument]]:
+                             record_type_id: int,
+                             institution_places: list[str]) -> Optional[list[HoldingIndexDocument]]:
     """
         Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
         This is so that we can provide a unified interface for searching all holdings of an institution
@@ -204,7 +205,20 @@ def _get_manuscript_holdings(record: pymarc.Record,
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
     holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
-    return [holding_index_document(record, holding_id, holding_record_id, source_id, main_title, creator_name, record_type_id, mss_profile=True)]
+    idx_doc: HoldingIndexDocument = holding_index_document(record,
+                                                           holding_id,
+                                                           holding_record_id,
+                                                           source_id,
+                                                           main_title,
+                                                           creator_name,
+                                                           record_type_id,
+                                                           mss_profile=True)
+
+    # Optionally add the city if we know it.
+    if len(institution_places) > 0:
+        idx_doc["city_s"] = institution_places[0]
+
+    return [idx_doc]
 
 
 def _get_variant_people_names(variant_names: Optional[str]) -> Optional[list]:

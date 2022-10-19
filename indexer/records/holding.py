@@ -23,6 +23,7 @@ class HoldingIndexDocument(TypedDict):
     holding_id_sni: str  # Convenience for URL construction; should not be used for lookups.
     siglum_s: Optional[str]
     department_s: Optional[str]
+    city_s: Optional[str]
     country_code_s: Optional[str]
     institution_name_s: Optional[str]
     institution_id: Optional[str]

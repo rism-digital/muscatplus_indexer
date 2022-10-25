@@ -58,12 +58,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     creator_name: Optional[str] = get_creator_name(marc_record)
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
-    parent_child_record_types: list[int] = [int(s) for s in record['parent_child_record_types'].split(",")] if record.get('parent_child_record_types') else []
     institution_places: list[str] = [s for s in record['institution_places'].split("|") if s] if record.get('institution_places') else []
     source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
+    holdings_marc: list[pymarc.Record] = _create_marc_from_str(record.get("holdings_marc"))
+
     all_print_holding_records: list[pymarc.Record] = []
-    all_print_holding_records += _create_marc_from_str(record.get("holdings_marc"))
+    all_print_holding_records += holdings_marc
     all_print_holding_records += _create_marc_from_str(record.get("parent_holdings_marc"))
 
     all_print_holding_sigla: list[str] = []
@@ -105,7 +106,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     people_names: list = list({n.strip() for n in d.split("\n") if n}) if (d := record.get("people_names")) else []
     variant_people_names: Optional[list] = _get_variant_people_names(record.get("alt_people_names"))
-    related_people_ids: list = list({f"person_{n}" for n in d.split("\n") if n}) if (d := record.get("people_ids")) else []
+
+    source_people_ids: set[str] = {f"person_{n}" for n in d.split("\n") if n} if (d := record.get("people_ids")) else set()
+    holding_people_ids: set[str] = _get_holding_people_ids(holdings_marc)
+
+    # merge the two sets
+    source_people_ids |= holding_people_ids
+    related_people_ids: list[str] = list(source_people_ids)
 
     variant_standard_terms: Optional[list] = _get_variant_standard_terms(record.get("alt_standard_terms"))
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
@@ -482,5 +489,15 @@ def _get_related_sources(related: str, relationship_fields: list[pymarc.Field]) 
 
     return related_entries
 
+
+def _get_holding_people_ids(records: list[pymarc.Record]) -> set[str]:
+    ids: set[str] = set()
+
+    for rec in records:
+        if f := to_solr_multi(rec, "700", "0"):
+            p_ids: set[str] = {f"person_{i}" for i in f if i}
+            ids.update(p_ids)
+
+    return ids
 
 

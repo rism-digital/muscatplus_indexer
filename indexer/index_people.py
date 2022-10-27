@@ -21,16 +21,17 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
 
     sql_statement = f"""SELECT p.id AS id, p.marc_source AS marc_source,
                      p.created_at AS created, p.updated_at AS updated,
-                    (SELECT COUNT(DISTINCT sp.source_id)
-                        FROM {dbname}.sources_to_people AS sp
-                        LEFT JOIN {dbname}.sources AS ss ON sp.source_id = ss.id
-                        WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)) 
-                        AS source_count,
-                    (SELECT COUNT(DISTINCT hp.holding_id)
-                        FROM {dbname}.holdings_to_people AS hp
-                        LEFT JOIN {dbname}.holdings AS hh ON hp.holding_id = hh.id
-                        WHERE hp.person_id = p.id AND (hh.wf_stage IS NULL OR hh.wf_stage = 1))
-                        AS holdings_count,
+                    (SELECT COUNT(DISTINCT source_id) FROM (
+                         SELECT sp.source_id
+                             FROM {dbname}.sources_to_people sp
+                             LEFT JOIN {dbname}.sources AS ss ON sp.source_id = ss.id 
+                             WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+                         UNION
+                         SELECT ho.source_id
+                             FROM {dbname}.holdings ho
+                             LEFT JOIN {dbname}.holdings_to_people hp ON hp.holding_id = ho.id 
+                             WHERE hp.person_id = p.id
+                     ) AS derived) AS source_count,
                      (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cre') SEPARATOR ',') 
                         FROM {dbname}.sources_to_people AS ssp 
                         LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id

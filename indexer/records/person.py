@@ -56,7 +56,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "rism_id": rism_id,
         "roles_sm": roles,
         "source_count_i": source_count if rism_id != "30004985" else 0,
-        "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
+        # "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
         "total_sources_i": total_count if rism_id != "30004985" else 0,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")

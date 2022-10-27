@@ -7,15 +7,15 @@ authors = ["Andrew Hankinson <andrew.hankinson@rism.digital>"]
 [tool.poetry.dependencies]
 python = "^3.9"
 dbutils = "^3.0"
-pymarc = "^4.0.0"
+pymarc = "^4.2.1"
 mysqlclient = "^2.0.1"
 pyyaml = "^6.0.0"
-uvloop = "^0.16.0"
+uvloop = "^0.17.0"
 ujson = "^5.0.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
 httpx = "^0.23.0"
 verovio = { version = "^3.11.0", allow-prereleases = true }
-sentry-sdk = "^1.5.12"
+sentry-sdk = "^1.10.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.0"

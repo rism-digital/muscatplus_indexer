@@ -39,6 +39,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
 
     source_count: int = record.get("source_count", 0)
     holdings_count: int = record.get("holdings_count", 0)
+    other_count: int = record.get("other_count", 0)
     total_count: int = record.get("total_source_count", 0)
 
     related_institutions = record.get("related_institutions")
@@ -64,7 +65,8 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
         "has_siglum_b": True if record.get("siglum") else False,
         "source_count_i": source_count if rism_id != "40009305" else 0,
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
-        "total_holdings_i": total_count if rism_id != "40009305" else 0,
+        "other_count_i": other_count if rism_id != "40009305" else 0,
+        "total_sources_i": total_count if rism_id != "40009305" else 0,
         "now_in_json": ujson.dumps(now_in) if now_in else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")

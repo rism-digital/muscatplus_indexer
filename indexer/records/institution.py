@@ -56,12 +56,16 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
                 continue
 
     now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup)
+    has_digital_objects: bool = record.get("digital_objects") is not None
+    digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
 
     institution_core: dict = {
         "id": institution_id,
         "type": "institution",
         "institution_id": institution_id,
         "rism_id": rism_id,
+        "has_digital_objects_b": has_digital_objects,
+        "digital_object_ids": digital_object_ids,
         "has_siglum_b": True if record.get("siglum") else False,
         "source_count_i": source_count if rism_id != "40009305" else 0,
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,

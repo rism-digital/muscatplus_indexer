@@ -11,6 +11,7 @@ import yaml
 
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
 from indexer.helpers.utilities import elapsedtime
+from indexer.index_digital_objects import index_digital_objects
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
 from indexer.index_liturgical_festivals import index_liturgical_festivals
@@ -86,7 +87,14 @@ def main(args) -> bool:
 
     inc: list
     if not args.include:
-        inc = ["sources", "people", "places", "institutions", "holdings", "subjects", "festivals"]
+        inc = ["sources",
+               "people",
+               "places",
+               "institutions",
+               "holdings",
+               "subjects",
+               "festivals",
+               "digital-objects"]
     else:
         inc = args.include
 
@@ -115,6 +123,8 @@ def main(args) -> bool:
             res |= index_subjects(idx_config)
         elif record_type == "festivals" and "festivals" not in args.exclude:
             res |= index_liturgical_festivals(idx_config)
+        elif record_type == "digital-objects" and "digital-objects" not in args.exclude:
+            res |= index_digital_objects(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()

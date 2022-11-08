@@ -16,7 +16,7 @@ index_config: dict = yaml.full_load(open("index_config.yml", "r"))
 
 RenderedPAE = namedtuple('RenderedPAE', ['svg', 'midi', 'features'])
 verovio.enableLog(False)
-VEROVIO_OPTIONS = ujson.dumps({
+VEROVIO_OPTIONS = {
     # "paeFeatures": True,
     "footer": 'none',
     "header": 'none',
@@ -35,7 +35,7 @@ VEROVIO_OPTIONS = ujson.dumps({
     "svgRemoveXlink": True,
     "svgViewBox": True,
     "xmlIdChecksum": True
-})
+}
 vrv_tk = verovio.toolkit()
 vrv_tk.setInputFrom(verovio.PAE)
 vrv_tk.setOptions(VEROVIO_OPTIONS)
@@ -87,10 +87,7 @@ def _incipit_to_pae(incipit: dict) -> str:
 def _get_pae_features(pae: str) -> dict:
     vrv_tk.loadData(pae)
     # Verovio is set to render PAE to features
-    features: str = vrv_tk.getDescriptiveFeatures("{}")
-    feat_output: dict = ujson.loads(features)
-
-    return feat_output
+    return vrv_tk.getDescriptiveFeatures("{}")
 
 
 def __incipit(field: pymarc.Field,

@@ -191,6 +191,8 @@ def __incipit(field: pymarc.Field,
         pitches_diat: list = feat.get("pitchesDiatonic", [])
         interval_ids: list = feat.get("intervalsIds", [])
         pitch_ids: list = feat.get("pitchesIds", [])
+        contour_gross: list = feat.get("intervalGrossContour", [])
+        contour_refined: list = feat.get("intervalRefinedContour", [])
 
         # Index the 12 interval fields separately; used for scoring and ranking the document
         # intvfields: dict = _get_intervals(intervals) if intervals else {}
@@ -210,7 +212,9 @@ def __incipit(field: pymarc.Field,
             "pitches_diat_sm": pitches_diat if pitches_diat else None,
             "pitches_len_i": len(pitches) if pitches else None,
             "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
-            "pitches_ids_json": ujson.dumps(pitch_ids) if pitch_ids else None
+            "pitches_ids_json": ujson.dumps(pitch_ids) if pitch_ids else None,
+            "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
+            "contour_refined_bi": " ".join(contour_refined) if contour_refined else None
         }
 
         # update the record with the verovio features

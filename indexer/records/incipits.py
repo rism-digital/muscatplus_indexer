@@ -213,7 +213,9 @@ def __incipit(field: pymarc.Field,
             "pitches_len_i": len(pitches) if pitches else None,
             "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
             "pitches_ids_json": ujson.dumps(pitch_ids) if pitch_ids else None,
+            "contour_gross_sm": contour_gross if contour_gross else None,
             "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
+            "contour_refined_sm": contour_refined if contour_refined else None,
             "contour_refined_bi": " ".join(contour_refined) if contour_refined else None
         }
 

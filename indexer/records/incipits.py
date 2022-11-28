@@ -37,7 +37,7 @@ VEROVIO_OPTIONS = {
     "xmlIdChecksum": True
 }
 vrv_tk = verovio.toolkit()
-vrv_tk.setInputFrom(verovio.PAE)
+vrv_tk.setInputFrom("pae")
 vrv_tk.setOptions(VEROVIO_OPTIONS)
 
 

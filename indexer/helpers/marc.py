@@ -46,9 +46,12 @@ def _parse_field(line: str) -> MarcField:
     }
 
 
+DOLLAR_PATT: Pattern = re.compile(r"_DOLLAR_")
+
+
 def _parse_subf(subf_value: str) -> list[str]:
     code: str = subf_value[0]
-    value: str = subf_value[1:]
+    value: str = re.sub(DOLLAR_PATT, "$", subf_value[1:])
     return [code, value]
 
 

@@ -124,6 +124,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     works_catalogue_titles: Optional[list[dict]] = _get_bibliographic_reference_titles(marc_record, "690", publication_entries)
 
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
+    has_digital_objects: bool = record.get("digital_objects") is not None
+    digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
 
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
@@ -160,6 +162,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "is_composite_volume_b": record_type_id == 11,
         "has_digitization_b": _get_has_digitization(all_marc_records),
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
+        "has_digital_objects_b": has_digital_objects,
+        "digital_object_ids": digital_object_ids,
         "bibliographic_references_json": ujson.dumps(bibliographic_references) if bibliographic_references else None,
         "bibliographic_references_sm": bibliographic_reference_titles,
         "works_catalogue_sm": works_catalogue_titles,

@@ -46,8 +46,11 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     source_count: int = record.get("source_count", 0)
     holdings_count: int = record.get("holdings_count", 0)
     total_count: int = source_count + holdings_count
+    has_digital_objects: bool = record.get("digital_objects") is not None
+    digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
 
-    # For the source count we take the literal count *except* for the Anonymous user,
+
+# For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
     core_person: dict = {
         "type": "person",
@@ -55,6 +58,8 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "person_id": person_id,
         "rism_id": rism_id,
         "roles_sm": roles,
+        "has_digital_objects_b": has_digital_objects,
+        "digital_object_ids": digital_object_ids,
         "source_count_i": source_count if rism_id != "30004985" else 0,
         # "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
         "total_sources_i": total_count if rism_id != "30004985" else 0,

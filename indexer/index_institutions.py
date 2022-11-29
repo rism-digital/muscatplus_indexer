@@ -58,7 +58,8 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_b_id
                         WHERE rela.institution_a_id = i.id)
-                        AS related_institutions
+                        AS related_institutions,
+                    (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id) AS digital_objects
                     FROM {dbname}.institutions AS i
                     WHERE i.siglum IS NOT NULL OR
                         ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR

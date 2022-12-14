@@ -3,7 +3,7 @@ from collections import namedtuple
 from typing import TypedDict, Optional
 
 import pymarc
-import ujson
+import orjson
 import verovio
 import yaml
 
@@ -176,7 +176,7 @@ def __incipit(field: pymarc.Field,
         "general_notes_sm": field.get_subfields('q'),
         "scoring_sm": field.get_subfields('z'),
         "country_codes_sm": country_codes,
-        "standard_titles_json": ujson.dumps(standard_title_json) if standard_title_json else None
+        "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8") if standard_title_json else None
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
@@ -205,14 +205,14 @@ def __incipit(field: pymarc.Field,
             "intervals_diat_im": [int(i) for i in intervals_diat] if intervals_diat else None,
             "intervals_len_i": len(intervals) if intervals else None,
             "intervals_diat_len_i": len(intervals_diat) if intervals_diat else None,
-            "interval_ids_json": ujson.dumps(interval_ids) if interval_ids else None,
+            "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8") if interval_ids else None,
             "pitches_bi": " ".join(pitches) if pitches else None,
             "pitches_diat_bi": " ".join(pitches_diat) if pitches_diat else None,
             "pitches_sm": pitches if pitches else None,
             "pitches_diat_sm": pitches_diat if pitches_diat else None,
             "pitches_len_i": len(pitches) if pitches else None,
             "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
-            "pitches_ids_json": ujson.dumps(pitch_ids) if pitch_ids else None,
+            "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8") if pitch_ids else None,
             "contour_gross_sm": contour_gross if contour_gross else None,
             "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
             "contour_refined_sm": contour_refined if contour_refined else None,

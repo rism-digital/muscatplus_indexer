@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import pymarc
-import ujson
+import orjson
 import yaml
 
 from indexer.helpers.identifiers import (
@@ -142,7 +142,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "source_member_composers_sm": source_member_composers,
         "source_membership_id": f"source_{membership_id}",
         "source_membership_title_s": record.get("parent_title"),  # the title of the parent record; can be NULL.
-        "source_membership_json": ujson.dumps(source_membership_json) if source_membership_json else None,
+        "source_membership_json": orjson.dumps(source_membership_json).decode("utf-8") if source_membership_json else None,
         "source_membership_order_i": get_parent_order_for_members(parent_marc_record, source_id) if parent_marc_record else None,
         "main_title_s": main_title,  # uses the std_title column in the Muscat database; cannot be NULL.
         "num_holdings_i": num_holdings if num_holdings > 0 else None,  # Only show holding numbers for prints.
@@ -164,11 +164,11 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
-        "bibliographic_references_json": ujson.dumps(bibliographic_references) if bibliographic_references else None,
+        "bibliographic_references_json": orjson.dumps(bibliographic_references).decode("utf-8") if bibliographic_references else None,
         "bibliographic_references_sm": bibliographic_reference_titles,
         "works_catalogue_sm": works_catalogue_titles,
-        "related_sources_json": ujson.dumps(_get_related_sources(t, related_source_fields)) if (t := record.get("related_sources")) else None,
-        "works_catalogue_json": ujson.dumps(works_catalogue) if works_catalogue else None,
+        "related_sources_json": orjson.dumps(_get_related_sources(t, related_source_fields)).decode("utf-8") if (t := record.get("related_sources")) else None,
+        "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8") if works_catalogue else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

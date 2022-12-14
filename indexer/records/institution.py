@@ -2,7 +2,7 @@ import logging
 from typing import TypedDict, Optional
 
 import pymarc
-import ujson
+import orjson
 import yaml
 
 from indexer.helpers.marc import create_marc
@@ -71,7 +71,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
         "total_sources_i": total_count if rism_id != "40009305" else 0,
-        "now_in_json": ujson.dumps(now_in) if now_in else None,
+        "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
     }

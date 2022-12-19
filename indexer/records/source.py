@@ -162,6 +162,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "is_composite_volume_b": record_type_id == 11,
         "has_digitization_b": _get_has_digitization(all_marc_records),
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
+        "digitization_notes_sm": _get_digitization_notes(all_marc_records),
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
         "bibliographic_references_json": orjson.dumps(bibliographic_references).decode("utf-8") if bibliographic_references else None,
@@ -335,6 +336,17 @@ def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
             return True
 
     return False
+
+
+def _get_digitization_notes(all_records: list[pymarc.Record]) -> list[str]:
+    all_project_notes: set = set()
+    for record in all_records:
+        if '856' not in record:
+            continue
+        recnotes: set = {f['z'] for f in record.get_fields("856") if 'z' in f}
+        all_project_notes |= recnotes
+
+    return list(all_project_notes)
 
 
 def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:

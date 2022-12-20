@@ -3,7 +3,7 @@ import types
 from typing import Callable, Any, Optional
 
 import pymarc
-import ujson
+import orjson
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.utilities import to_solr_single_required, to_solr_multi, to_solr_multi_required, to_solr_single, \
@@ -47,7 +47,7 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
                 continue
 
             if to_json:
-                field_result = ujson.dumps(field_result)
+                field_result = orjson.dumps(field_result).decode("utf-8")
 
             solr_document[solr_field] = field_result
         else:

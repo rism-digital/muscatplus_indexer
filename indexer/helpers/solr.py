@@ -1,7 +1,7 @@
 import logging
 
 import httpx
-import ujson
+import orjson
 
 log = logging.getLogger("muscat_indexer")
 
@@ -12,7 +12,7 @@ def empty_solr_core(cfg: dict) -> bool:
     solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
 
     res = httpx.post(f"{solr_idx_server}/update?commit=true",
-                     content=ujson.dumps({"delete": {"query": "*:*"}}),
+                     content=orjson.dumps({"delete": {"query": "*:*"}}),
                      headers={"Content-Type": "application/json"},
                      timeout=None)
 
@@ -36,7 +36,7 @@ def submit_to_solr(records: list, cfg: dict) -> bool:
 
     log.debug("Indexing records to Solr")
     res = httpx.post(f"{solr_idx_server}/update",
-                     content=ujson.dumps(records),
+                     content=orjson.dumps(records),
                      headers={"Content-Type": "application/json"},
                      timeout=None)
 

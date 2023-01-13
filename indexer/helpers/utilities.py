@@ -305,7 +305,7 @@ def __related_place(field: pymarc.Field, this_id: str, this_type: str, relations
         "this_id": this_id,
         "this_type": this_type,
         "name": field["a"],
-        "relationship": field["i"],
+        "relationship": field["i"] if 'i' in field else "xx",
         "place_id": f"place_{field['0']}"
     }
 

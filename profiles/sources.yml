@@ -119,6 +119,8 @@ creator_name_s:  # 100, but with optional dates added ($a and $d)
 creator_json:
   processor: "_get_creator_data"
   json: true
+creator_anonymous_b:
+  processor: "_is_anonymous_creator"
 
 standard_title_s:
   field: "240"

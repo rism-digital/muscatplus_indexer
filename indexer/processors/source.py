@@ -54,6 +54,15 @@ def _get_creator_data(record: pymarc.Record) -> Optional[list]:
     return creator
 
 
+def _is_anonymous_creator(record: pymarc.Record) -> bool:
+    creator: Optional[pymarc.Field] = record["100"]
+    if not creator:
+        return False
+
+    person_id: str = creator['0']
+    return person_id == "30004985"
+
+
 def _get_subjects(record: pymarc.Record) -> Optional[list[dict]]:
     subject_fields: list[pymarc.Field] = record.get_fields("650")
     if not subject_fields:

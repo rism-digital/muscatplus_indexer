@@ -334,6 +334,14 @@ class InstitutionRelationshipIndexDocument(TypedDict):
 
 
 def related_institution(field: pymarc.Field, this_id: str, this_type: str, relationship_number: int) -> InstitutionRelationshipIndexDocument:
+    relationship_code: str
+    if '4' in field:
+        relationship_code = field['4']
+    elif 'i' in field:
+        relationship_code = field['i']
+    else:
+        relationship_code = 'xx'
+
     d: InstitutionRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "type": "institution",
@@ -342,7 +350,7 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
         "name": field["a"],
         "department": field["d"],
         "institution_id": f"institution_{field['0']}",
-        "relationship": field['4'] if '4' in field else field['i'],
+        "relationship": relationship_code,
         "qualifier": field['g'],
     }
 

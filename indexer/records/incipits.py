@@ -51,7 +51,7 @@ class IncipitIndexDocument(TypedDict):
     music_incipit_s: Optional[str]
     text_incipit_s: Optional[str]
     role_s: Optional[str]
-    title_s: Optional[str]
+    titles_sm: Optional[str]
     key_mode_s: Optional[str]
     key_s: Optional[str]
     timesig_s: Optional[str]
@@ -164,7 +164,7 @@ def __incipit(field: pymarc.Field,
         "incipit_len_i": incipit_len,
         "text_incipit_s": field['t'],
         "date_ranges_im": source_dates,
-        "title_s": field['d'],
+        "titles_sm": field.get_subfields("d"),
         "role_s": field['e'],
         "work_num_s": work_number,
         "key_mode_s": field['r'],
@@ -180,10 +180,11 @@ def __incipit(field: pymarc.Field,
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
-    d["original_pae_sni"] = pae_code
 
     # Run the PAE through Verovio
     if pae_code:
+        d["original_pae_sni"] = pae_code
+
         feat = _get_pae_features(pae_code)
         intervals: list = feat.get("intervalsChromatic", [])
         intervals_diat: list = feat.get("intervalsDiatonic", [])

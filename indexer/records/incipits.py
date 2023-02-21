@@ -162,7 +162,7 @@ def __incipit(field: pymarc.Field,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
         "has_notation_b": incipit_len > 0,
         "incipit_len_i": incipit_len,
-        "text_incipit_s": field['t'],
+        "text_incipit_sm": field.get_subfields('t'),
         "date_ranges_im": source_dates,
         "titles_sm": field.get_subfields("d"),
         "role_s": field['e'],
@@ -237,4 +237,4 @@ def get_incipits(record: pymarc.Record,
 
     incipits: list = record.get_fields("031")
 
-    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num, country_codes) for num, f in enumerate(incipits)]
+    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num, country_codes) for num, f in enumerate(incipits, 1)]

@@ -354,7 +354,7 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
 MaterialGroupFields = dict[str, list]
 
 
-def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_plate(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 028 can be either publisher number (30) or plate number (20), depending on the indicators
     # The default assumption is that it is a plate number, since this was the only value
     # available until 06/2021.
@@ -367,7 +367,7 @@ def __mg_plate(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_pub(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_pub(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 260
     res: MaterialGroupFields = {
         "publication_place": field.get_subfields("a"),
@@ -380,7 +380,7 @@ def __mg_pub(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_phys(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 300
     res: MaterialGroupFields = {
         "physical_extent": field.get_subfields("a"),
@@ -391,7 +391,7 @@ def __mg_phys(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_special(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 340
     # 340$a is deprecated, but at this time most data is in that
     # subfield, so we get values from both fields.
@@ -404,7 +404,7 @@ def __mg_special(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_general(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 500
     note_values: list[str] = field.get_subfields("a")
     notes: list[str] = _reformat_notes(note_values)
@@ -416,7 +416,7 @@ def __mg_general(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_binding(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 563
     note_values = field.get_subfields("a")
     notes = _reformat_notes(note_values)
@@ -428,7 +428,7 @@ def __mg_binding(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_parts(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 590
     parts_held: list[str] = field.get_subfields('a')
     parts_extent: list[str] = field.get_subfields('b')
@@ -444,7 +444,7 @@ def __mg_parts(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_watermark(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 592
     note_values = field.get_subfields("a")
     notes = _reformat_notes(note_values)
@@ -455,7 +455,7 @@ def __mg_watermark(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_type(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 593
     # removes duplicate values
     res: MaterialGroupFields = {
@@ -466,11 +466,11 @@ def __mg_type(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_add_name(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 700
     # We pass some dummy values to the related_person function
     # so that we can keep the structure of the data consistent.
-    person = related_person(field, "", "material_group", 0)
+    person = related_person(field, source_id, "material_group", 0)
 
     # Use the same key in the output so that we can use the
     # same relationship serializer as we do for the full object.
@@ -481,9 +481,9 @@ def __mg_add_name(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_add_inst(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 710
-    institution = related_institution(field, "", "material_group", 0)
+    institution = related_institution(field, source_id, "material_group", 0)
 
     res: MaterialGroupFields = {
         "related_institutions_json": [institution]
@@ -492,7 +492,7 @@ def __mg_add_inst(field: pymarc.Field) -> MaterialGroupFields:
     return res
 
 
-def __mg_external(field: pymarc.Field) -> MaterialGroupFields:
+def __mg_external(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 856
     res: MaterialGroupFields = {
         "external_resources": [external_resource_data(field)]
@@ -575,7 +575,7 @@ def _get_material_groups(record: pymarc.Record) -> Optional[list[dict]]:
         }
 
         for field in fields:
-            field_res: MaterialGroupFields = member_fields[field.tag](field)
+            field_res: MaterialGroupFields = member_fields[field.tag](field, source_id)
             if not field_res:
                 continue
 

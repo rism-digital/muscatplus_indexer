@@ -1,0 +1,14 @@
+---
+creator_id:
+  field: "100"
+  subfield: "0"
+  value_prefix: "person_"
+creator_name_s:
+  processor: "_get_creator_name"
+creator_json:
+  processor: "_get_creator_data"
+  json: true
+
+standard_title_s:
+  field: "130"
+  subfield: "a"

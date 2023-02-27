@@ -19,6 +19,7 @@ from indexer.index_people import index_people
 from indexer.index_places import index_places
 from indexer.index_sources import index_sources
 from indexer.index_subjects import index_subjects
+from indexer.index_works import index_works
 
 faulthandler.enable()
 
@@ -45,7 +46,7 @@ def index_indexer(cfg: dict, start: float, end: float) -> bool:
 
 
 @elapsedtime
-def main(args) -> bool:
+def main(args: argparse.Namespace) -> bool:
     idx_start: float = timeit.default_timer()
 
     cfg_filename: str
@@ -94,7 +95,8 @@ def main(args) -> bool:
                "holdings",
                "subjects",
                "festivals",
-               "digital-objects"]
+               "digital-objects",
+               "works"]
     else:
         inc = args.include
 
@@ -125,6 +127,8 @@ def main(args) -> bool:
             res |= index_liturgical_festivals(idx_config)
         elif record_type == "digital-objects" and "digital-objects" not in args.exclude:
             res |= index_digital_objects(idx_config)
+        elif record_type == "works" and "works" not in args.exclude:
+            res |= index_works(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()
@@ -169,9 +173,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--id", dest="only_id", help="Only index a single ID")
 
-    args = parser.parse_args()
+    input_args: argparse.Namespace = parser.parse_args()
 
-    success: bool = main(args)
+    success: bool = main(input_args)
     if success:
         # Exit with status 0 (success).
         faulthandler.disable()

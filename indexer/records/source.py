@@ -56,6 +56,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     num_holdings: int = record.get("holdings_count")
     main_title: str = record['std_title']
 
+    log.debug("Indexing %s", source_id)
+
     creator_name: Optional[str] = get_creator_name(marc_record)
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
     institution_places: list[str] = [s for s in record['institution_places'].split("|") if s] if record.get('institution_places') else []

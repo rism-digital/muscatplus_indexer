@@ -85,9 +85,12 @@ def _incipit_to_pae(incipit: dict) -> str:
 
 
 def _get_pae_features(pae: str) -> dict:
-    vrv_tk.loadData(pae)
+    load_success: bool = vrv_tk.loadData(pae)
+    if load_success is False:
+        log.warning("Verovio could not load PAE %s", pae)
+        return {}
     # Verovio is set to render PAE to features
-    return vrv_tk.getDescriptiveFeatures("{}")
+    return vrv_tk.getDescriptiveFeatures({})
 
 
 def __incipit(field: pymarc.Field,
@@ -101,6 +104,8 @@ def __incipit(field: pymarc.Field,
     record_id: str = normalize_id(record['001'].value())
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
+
+    log.debug("Creating incipits %s %s", source_id, work_number)
 
     is_mensural: bool = False
     if clef and "+" in clef:
@@ -185,7 +190,7 @@ def __incipit(field: pymarc.Field,
     if pae_code:
         d["original_pae_sni"] = pae_code
 
-        feat = _get_pae_features(pae_code)
+        feat: dict = _get_pae_features(pae_code)
         intervals: list = feat.get("intervalsChromatic", [])
         intervals_diat: list = feat.get("intervalsDiatonic", [])
         pitches: list = feat.get("pitchesChromatic", [])

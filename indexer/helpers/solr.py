@@ -14,7 +14,8 @@ def empty_solr_core(cfg: dict) -> bool:
     res = httpx.post(f"{solr_idx_server}/update?commit=true",
                      content=orjson.dumps({"delete": {"query": "*:*"}}),
                      headers={"Content-Type": "application/json"},
-                     timeout=None)
+                     timeout=None,
+                     verify=False)
 
     if 200 <= res.status_code < 400:
         log.debug("Deletion was successful")
@@ -37,8 +38,10 @@ def submit_to_solr(records: list, cfg: dict) -> bool:
     log.debug("Indexing records to Solr")
     res = httpx.post(f"{solr_idx_server}/update",
                      content=orjson.dumps(records),
-                     headers={"Content-Type": "application/json"},
-                     timeout=None)
+                     headers={"Content-Type": "application/json",
+                              "Content-Encoding": "gzip"},
+                     timeout=None,
+                     verify=False)
 
     if 200 <= res.status_code < 400:
         log.debug("Indexing was successful")
@@ -56,7 +59,8 @@ def commit_changes(cfg: dict) -> bool:
 
     log.info("Committing changes")
     res = httpx.get(f"{solr_idx_server}/update?commit=true",
-                    timeout=None)
+                    timeout=None,
+                    verify=False)
     if 200 <= res.status_code < 400:
         log.debug("Commit was successful")
         return True
@@ -75,7 +79,8 @@ def swap_cores(server_address: str, index_core: str, live_core: str) -> bool:
     :return: True if swap was successful; otherwise False
     """
     admconn = httpx.get(f"{server_address}/admin/cores?action=SWAP&core={index_core}&other={live_core}",
-                        timeout=None)
+                        timeout=None,
+                        verify=False)
 
     if 200 <= admconn.status_code < 400:
         log.info("Core swap for %s and %s was successful.", index_core, live_core)
@@ -97,7 +102,8 @@ def reload_core(server_address: str, core_name: str) -> bool:
     :return: True if the reload was successful, otherwise False.
     """
     admconn = httpx.get(f"{server_address}/admin/cores?action=RELOAD&core={core_name}",
-                        timeout=None)
+                        timeout=None,
+                        verify=False)
 
     if 200 <= admconn.status_code < 400:
         log.info("Core reload for %s was successful.", core_name)

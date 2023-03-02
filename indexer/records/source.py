@@ -56,6 +56,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     num_holdings: int = record.get("holdings_count")
     main_title: str = record['std_title']
 
+    log.debug("Indexing %s", source_id)
+
     creator_name: Optional[str] = get_creator_name(marc_record)
     child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
     institution_places: list[str] = [s for s in record['institution_places'].split("|") if s] if record.get('institution_places') else []
@@ -168,7 +170,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "bibliographic_references_json": orjson.dumps(bibliographic_references).decode("utf-8") if bibliographic_references else None,
         "bibliographic_references_sm": bibliographic_reference_titles,
         "works_catalogue_sm": works_catalogue_titles,
-        "related_sources_json": orjson.dumps(_get_related_sources(t, related_source_fields)).decode("utf-8") if (t := record.get("related_sources")) else None,
+        "related_sources_json": orjson.dumps(_get_related_sources(t, related_source_fields, source_id)).decode("utf-8") if (t := record.get("related_sources")) else None,
         "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8") if works_catalogue else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -455,7 +457,7 @@ def _get_num_holdings_facet(num: int) -> Optional[str]:
         return "more than 100"
 
 
-def _get_related_sources(related: str, relationship_fields: list[pymarc.Field]) -> Optional[list[dict]]:
+def _get_related_sources(related: str, relationship_fields: list[pymarc.Field], host_source_id: str) -> Optional[list[dict]]:
     """
     Combines the MARC source from related sources and the 787 entries from a record to create a JSON
     field for the related sources.
@@ -478,7 +480,7 @@ def _get_related_sources(related: str, relationship_fields: list[pymarc.Field]) 
     # "|:|" between fields in that record.
     all_records: list[str] = related.split("|~|")
     related_entries: list = []
-    for individual_record in all_records:
+    for relationship_id, individual_record in enumerate(all_records, 1):
         relator_code, relmarc_source = individual_record.split("|:|")
         rel_marc_record: Optional[pymarc.Record] = create_marc(relmarc_source) if relmarc_source else None
         if not rel_marc_record:
@@ -495,10 +497,14 @@ def _get_related_sources(related: str, relationship_fields: list[pymarc.Field]) 
             note = notes[record_id]
 
         d = {
+            "id": f"{relationship_id}",
+            "type": "source",
             "source_id": source_id,
             "relationship": relator_code,
             "title": title,
-            "note": note
+            "note": note,
+            "this_id": host_source_id,
+            "this_type": "source"
         }
 
         related_entries.append({k: v for k, v in d.items() if v})

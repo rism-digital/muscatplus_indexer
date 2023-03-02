@@ -55,7 +55,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
             else:
                 continue
 
-    now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup)
+    now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup, institution_id)
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
 
@@ -82,14 +82,14 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
     return institution_core
 
 
-def _get_now_in_json(record: pymarc.Record, related_institutions: dict) -> Optional[list[dict]]:
+def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id: str) -> Optional[list[dict]]:
     now_in_fields: list[pymarc.Field] = record.get_fields("580")
     if not now_in_fields:
         return None
 
     all_entries: list = []
 
-    for entry in now_in_fields:
+    for num, entry in enumerate(now_in_fields, 1):
         institution_id = entry["0"]
         if not institution_id:
             log.warning(f"Got a 'now in' record with no identifier.")
@@ -101,9 +101,13 @@ def _get_now_in_json(record: pymarc.Record, related_institutions: dict) -> Optio
 
         institution_info: dict = related_institutions.get(institution_id)
         now_in: dict = {
+            "id": f"{num}",
+            "type": "institution",
             "institution_id": f"institution_{institution_id}",
             "name": f"{institution_info.get('name')}",
-            "relationship": "now-in"
+            "relationship": "now-in",
+            "this_id": this_id,
+            "this_type": "institution"
         }
 
         if "siglum" in institution_info:

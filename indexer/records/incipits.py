@@ -51,7 +51,7 @@ class IncipitIndexDocument(TypedDict):
     music_incipit_s: Optional[str]
     text_incipit_s: Optional[str]
     role_s: Optional[str]
-    title_s: Optional[str]
+    titles_sm: Optional[str]
     key_mode_s: Optional[str]
     key_s: Optional[str]
     timesig_s: Optional[str]
@@ -85,9 +85,12 @@ def _incipit_to_pae(incipit: dict) -> str:
 
 
 def _get_pae_features(pae: str) -> dict:
-    vrv_tk.loadData(pae)
+    load_success: bool = vrv_tk.loadData(pae)
+    if load_success is False:
+        log.warning("Verovio could not load PAE %s", pae)
+        return {}
     # Verovio is set to render PAE to features
-    return vrv_tk.getDescriptiveFeatures("{}")
+    return vrv_tk.getDescriptiveFeatures({})
 
 
 def __incipit(field: pymarc.Field,
@@ -101,6 +104,8 @@ def __incipit(field: pymarc.Field,
     record_id: str = normalize_id(record['001'].value())
     work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
     clef: Optional[str] = field['g']
+
+    log.debug("Creating incipits %s %s", source_id, work_number)
 
     is_mensural: bool = False
     if clef and "+" in clef:
@@ -162,9 +167,9 @@ def __incipit(field: pymarc.Field,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
         "has_notation_b": incipit_len > 0,
         "incipit_len_i": incipit_len,
-        "text_incipit_s": field['t'],
+        "text_incipit_sm": field.get_subfields('t'),
         "date_ranges_im": source_dates,
-        "title_s": field['d'],
+        "titles_sm": field.get_subfields("d"),
         "role_s": field['e'],
         "work_num_s": work_number,
         "key_mode_s": field['r'],
@@ -180,11 +185,12 @@ def __incipit(field: pymarc.Field,
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
-    d["original_pae_sni"] = pae_code
 
     # Run the PAE through Verovio
     if pae_code:
-        feat = _get_pae_features(pae_code)
+        d["original_pae_sni"] = pae_code
+
+        feat: dict = _get_pae_features(pae_code)
         intervals: list = feat.get("intervalsChromatic", [])
         intervals_diat: list = feat.get("intervalsDiatonic", [])
         pitches: list = feat.get("pitchesChromatic", [])
@@ -236,4 +242,4 @@ def get_incipits(record: pymarc.Record,
 
     incipits: list = record.get_fields("031")
 
-    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num, country_codes) for num, f in enumerate(incipits)]
+    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num, country_codes) for num, f in enumerate(incipits, 1)]

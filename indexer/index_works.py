@@ -17,10 +17,18 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
 
-    sql_query: str = f"""SELECT work.id, work.marc_source
-    FROM {dbname}.works AS work
-    ORDER BY work.id asc;
-    """
+    sql_query: str = f"""SELECT work.id, work.marc_source,
+        COUNT(s.id) as source_count,
+        GROUP_CONCAT(DISTINCT s.id SEPARATOR '\n') as source_ids,
+        GROUP_CONCAT(DISTINCT s.marc_source SEPARATOR '\n') as source_marc,
+        GROUP_CONCAT(DISTINCT pub.marc_source SEPARATOR '\n') as publication_marc
+        FROM {dbname}.works AS work
+        LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
+        LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
+        LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
+        LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
+        GROUP BY work.id
+        ORDER BY work.id asc;"""
 
     curs.execute(sql_query)
 

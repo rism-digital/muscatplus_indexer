@@ -12,3 +12,10 @@ creator_json:
 standard_title_s:
   field: "130"
   subfield: "a"
+
+catalogue_s:
+  field: "690"
+  subfield: "a"
+number_page_s:
+  field: "690"
+  subfield: "n"

@@ -18,20 +18,17 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     rism_id: str = normalize_id(marc_record['001'].value())
     work_id: str = f"work_{rism_id}"
 
-    source_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("related_sources")) else []
-    related_sources: Optional[list[dict]] = _get_related_sources_json(source_entries)
+    source_entries: set[str] = {f"source_{n}" for n in d.split("\n") if n and n.strip()} if (d := record.get("source_ids")) else set()
 
     work_core: dict = {
         "id": work_id,
-        "type": "work"
+        "type": "work",
+        "sources_ids": list(source_entries),
+        "source_count_i": record['source_count']
     }
 
     additional_fields: dict = process_marc_profile(work_profile, work_id, marc_record, work_processor)
     work_core.update(additional_fields)
 
     return [work_core]
-
-
-def _get_related_sources_json(source_entries: list) -> Optional[list[dict]]:
-    for src in source_entries:
-        pass
+    

@@ -12,7 +12,7 @@ from indexer.helpers.identifiers import (
     get_is_collection_record,
     country_code_from_siglum
 )
-from indexer.helpers.marc import create_marc
+from indexer.helpers.marc import create_marc, create_marc_list
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
     normalize_id,
@@ -63,11 +63,11 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     institution_places: list[str] = [s for s in record['institution_places'].split("|") if s] if record.get('institution_places') else []
     source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
-    holdings_marc: list[pymarc.Record] = _create_marc_from_str(record.get("holdings_marc"))
+    holdings_marc: list[pymarc.Record] = create_marc_list(record.get("holdings_marc"))
 
     all_print_holding_records: list[pymarc.Record] = []
     all_print_holding_records += holdings_marc
-    all_print_holding_records += _create_marc_from_str(record.get("parent_holdings_marc"))
+    all_print_holding_records += create_marc_list(record.get("parent_holdings_marc"))
 
     all_print_holding_sigla: list[str] = []
     all_print_holding_sigla += _create_sigla_list_from_str(record.get("holdings_org"))
@@ -129,6 +129,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
 
+    work_ids: list = list({f"work_{n}" for n in record['work_ids'].split("\n") if n}) if record.get("work_ids") else []
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: dict = {
@@ -170,6 +172,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "bibliographic_references_json": orjson.dumps(bibliographic_references).decode("utf-8") if bibliographic_references else None,
         "bibliographic_references_sm": bibliographic_reference_titles,
         "works_catalogue_sm": works_catalogue_titles,
+        "work_ids": work_ids,
         "related_sources_json": orjson.dumps(_get_related_sources(t, related_source_fields, source_id)).decode("utf-8") if (t := record.get("related_sources")) else None,
         "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8") if works_catalogue else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -359,16 +362,6 @@ def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:
     :return: A list of sigla.
     """
     return list({s.strip() for s in sigla.split("\n") if s}) if sigla else []
-
-
-def _create_marc_from_str(marc_records: Optional[str]) -> list[pymarc.Record]:
-    """
-    Will always return a list, potentially an empty one.
-
-    :param marc_records: A string of newline-separated MARC records
-    :return: A list of pymarc.Record objects
-    """
-    return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
 
 
 def _format_reference(ref: list) -> str:

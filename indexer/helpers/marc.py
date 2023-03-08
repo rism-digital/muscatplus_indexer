@@ -74,6 +74,16 @@ def create_marc(record: str) -> pymarc.Record:
     return r
 
 
+def create_marc_list(marc_records: Optional[str]) -> list[pymarc.Record]:
+    """
+    Will always return a list, potentially an empty one.
+
+    :param marc_records: A string of newline-separated MARC records
+    :return: A list of pymarc.Record objects
+    """
+    return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
+
+
 def record_value_lookup(record: pymarc.Record, tag: str, subfield: str) -> Optional[list]:
     """
     Takes a record, tag, and subfield and extracts the string value from that.

@@ -603,3 +603,76 @@ def get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id
         return idxs.index(this_id)
 
     return None
+
+
+def get_bibliographic_reference_titles(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[str]]:
+    if not references:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields(field)
+    if not fields:
+        return None
+
+    ret: list = []
+    for r in references:
+        # |:| is a unique field delimiter
+        rid, *rest = r.split("|:|")
+        ret.append(format_reference(rest))
+
+    return ret
+
+
+def get_bibliographic_references_json(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[dict]]:
+    if not references:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields(field)
+    if not fields:
+        return None
+
+    refs: dict = {}
+    for r in references:
+        # |:| is a unique field delimiter
+        rid, *rest = r.split("|:|")
+        refs[rid] = format_reference(rest)
+
+    outp: list = []
+
+    for field in fields:
+        fid: str = field["0"]
+        literature_id: str = f"literature_{fid}"
+        r = {
+            "id": literature_id,
+            "formatted": refs[fid],
+        }
+        if p := field["n"]:
+            r["pages"] = p
+
+        outp.append(r)
+
+    return outp
+
+
+def format_reference(ref: list) -> str:
+    author, description, journal, date, place, short = ref
+    res: str = ""
+
+    if author:
+        res += f"{author.strip()}{' ' if author.endswith('.') else '. ' }"
+
+    if description:
+        res += f"{description.strip()}{' ' if description.endswith('.') else '. ' }"
+
+    if journal:
+        res += f"{journal.strip()}, "
+
+    if date:
+        res += f"{date.strip()}. "
+
+    if place:
+        res += f"{place.strip()} "
+
+    if short:
+        res += f"({short.strip()})."
+
+    return res

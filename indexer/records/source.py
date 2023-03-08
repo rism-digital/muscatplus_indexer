@@ -20,7 +20,8 @@ from indexer.helpers.utilities import (
     tokenize_variants,
     get_creator_name,
     to_solr_multi,
-    get_titles, get_content_types, get_parent_order_for_members
+    get_titles, get_content_types, get_parent_order_for_members, get_bibliographic_references_json, format_reference,
+    get_bibliographic_reference_titles
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
@@ -120,10 +121,10 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
 
     publication_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
-    bibliographic_references: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "691", publication_entries)
-    bibliographic_reference_titles: Optional[list[str]] = _get_bibliographic_reference_titles(marc_record, "691", publication_entries)
-    works_catalogue: Optional[list[dict]] = _get_bibliographic_references_json(marc_record, "690", publication_entries)
-    works_catalogue_titles: Optional[list[dict]] = _get_bibliographic_reference_titles(marc_record, "690", publication_entries)
+    bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(marc_record, "691", publication_entries)
+    bibliographic_reference_titles: Optional[list[str]] = get_bibliographic_reference_titles(marc_record, "691", publication_entries)
+    works_catalogue: Optional[list[dict]] = get_bibliographic_references_json(marc_record, "690", publication_entries)
+    works_catalogue_titles: Optional[list[dict]] = get_bibliographic_reference_titles(marc_record, "690", publication_entries)
 
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
     has_digital_objects: bool = record.get("digital_objects") is not None
@@ -362,79 +363,6 @@ def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:
     :return: A list of sigla.
     """
     return list({s.strip() for s in sigla.split("\n") if s}) if sigla else []
-
-
-def _format_reference(ref: list) -> str:
-    author, description, journal, date, place, short = ref
-    res: str = ""
-
-    if author:
-        res += f"{author.strip()}{' ' if author.endswith('.') else '. ' }"
-
-    if description:
-        res += f"{description.strip()}{' ' if description.endswith('.') else '. ' }"
-
-    if journal:
-        res += f"{journal.strip()}, "
-
-    if date:
-        res += f"{date.strip()}. "
-
-    if place:
-        res += f"{place.strip()} "
-
-    if short:
-        res += f"({short.strip()})."
-
-    return res
-
-
-def _get_bibliographic_references_json(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[dict]]:
-    if not references:
-        return None
-
-    fields: list[pymarc.Field] = record.get_fields(field)
-    if not fields:
-        return None
-
-    refs: dict = {}
-    for r in references:
-        # |:| is a unique field delimiter
-        rid, *rest = r.split("|:|")
-        refs[rid] = _format_reference(rest)
-
-    outp: list = []
-
-    for field in fields:
-        fid: str = field["0"]
-        literature_id: str = f"literature_{fid}"
-        r = {
-            "id": literature_id,
-            "formatted": refs[fid],
-        }
-        if p := field["n"]:
-            r["pages"] = p
-
-        outp.append(r)
-
-    return outp
-
-
-def _get_bibliographic_reference_titles(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[str]]:
-    if not references:
-        return None
-
-    fields: list[pymarc.Field] = record.get_fields(field)
-    if not fields:
-        return None
-
-    ret: list = []
-    for r in references:
-        # |:| is a unique field delimiter
-        rid, *rest = r.split("|:|")
-        ret.append(_format_reference(rest))
-
-    return ret
 
 
 def _get_num_holdings_facet(num: int) -> Optional[str]:

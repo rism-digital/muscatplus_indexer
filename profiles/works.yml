@@ -13,6 +13,10 @@ standard_title_s:
   field: "130"
   subfield: "a"
 
+opus_number_s:
+  field: "393"
+  subfield: "b"
+
 catalogue_s:
   field: "690"
   subfield: "a"

@@ -15,20 +15,24 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg['mysql']['database']
 
+    # work around a bug with collations
+    curs.execute(f"""alter table {dbname}.institutions
+            modify siglum varchar(32) collate utf8mb4_0900_as_cs null;
+        alter table {dbname}.holdings
+            modify lib_siglum varchar(255) collate utf8mb4_0900_as_cs null;""")
+
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"AND holdings.id = {cfg['id']}"
 
     # The published / unpublished state is ignored for holding records, so we just take any and all holding records.
     curs.execute(f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
-                           sources.std_title AS source_title, sources.composer AS creator_name, 
-                           sources.record_type as record_type, sources.marc_source AS source_record_marc,
-                           institution.marc_source AS institution_record_marc,
-                    (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc
+                        sources.std_title AS source_title, sources.composer AS creator_name,
+                        sources.record_type as record_type, sources.marc_source AS source_record_marc,
+                        (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc,
+                        (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc
                     FROM {dbname}.holdings AS holdings
                     LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
-                    LEFT JOIN {dbname}.holdings_to_institutions AS hi on hi.holding_id = holdings.id
-                    LEFT JOIN {dbname}.institutions AS institution ON hi.institution_id = institution.id
                     WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause};""")
 
     while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa

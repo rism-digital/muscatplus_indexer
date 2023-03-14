@@ -18,7 +18,7 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
     dbname: str = cfg["mysql"]["database"]
 
     sql_query: str = f"""SELECT work.id, work.marc_source,
-        COUNT(s.id) as source_count,
+        COUNT(DISTINCT s.id) as source_count,
         GROUP_CONCAT(DISTINCT s.id SEPARATOR '\n') as source_ids,
         GROUP_CONCAT(DISTINCT s.marc_source SEPARATOR '\n') as source_marc,
         GROUP_CONCAT(DISTINCT pub.marc_source SEPARATOR '\n') as publication_marc,
@@ -28,6 +28,7 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
         LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
         LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
         LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
+--         WHERE work.wf_stage = 1
         GROUP BY work.id
         ORDER BY work.id asc;"""
 
@@ -49,7 +50,7 @@ def index_works(cfg: dict) -> bool:
 
 
 def index_work_groups(works: list, cfg: dict) -> bool:
-    log.info("indexing Work Group")
+    log.info("Indexing Work Group")
     records_to_index = deque()
 
     for record in works:

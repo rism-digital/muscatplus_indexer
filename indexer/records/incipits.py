@@ -95,17 +95,19 @@ def _get_pae_features(pae: str) -> dict:
 
 def __incipit(field: pymarc.Field,
               record: pymarc.Record,
-              source_id: str,
+              parent_record_id: str,
               record_type_id: int,
-              child_type_ids: list[int],
-              source_title: str,
+              parent_record_title: str,
               num: int,
               country_codes: list[str]) -> IncipitIndexDocument:
     record_id: str = normalize_id(record['001'].value())
-    work_number: str = f"{field['a']}.{field['b']}.{field['c']}"
-    clef: Optional[str] = field['g']
+    work_number: str = f"{field.get('a', 'x')}.{field.get('b', 'x')}.{field.get('c', 'x')}"
+    if work_number == "x.x.x":
+        log.warning("Bad incipit number for %s", parent_record_id)
 
-    log.debug("Creating incipits %s %s", source_id, work_number)
+    clef: Optional[str] = field.get('g')
+
+    log.debug("Creating incipits %s %s", parent_record_id, work_number)
 
     is_mensural: bool = False
     if clef and "+" in clef:
@@ -113,7 +115,7 @@ def __incipit(field: pymarc.Field,
 
     # This is a rough measure of the length of an incipit is so that we can
     # identify and check the rendering of long incipits.
-    music_incipit: Optional[str] = field['p']
+    music_incipit: Optional[str] = field.get('p')
     incipit_len: int = 0
     if music_incipit:
         # ensure we strip any leading or trailing whitespace.
@@ -129,7 +131,7 @@ def __incipit(field: pymarc.Field,
 
     # Take the first value if our list of possible time signatures is greater than 0, else take the
     # original field value. This may also be None if field['o'] is None.
-    time_signature_data: Optional[str] = field['o']
+    time_signature_data: Optional[str] = field.get('o')
 
     # if we have more than two space characters in the string, collapse excessive ones into a since space
     # by splitting on space characters and then joining with a single space.
@@ -146,7 +148,7 @@ def __incipit(field: pymarc.Field,
     key_sig: str
     # If there is a value for the key signature field (and it's not an empty string) then
     # put an 'n' in place so that people can filter for incipits with no key signature.
-    if field['n'] and field['n'].strip():
+    if 'n' in field and field['n'].strip():
         key_sig = field['n']
     else:
         key_sig = "n"
@@ -154,14 +156,14 @@ def __incipit(field: pymarc.Field,
     standard_title_json = get_titles(record, "240")
 
     d: dict = {
-        "id": f"{source_id}_incipit_{num}",
+        "id": f"{parent_record_id}_incipit_{num}",
         "type": "incipit",
-        "source_id": source_id,
+        "source_id": parent_record_id,
         "rism_id": record_id,  # index the raw source id to support incipit lookups by source
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(record),
-        "main_title_s": source_title,  # using 'main_title_s' allows us to later serialize this as a source record.
+        "main_title_s": parent_record_title,  # using 'main_title_s' allows us to later serialize this as a source record.
         "creator_name_s": creator,
         "incipit_num_i": num,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
@@ -170,13 +172,13 @@ def __incipit(field: pymarc.Field,
         "text_incipit_sm": field.get_subfields('t'),
         "date_ranges_im": source_dates,
         "titles_sm": field.get_subfields("d"),
-        "role_s": field['e'],
+        "role_s": field.get('e'),
         "work_num_s": work_number,
-        "key_mode_s": field['r'],
+        "key_mode_s": field.get('r'),
         "key_s": key_sig,
         "timesig_s": time_sig.strip() if time_sig and len(time_sig) > 0 else None,
-        "clef_s": field['g'],
-        "voice_instrument_s": field["m"],
+        "clef_s": field.get('g'),
+        "voice_instrument_s": field.get("m"),
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields('q'),
         "scoring_sm": field.get_subfields('z'),
@@ -184,7 +186,7 @@ def __incipit(field: pymarc.Field,
         "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8") if standard_title_json else None
     }
 
-    pae_code: Optional[str] = _incipit_to_pae(d) if field['p'] else None
+    pae_code: Optional[str] = _incipit_to_pae(d) if d['music_incipit_s'] else None
 
     # Run the PAE through Verovio
     if pae_code:
@@ -232,14 +234,13 @@ def __incipit(field: pymarc.Field,
 
 
 def get_incipits(record: pymarc.Record,
-                 source_id: str,
-                 source_title: str,
+                 parent_record_id: str,
+                 parent_record_title: str,
                  record_type_id: int,
-                 child_type_ids: list[int],
                  country_codes: list[str]) -> Optional[list]:
     if "031" not in record:
         return None
 
     incipits: list = record.get_fields("031")
 
-    return [__incipit(f, record, source_id, record_type_id, child_type_ids, source_title, num, country_codes) for num, f in enumerate(incipits, 1)]
+    return [__incipit(f, record, parent_record_id, record_type_id, parent_record_title, num, country_codes) for num, f in enumerate(incipits, 1)]

@@ -83,14 +83,14 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
 
 
 def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id: str) -> Optional[list[dict]]:
-    now_in_fields: list[pymarc.Field] = record.get_fields("580")
-    if not now_in_fields:
+    if "580" not in record:
         return None
 
+    now_in_fields: list[pymarc.Field] = record.get_fields("580")
     all_entries: list = []
 
     for num, entry in enumerate(now_in_fields, 1):
-        institution_id = entry["0"]
+        institution_id = entry.get("0")
         if not institution_id:
             log.warning(f"Got a 'now in' record with no identifier.")
             continue

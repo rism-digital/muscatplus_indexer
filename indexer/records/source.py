@@ -1,8 +1,8 @@
 import logging
 from typing import Optional
 
-import pymarc
 import orjson
+import pymarc
 import yaml
 
 from indexer.helpers.identifiers import (
@@ -20,7 +20,7 @@ from indexer.helpers.utilities import (
     tokenize_variants,
     get_creator_name,
     to_solr_multi,
-    get_titles, get_content_types, get_parent_order_for_members, get_bibliographic_references_json, format_reference,
+    get_titles, get_content_types, get_parent_order_for_members, get_bibliographic_references_json,
     get_bibliographic_reference_titles
 )
 from indexer.processors import source as source_processor
@@ -54,13 +54,12 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     membership_id: int = m if (m := parent_id) else record['id']
     rism_id: str = normalize_id(marc_record['001'].value())
     source_id: str = f"source_{rism_id}"
-    num_holdings: int = record.get("holdings_count")
+    num_holdings: int = record.get("holdings_count", 0)
     main_title: str = record['std_title']
 
     log.debug("Indexing %s", source_id)
 
     creator_name: Optional[str] = get_creator_name(marc_record)
-    child_record_types: list[int] = [int(s) for s in record['child_record_types'].split(",") if s] if record.get('child_record_types') else []
     institution_places: list[str] = [s for s in record['institution_places'].split("|") if s] if record.get('institution_places') else []
     source_member_composers: list[str] = [s.strip() for s in record['child_composer_list'].split("\n") if s] if record.get('child_composer_list') else []
 
@@ -122,9 +121,9 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     publication_entries: list = list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
     bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(marc_record, "691", publication_entries)
-    bibliographic_reference_titles: Optional[list[str]] = get_bibliographic_reference_titles(marc_record, "691", publication_entries)
+    bibliographic_reference_titles: Optional[list[str]] = get_bibliographic_reference_titles(publication_entries)
     works_catalogue: Optional[list[dict]] = get_bibliographic_references_json(marc_record, "690", publication_entries)
-    works_catalogue_titles: Optional[list[dict]] = get_bibliographic_reference_titles(marc_record, "690", publication_entries)
+    works_catalogue_titles: Optional[list[dict]] = get_bibliographic_reference_titles(publication_entries)
 
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
     has_digital_objects: bool = record.get("digital_objects") is not None
@@ -188,7 +187,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
 
-    incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, child_record_types, country_codes) or []
+    incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, country_codes) or []
 
     res: list = [source_core]
     res.extend(incipits)
@@ -328,6 +327,9 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
     for record in all_records:
+        if '856' not in record:
+            continue
+
         digitization_links: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("Digitalization", "Digitized sources", "Digitized", "IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")]
         if len(digitization_links) > 0:
             return True
@@ -337,6 +339,9 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
 
 def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
     for record in all_records:
+        if '856' not in record:
+            continue
+
         iiif_manifests: list = [f for f in record.get_fields("856") if 'x' in f and f['x'] in ("IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")]
         if len(iiif_manifests) > 0:
             return True
@@ -393,9 +398,10 @@ def _get_related_sources(related: str, relationship_fields: list[pymarc.Field], 
     notes: dict = {}
 
     for relfield in relationship_fields:
-        sid = relfield["w"]
-        snote = relfield["n"]
-        notes[sid] = snote
+        sid = relfield.get("w")
+        snote = relfield.get("n")
+        if sid and snote:
+            notes[sid] = snote
 
     # The related sources are first separated by "|~|" delineations between records, and then
     # "|:|" between fields in that record.

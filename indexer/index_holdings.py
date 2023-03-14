@@ -33,10 +33,14 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
                         sources.std_title AS source_title, sources.composer AS creator_name,
                         sources.record_type as record_type, sources.marc_source AS source_record_marc,
                         (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc,
-                        (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc
+                        (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc,
+                        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries
                     FROM {dbname}.holdings AS holdings
                     LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
-                    WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause};"""
+                    LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id
+                    LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
+                    WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause}
+                    GROUP BY holdings.id;"""
     )
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa

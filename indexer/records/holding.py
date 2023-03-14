@@ -1,6 +1,7 @@
 import logging
 from typing import TypedDict, Optional
 
+import orjson
 import pymarc
 import yaml
 
@@ -11,7 +12,7 @@ from indexer.helpers.utilities import (
     get_creator_name,
     to_solr_single,
     get_content_types,
-    get_parent_order_for_members,
+    get_parent_order_for_members, get_bibliographic_references_json,
 )
 from indexer.processors import holding as holding_processor
 
@@ -45,6 +46,7 @@ class HoldingIndexDocument(TypedDict):
     provenance_notes_sm: Optional[list[str]]
     external_resources_json: Optional[str]
     source_membership_order_i: Optional[int]
+    bibliographic_references_json: Optional[str]
 
 
 def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocument:
@@ -90,10 +92,20 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
 
     if c := record.get("institution_record_marc"):
         institution_marc_record: pymarc.Record = create_marc(c)
-        additional_institution_fields: Optional[
-            dict
-        ] = _index_additional_institution_fields(institution_marc_record)
+        additional_institution_fields: Optional[dict] = _index_additional_institution_fields(institution_marc_record)
         idx_document.update(additional_institution_fields)
+
+    if p := record.get("publication_entries"):
+        publication_entries: list = (
+            list({n.strip() for n in p.split("\n") if n and n.strip()})
+            if p else []
+        )
+        bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
+            marc_record, "691", publication_entries
+        )
+        idx_document.update({
+            "bibliographic_references_json": orjson.dumps(bibliographic_references).decode("utf-8")
+        })
 
     return idx_document
 

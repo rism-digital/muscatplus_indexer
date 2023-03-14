@@ -1,10 +1,7 @@
-import re
-import itertools
-from typing import Optional, TypedDict, Pattern, Set
-import pymarc
 import logging
+from typing import Optional, TypedDict, Iterator
 
-MARC_LINE_REGEX: Pattern = re.compile(r'^=(?P<idtag>001)\s{2}(?P<ident>.*)|(?P<tag>\d{3})\s{2}(?P<indicators>[0-9#| ]{2})(?P<subfields>.*)', re.S)
+import pymarc
 
 MarcSubField = list[str]
 
@@ -14,45 +11,47 @@ log = logging.getLogger("muscat_indexer")
 class MarcField(TypedDict):
     tag: str
     indicators: Optional[list]
-    subfields: Optional[list[str]]
+    subfields: Optional[list[pymarc.CodedSubfield]]
     data: Optional[str]
 
 
 def _parse_field(line: str) -> MarcField:
-    match = re.search(MARC_LINE_REGEX, line)
-    tag_value: str = match.group('tag') or match.group('idtag')
-    ind_value: str = match.group('indicators')
-    sub_value: str = match.group('subfields') or match.group('ident')
+    # General format: =TAG  ##$afoo$bbar
+    tag_value: str = line[1:4]
 
-    # Control fields are those in the 001-008 range. They do not have
+    # Control fields are those in the <010 range. They do not have
     # subfields, but have the data encoded in them directly.
     control: bool = tag_value.isdigit() and int(tag_value) < 10
-    subfields: Optional[list[str]]
-
-    if not control:
-        subf_list: list = sub_value.split("$") if sub_value else []
-        parsed_subfields: list[MarcSubField] = [_parse_subf(itm) for itm in subf_list if itm != '']
-        subfields = list(itertools.chain.from_iterable(parsed_subfields))
-        data = None
-    else:
+    subfields: Optional[list[pymarc.CodedSubfield]]
+    indicators: Optional[list[str]]
+    if control:
         subfields = None
-        data = f"{sub_value}"
+        indicators = None
+        data = line[6:]
+    else:
+        ind_value: str = line[6:8]
+        indicators: list = list(ind_value)
+        sub_value: str = line[9:]
+        subf_list: list = sub_value.split("$") if sub_value else []
+        subfields: list[pymarc.CodedSubfield] = [_parse_subf(itm) for itm in subf_list if itm != '']
+        data = None
 
     return {
         "tag": tag_value,
-        "indicators": list(ind_value) if not control else None,
+        "indicators": indicators,
         "subfields": subfields,
         "data": data
     }
 
 
-DOLLAR_PATT: Pattern = re.compile(r"_DOLLAR_")
-
-
-def _parse_subf(subf_value: str) -> list[str]:
+def _parse_subf(subf_value: str) -> pymarc.CodedSubfield:
     code: str = subf_value[0]
-    value: str = re.sub(DOLLAR_PATT, "$", subf_value[1:])
-    return [code, value]
+    value: str = subf_value[1:].strip()
+
+    if "_DOLLAR_" in value:
+        value = value.replace("_DOLLAR_", "$")
+
+    return pymarc.CodedSubfield(code, value)
 
 
 def create_marc(record: str) -> pymarc.Record:
@@ -62,14 +61,12 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    lines: list = re.split(r"[\r\n]+", record)
-    fields: list[MarcField] = [_parse_field(line) for line in lines if line != '']
+    lines: list = record.split("\n")
+    fields: Iterator[MarcField] = (_parse_field(line) for line in lines if line and line != '')
     r: pymarc.Record = pymarc.Record()
 
-    for field in fields:
-        r.add_field(
-            pymarc.Field(**field)
-        )
+    all_fields = (pymarc.Field(**field) for field in fields)
+    r.add_field(*all_fields)
 
     return r
 
@@ -82,58 +79,3 @@ def create_marc_list(marc_records: Optional[str]) -> list[pymarc.Record]:
     :return: A list of pymarc.Record objects
     """
     return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
-
-
-def record_value_lookup(record: pymarc.Record, tag: str, subfield: str) -> Optional[list]:
-    """
-    Takes a record, tag, and subfield and extracts the string value from that.
-    Returns None if the tag or subfield is not found.
-
-    :param record: a pymarc.Record instance
-    :param tag: A string representing a MARC tag name
-    :param subfield: A string representing the subfield
-    :return: A list of subfield values
-    """
-    fields: list[pymarc.Field] = record.get_fields(tag)
-    if not fields:
-        return None
-
-    subfields: Set[str] = {f[subfield] for f in fields if subfield in f}
-
-    return list(subfields)
-
-
-def id_field_lookup(record: pymarc.Record, id_type: str) -> Optional[list]:
-    """
-    A specialized lookup field for extracting specific ID types from the
-    repeatable 024 field. All other fields that do not match the value given
-    in the $2 field and the id_type parameter will be ignored.
-
-    Returns None if no 024 field is found with the id field match
-
-    :param record: A pymarc.Record instance
-    :param id_type: The value of the $2 field to match
-    :return: A list of values from the $a of the 024 that match the id type
-    """
-    id_fields: list[pymarc.Field] = record.get_fields("024")
-
-    if not id_fields:
-        return None
-
-    ids: list = []
-
-    for field in id_fields:
-        is_of_type: bool = len(field.get_subfields("2")) > 0 and field.get_subfields("2")[0] == id_type
-        # if the record is NOT the type we are looking for, continue.
-        if not is_of_type:
-            continue
-
-        id_val: list = field.get_subfields("a")
-        if not id_val:
-            continue
-
-        ids.append(
-            id_val[0]
-        )
-
-    return ids

@@ -5,7 +5,7 @@ import re
 import timeit
 from collections import OrderedDict
 from functools import wraps
-from typing import Iterable, Optional, TypedDict, Pattern, Callable
+from typing import Iterable, Optional, TypedDict, Pattern, Callable, Iterator
 
 import pymarc
 
@@ -108,9 +108,10 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     Default is "None"
 
     """
-    fields: list[pymarc.Field] = record.get_fields(field)
-    if not fields:
+    if field not in record:
         return None
+
+    fields: list[pymarc.Field] = record.get_fields(field)
 
     if subfield is None:
         return list(OrderedDict.fromkeys(f.value() for f in fields if f))
@@ -121,9 +122,12 @@ def to_solr_multi(record: pymarc.Record, field: str, subfield: Optional[str] = N
     retval: list[str] = []
 
     for fl in fields:
-        if grouped is True and fl["8"] is not None:
+        if subfield not in fl:
+            continue
+
+        if grouped is True and fl.get("8") is not None:
             retval += [subf.strip() for subf in fl.get_subfields(subfield)]
-        elif grouped is False and fl["8"] is None:
+        elif grouped is False and fl.get("8") is None:
             retval += [subf.strip() for subf in fl.get_subfields(subfield)]
         elif grouped is None:
             retval += [subf.strip() for subf in fl.get_subfields(subfield)]
@@ -178,10 +182,10 @@ def normalize_id(identifier: str) -> str:
 
 
 def clean_multivalued(fields: dict, field_name: str) -> Optional[list[str]]:
-    if not fields.get(field_name):
+    if field_name not in fields or fields[field_name] is None:
         return None
 
-    return [t for t in fields.get(field_name).splitlines() if t.strip()]
+    return [t.strip() for t in fields.get(field_name).splitlines() if t.strip()]
 
 
 class ExternalResourceDocument(TypedDict, total=False):
@@ -204,13 +208,13 @@ def external_resource_data(field: pymarc.Field) -> Optional[ExternalResourceDocu
     """
     external_resource: ExternalResourceDocument = {}
 
-    if u := field['u']:
+    if u := field.get('u'):
         external_resource["url"] = u
 
-    if k := field['x']:
+    if k := field.get('x'):
         external_resource['link_type'] = k
 
-    if (n := field['z']) or (n := field['y']):
+    if (n := field.get('z')) or (n := field.get('y')):
         external_resource["note"] = n
 
     return external_resource
@@ -247,13 +251,13 @@ def related_person(field: pymarc.Field, this_id: str, this_type: str, relationsh
 
     d: PersonRelationshipIndexDocument = {
         "id": f"{relationship_number}",
-        "name": field['a'],
+        "name": field.get('a'),
         "type": "person",
         # sources use $4 for relationship info; others use $i. Will ultimately return None if neither are found.
-        "relationship": field['4'] if '4' in field else field['i'],
-        "qualifier": field['j'],
-        "date_statement": field['d'],
-        "person_id": f"person_{field['0']}",
+        "relationship": field.get('4') if '4' in field else field.get('i'),
+        "qualifier": field.get('j'),
+        "date_statement": field.get('d'),
+        "person_id": f"person_{field.get('0')}",
         "this_id": this_id,
         "this_type": this_type
     }
@@ -278,9 +282,11 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
 
     :return: A list of person relationships, or None if not applicable.
     """
-    people: list = record.get_fields(*fields)
-    if not people:
+    record_tags: set = {f.tag for f in record}
+    if set(fields).isdisjoint(record_tags):
         return None
+
+    people: Iterator[pymarc.Field] = record.get_fields(*fields)
 
     # NB: enumeration starts at 1
     if ungrouped:
@@ -304,8 +310,8 @@ def __related_place(field: pymarc.Field, this_id: str, this_type: str, relations
         "type": "place",
         "this_id": this_id,
         "this_type": this_type,
-        "name": field["a"],
-        "relationship": field["i"] if 'i' in field else "xx",
+        "name": field.get("a"),
+        "relationship": field.get("i", "xx"),
         "place_id": f"place_{field['0']}"
     }
 
@@ -314,11 +320,12 @@ def __related_place(field: pymarc.Field, this_id: str, this_type: str, relations
 
 
 def get_related_places(record: pymarc.Record, record_id: str, record_type: str, fields: tuple = ("551", "751")) -> Optional[list[PlaceRelationshipIndexDocument]]:
-    places: list = record.get_fields(*fields)
-    if not places:
+    record_tags: set = {f.tag for f in record}
+    if set(fields).isdisjoint(record_tags):
         return None
+    places: list = record.get_fields(*fields)
 
-    return [__related_place(p, record_id, record_type, i) for i, p in enumerate(places, 1) if p]
+    return [__related_place(p, record_id, record_type, i) for i, p in enumerate(places, 1) if p and '0' in p]
 
 
 class InstitutionRelationshipIndexDocument(TypedDict):
@@ -347,11 +354,11 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
         "type": "institution",
         "this_id": this_id,
         "this_type": this_type,
-        "name": field["a"],
-        "department": field["d"],
+        "name": field.get("a"),
+        "department": field.get("d"),
         "institution_id": f"institution_{field['0']}",
         "relationship": relationship_code,
-        "qualifier": field['g'],
+        "qualifier": field.get('g'),
     }
 
     return {k: v for k, v in d.items() if v}
@@ -359,13 +366,15 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
 
 def get_related_institutions(record: pymarc.Record, record_id: str, record_type: str, fields: tuple = ("510", "710"), ungrouped: bool = False) -> Optional[list[InstitutionRelationshipIndexDocument]]:
     # Due to inconsistencies in authority records, these relationships are held in both 510 and 710 fields.
-    institutions: list = record.get_fields(*fields)
-    if not institutions:
+    record_tags: set = {f.tag for f in record}
+    if set(fields).isdisjoint(record_tags):
         return None
 
+    institutions: list = record.get_fields(*fields)
+
     if ungrouped:
-        return [related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and ('8' not in p)]
-    return [related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p]
+        return [related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and p.get('0') and ('8' not in p)]
+    return [related_institution(p, record_id, record_type, i) for i, p in enumerate(institutions, 1) if p and p.get('0')]
 
 
 BREAK_CONVERT: Pattern = re.compile(r"({{brk}})")
@@ -411,10 +420,10 @@ def get_catalogue_numbers(field: pymarc.Field, catalogue_fields: Optional[list[p
     elif field.tag == "240" and catalogue_fields:
         for cfield in catalogue_fields:
             if cfield.tag == "383" and 'a' in cfield:
-                catalogue_numbers.append(cfield['b'])
+                catalogue_numbers.append(cfield.get('b'))
             elif cfield.tag == "690":
-                wv: str = cfield['a'] or ""
-                wvno: str = cfield['n'] or ""
+                wv: str = cfield.get('a', "")
+                wvno: str = cfield.get('n', "")
                 wvtitle: str = f"{wv} {wvno}"
                 catalogue_numbers.append(wvtitle.strip())
 
@@ -428,20 +437,20 @@ def __title(field: pymarc.Field,
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
     d = {
-        "title": field['a'],
-        "subheading": field['k'],
-        "arrangement": field['o'],
-        "key_mode": field['r'],
+        "title": field.get('a'),
+        "subheading": field.get('k'),
+        "arrangement": field.get('o'),
+        "key_mode": field.get('r'),
         "catalogue_numbers": catalogue_numbers,
     }
 
-    scoring_summary_f: str = field['m']
+    scoring_summary_f: str = field.get('m')
     if scoring_summary_f:
         d['scoring_summary'] = list({val.strip() for val in scoring_summary_f.split(",") if val and val.strip()})
 
     if holding:
-        siglum = holding["a"]
-        shelfmark = holding["c"]
+        siglum = holding.get("a")
+        shelfmark = holding.get("c")
 
         d.update({
             "holding_siglum": siglum,
@@ -450,7 +459,7 @@ def __title(field: pymarc.Field,
 
     if source_type:
         d.update({
-            "source_type": source_type["a"]
+            "source_type": source_type.get("a")
         })
 
     return {k: v for k, v in d.items() if v}
@@ -464,9 +473,10 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
     :param field: The MARC tag; should either be 240 or 730.
     :return: A list of title structures suitable for storing as a JSON field.
     """
-    titles = record.get_fields(field)
-    if not titles:
+    if field not in record:
         return None
+
+    titles = record.get_fields(field)
 
     c: Optional[list[pymarc.Field]] = None
     h: Optional[pymarc.Field] = None
@@ -474,10 +484,10 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
     if field == "240":
         c = record.get_fields("383", "690")
         if "852" in record:
-            h = record["852"]
+            h = record.get("852")
 
         if "593" in record:
-            y = record["593"]
+            y = record.get("593")
 
     return [__title(t, c, h, y) for t in titles if t]
 
@@ -512,12 +522,12 @@ def tokenize_variants(variants: list[str]) -> list[str]:
 
 
 def get_creator_name(record: pymarc.Record) -> Optional[str]:
-    creator_field = record['100']
-    if not creator_field:
+    if "100" not in record:
         return None
 
-    creator_name: str = creator_field["a"].strip()
-    creator_dates: str = f" ({d})" if (d := creator_field["d"]) else ""
+    creator_field: Optional[pymarc.Field] = record.get('100')
+    creator_name: str = creator_field.get("a", "").strip()
+    creator_dates: str = f" ({d})" if (d := creator_field.get("d")) else ""
     return f"{creator_name}{creator_dates}"
 
 
@@ -577,17 +587,16 @@ def get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id
     if not parent_record:
         return None
 
-    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
-    if not child_record_fields:
+    if '774' not in parent_record:
         return None
 
+    child_record_fields: list[pymarc.Field] = parent_record.get_fields("774")
     idxs: list = []
     for field in child_record_fields:
-        subf: list = field.get_subfields("w")
-
-        if len(subf) == 0:
+        if 'w' not in field:
             continue
 
+        subf: list = field.get_subfields("w")
         subf_id = subf[0]
         if not subf_id:
             log.warning(f"Problem when searching the membership of {this_id} in {normalize_id(parent_record['001'].value())}.")
@@ -605,12 +614,8 @@ def get_parent_order_for_members(parent_record: Optional[pymarc.Record], this_id
     return None
 
 
-def get_bibliographic_reference_titles(record: pymarc.Record, field: str, references: Optional[list[str]]) -> Optional[list[str]]:
+def get_bibliographic_reference_titles(references: Optional[list[str]]) -> Optional[list[str]]:
     if not references:
-        return None
-
-    fields: list[pymarc.Field] = record.get_fields(field)
-    if not fields:
         return None
 
     ret: list = []
@@ -626,10 +631,10 @@ def get_bibliographic_references_json(record: pymarc.Record, field: str, referen
     if not references:
         return None
 
-    fields: list[pymarc.Field] = record.get_fields(field)
-    if not fields:
+    if field not in record:
         return None
 
+    fields: list[pymarc.Field] = record.get_fields(field)
     refs: dict = {}
     for r in references:
         # |:| is a unique field delimiter
@@ -645,7 +650,7 @@ def get_bibliographic_references_json(record: pymarc.Record, field: str, referen
             "id": literature_id,
             "formatted": refs[fid],
         }
-        if p := field["n"]:
+        if p := field.get("n"):
             r["pages"] = p
 
         outp.append(r)

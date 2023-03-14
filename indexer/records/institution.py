@@ -11,7 +11,7 @@ from indexer.helpers.utilities import normalize_id
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
-institution_profile: dict = yaml.full_load(open('profiles/institutions.yml', 'r'))
+institution_profile: dict = yaml.full_load(open("profiles/institutions.yml", "r"))
 
 
 class InstitutionIndexDocument(TypedDict):
@@ -32,8 +32,10 @@ class InstitutionIndexDocument(TypedDict):
     location_loc: Optional[str]
 
 
-def create_institution_index_document(record: dict, cfg: dict) -> InstitutionIndexDocument:
-    marc_record: pymarc.Record = create_marc(record['marc_source'])
+def create_institution_index_document(
+    record: dict, cfg: dict
+) -> InstitutionIndexDocument:
+    marc_record: pymarc.Record = create_marc(record["marc_source"])
     rism_id: str = normalize_id(marc_record["001"].value())
     institution_id: str = f"institution_{rism_id}"
 
@@ -51,13 +53,22 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
             if len(components) == 2:
                 inst_lookup[components[0]] = {"name": components[1]}
             elif len(components) == 3:
-                inst_lookup[components[0]] = {"name": components[2], "siglum": components[1]}
+                inst_lookup[components[0]] = {
+                    "name": components[2],
+                    "siglum": components[1],
+                }
             else:
                 continue
 
-    now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup, institution_id)
+    now_in: Optional[list[dict]] = _get_now_in_json(
+        marc_record, inst_lookup, institution_id
+    )
     has_digital_objects: bool = record.get("digital_objects") is not None
-    digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
+    digital_object_ids: list[str] = (
+        [f"dobject_{i}" for i in record["digital_objects"].split(",") if i]
+        if record.get("digital_objects")
+        else []
+    )
 
     institution_core: dict = {
         "id": institution_id,
@@ -73,16 +84,20 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
         "total_sources_i": total_count if rism_id != "40009305" else 0,
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
+        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
-    additional_fields: dict = process_marc_profile(institution_profile, institution_id, marc_record, institution_processor)
+    additional_fields: dict = process_marc_profile(
+        institution_profile, institution_id, marc_record, institution_processor
+    )
     institution_core.update(additional_fields)
 
     return institution_core
 
 
-def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id: str) -> Optional[list[dict]]:
+def _get_now_in_json(
+    record: pymarc.Record, related_institutions: dict, this_id: str
+) -> Optional[list[dict]]:
     if "580" not in record:
         return None
 
@@ -107,7 +122,7 @@ def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id:
             "name": f"{institution_info.get('name')}",
             "relationship": "now-in",
             "this_id": this_id,
-            "this_type": "institution"
+            "this_type": "institution",
         }
 
         if "siglum" in institution_info:
@@ -116,5 +131,3 @@ def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id:
         all_entries.append(now_in)
 
     return all_entries
-
-

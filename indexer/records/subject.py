@@ -17,8 +17,7 @@ def create_subject_index_document(subject: dict, cfg: dict) -> SubjectIndexDocum
         "type": "subject",
         "term_s": subject["term"],
         "alternate_terms_sm": clean_multivalued(subject, "alternate_terms"),
-        "notes_sm": clean_multivalued(subject, "notes")
+        "notes_sm": clean_multivalued(subject, "notes"),
     }
 
     return d
-

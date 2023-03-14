@@ -9,18 +9,24 @@ import yaml
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import get_record_type, get_source_type
-from indexer.helpers.utilities import to_solr_multi, get_creator_name, normalize_id, get_titles, get_content_types
+from indexer.helpers.utilities import (
+    to_solr_multi,
+    get_creator_name,
+    normalize_id,
+    get_titles,
+    get_content_types,
+)
 
 log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml", "r"))
 
-RenderedPAE = namedtuple('RenderedPAE', ['svg', 'midi', 'features'])
+RenderedPAE = namedtuple("RenderedPAE", ["svg", "midi", "features"])
 verovio.enableLog(False)
 VEROVIO_OPTIONS = {
     # "paeFeatures": True,
-    "footer": 'none',
-    "header": 'none',
-    "breaks": 'auto',
+    "footer": "none",
+    "header": "none",
+    "breaks": "auto",
     "pageMarginTop": 0,
     "pageMarginBottom": 25,  # Artificially inflate the bottom margin until rism-digital/verovio#1960 is fixed.
     "pageMarginLeft": 0,
@@ -34,7 +40,7 @@ VEROVIO_OPTIONS = {
     "svgFormatRaw": True,
     "svgRemoveXlink": True,
     "svgViewBox": True,
-    "xmlIdChecksum": True
+    "xmlIdChecksum": True,
 }
 vrv_tk = verovio.toolkit()
 vrv_tk.setInputFrom("pae")
@@ -93,19 +99,23 @@ def _get_pae_features(pae: str) -> dict:
     return vrv_tk.getDescriptiveFeatures({})
 
 
-def __incipit(field: pymarc.Field,
-              record: pymarc.Record,
-              parent_record_id: str,
-              record_type_id: int,
-              parent_record_title: str,
-              num: int,
-              country_codes: list[str]) -> IncipitIndexDocument:
-    record_id: str = normalize_id(record['001'].value())
-    work_number: str = f"{field.get('a', 'x')}.{field.get('b', 'x')}.{field.get('c', 'x')}"
+def __incipit(
+    field: pymarc.Field,
+    record: pymarc.Record,
+    parent_record_id: str,
+    record_type_id: int,
+    parent_record_title: str,
+    num: int,
+    country_codes: list[str],
+) -> IncipitIndexDocument:
+    record_id: str = normalize_id(record["001"].value())
+    work_number: str = (
+        f"{field.get('a', 'x')}.{field.get('b', 'x')}.{field.get('c', 'x')}"
+    )
     if work_number == "x.x.x":
         log.warning("Bad incipit number for %s", parent_record_id)
 
-    clef: Optional[str] = field.get('g')
+    clef: Optional[str] = field.get("g")
 
     log.debug("Creating incipits %s %s", parent_record_id, work_number)
 
@@ -115,7 +125,7 @@ def __incipit(field: pymarc.Field,
 
     # This is a rough measure of the length of an incipit is so that we can
     # identify and check the rendering of long incipits.
-    music_incipit: Optional[str] = field.get('p')
+    music_incipit: Optional[str] = field.get("p")
     incipit_len: int = 0
     if music_incipit:
         # ensure we strip any leading or trailing whitespace.
@@ -131,25 +141,31 @@ def __incipit(field: pymarc.Field,
 
     # Take the first value if our list of possible time signatures is greater than 0, else take the
     # original field value. This may also be None if field['o'] is None.
-    time_signature_data: Optional[str] = field.get('o')
+    time_signature_data: Optional[str] = field.get("o")
 
     # if we have more than two space characters in the string, collapse excessive ones into a since space
     # by splitting on space characters and then joining with a single space.
     if isinstance(time_signature_data, str) and time_signature_data.count(" ") > 2:
-        log.warning("Excessive spaces in incipit for source %s. Collapsing them.", record_id)
+        log.warning(
+            "Excessive spaces in incipit for source %s. Collapsing them.", record_id
+        )
         time_signature_data = " ".join(time_signature_data.split())
 
     tsig_components: list = []
     if time_signature_data and ";" in time_signature_data:
-        tsig_components = [s.strip() for s in time_signature_data.split(";") if s and s.strip()]
+        tsig_components = [
+            s.strip() for s in time_signature_data.split(";") if s and s.strip()
+        ]
 
-    time_sig: Optional[str] = tsig_components[0] if len(tsig_components) > 0 else time_signature_data
+    time_sig: Optional[str] = (
+        tsig_components[0] if len(tsig_components) > 0 else time_signature_data
+    )
 
     key_sig: str
     # If there is a value for the key signature field (and it's not an empty string) then
     # put an 'n' in place so that people can filter for incipits with no key signature.
-    if 'n' in field and field['n'].strip():
-        key_sig = field['n']
+    if "n" in field and field["n"].strip():
+        key_sig = field["n"]
     else:
         key_sig = "n"
 
@@ -169,24 +185,26 @@ def __incipit(field: pymarc.Field,
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
         "has_notation_b": incipit_len > 0,
         "incipit_len_i": incipit_len,
-        "text_incipit_sm": field.get_subfields('t'),
+        "text_incipit_sm": field.get_subfields("t"),
         "date_ranges_im": source_dates,
         "titles_sm": field.get_subfields("d"),
-        "role_s": field.get('e'),
+        "role_s": field.get("e"),
         "work_num_s": work_number,
-        "key_mode_s": field.get('r'),
+        "key_mode_s": field.get("r"),
         "key_s": key_sig,
         "timesig_s": time_sig.strip() if time_sig and len(time_sig) > 0 else None,
-        "clef_s": field.get('g'),
+        "clef_s": field.get("g"),
         "voice_instrument_s": field.get("m"),
         "is_mensural_b": is_mensural,
-        "general_notes_sm": field.get_subfields('q'),
-        "scoring_sm": field.get_subfields('z'),
+        "general_notes_sm": field.get_subfields("q"),
+        "scoring_sm": field.get_subfields("z"),
         "country_codes_sm": country_codes,
-        "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8") if standard_title_json else None
+        "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8")
+        if standard_title_json
+        else None,
     }
 
-    pae_code: Optional[str] = _incipit_to_pae(d) if d['music_incipit_s'] else None
+    pae_code: Optional[str] = _incipit_to_pae(d) if d["music_incipit_s"] else None
 
     # Run the PAE through Verovio
     if pae_code:
@@ -210,21 +228,29 @@ def __incipit(field: pymarc.Field,
             "intervals_bi": " ".join(intervals) if intervals else None,
             "intervals_diat_bi": " ".join(intervals_diat) if intervals_diat else None,
             "intervals_im": [int(i) for i in intervals] if intervals else None,
-            "intervals_diat_im": [int(i) for i in intervals_diat] if intervals_diat else None,
+            "intervals_diat_im": [int(i) for i in intervals_diat]
+            if intervals_diat
+            else None,
             "intervals_len_i": len(intervals) if intervals else None,
             "intervals_diat_len_i": len(intervals_diat) if intervals_diat else None,
-            "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8") if interval_ids else None,
+            "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8")
+            if interval_ids
+            else None,
             "pitches_bi": " ".join(pitches) if pitches else None,
             "pitches_diat_bi": " ".join(pitches_diat) if pitches_diat else None,
             "pitches_sm": pitches if pitches else None,
             "pitches_diat_sm": pitches_diat if pitches_diat else None,
             "pitches_len_i": len(pitches) if pitches else None,
             "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
-            "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8") if pitch_ids else None,
+            "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8")
+            if pitch_ids
+            else None,
             "contour_gross_sm": contour_gross if contour_gross else None,
             "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
             "contour_refined_sm": contour_refined if contour_refined else None,
-            "contour_refined_bi": " ".join(contour_refined) if contour_refined else None
+            "contour_refined_bi": " ".join(contour_refined)
+            if contour_refined
+            else None,
         }
 
         # update the record with the verovio features
@@ -233,14 +259,27 @@ def __incipit(field: pymarc.Field,
     return d
 
 
-def get_incipits(record: pymarc.Record,
-                 parent_record_id: str,
-                 parent_record_title: str,
-                 record_type_id: int,
-                 country_codes: list[str]) -> Optional[list]:
+def get_incipits(
+    record: pymarc.Record,
+    parent_record_id: str,
+    parent_record_title: str,
+    record_type_id: int,
+    country_codes: list[str],
+) -> Optional[list]:
     if "031" not in record:
         return None
 
     incipits: list = record.get_fields("031")
 
-    return [__incipit(f, record, parent_record_id, record_type_id, parent_record_title, num, country_codes) for num, f in enumerate(incipits, 1)]
+    return [
+        __incipit(
+            f,
+            record,
+            parent_record_id,
+            record_type_id,
+            parent_record_title,
+            num,
+            country_codes,
+        )
+        for num, f in enumerate(incipits, 1)
+    ]

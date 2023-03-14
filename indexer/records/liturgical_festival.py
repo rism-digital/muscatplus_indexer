@@ -11,13 +11,15 @@ class LiturgicalFestivalIndexDocument(TypedDict):
     notes_sm: Optional[list[str]]
 
 
-def create_liturgical_festival_document(festival: dict, cfg: dict) -> LiturgicalFestivalIndexDocument:
+def create_liturgical_festival_document(
+    festival: dict, cfg: dict
+) -> LiturgicalFestivalIndexDocument:
     d: LiturgicalFestivalIndexDocument = {
         "id": f"festival_{festival.get('id')}",
         "type": "liturgical_festival",
         "name_s": f"{festival.get('name')}",
         "alternate_terms_sm": clean_multivalued(festival, "alternate_terms"),
-        "notes_sm": clean_multivalued(festival, "notes")
+        "notes_sm": clean_multivalued(festival, "notes"),
     }
 
     return d

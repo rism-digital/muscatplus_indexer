@@ -13,7 +13,7 @@ log = logging.getLogger("muscat_indexer")
 def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
@@ -50,7 +50,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
 
     curs.execute(sql_statement)
 
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
         yield rows
 
     curs.close()

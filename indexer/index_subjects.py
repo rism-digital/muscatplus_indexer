@@ -11,19 +11,21 @@ def index_subjects(cfg: dict) -> bool:
     log.info("Indexing Subjects")
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"WHERE id = {cfg['id']}"
 
-    curs.execute(f"""SELECT 
+    curs.execute(
+        f"""SELECT 
         id, 
         term, 
         alternate_terms, 
         notes
         FROM {dbname}.standard_terms 
-        {id_where_clause};""")
+        {id_where_clause};"""
+    )
 
     all_subjects: list[dict] = curs._cursor.fetchall()
 

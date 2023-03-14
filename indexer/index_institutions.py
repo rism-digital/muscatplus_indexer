@@ -6,7 +6,10 @@ from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.institution import InstitutionIndexDocument, create_institution_index_document
+from indexer.records.institution import (
+    InstitutionIndexDocument,
+    create_institution_index_document,
+)
 
 log = logging.getLogger("muscat_indexer")
 
@@ -14,13 +17,14 @@ log = logging.getLogger("muscat_indexer")
 def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"AND i.id = {cfg['id']}"
 
-    curs.execute(f"""SELECT i.id, i.marc_source, i.siglum,
+    curs.execute(
+        f"""SELECT i.id, i.marc_source, i.siglum,
                         i.created_at AS created, i.updated_at AS updated,
                     (SELECT COUNT(DISTINCT allids)
                         FROM (
@@ -67,9 +71,10 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                          (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
-                        ) {id_where_clause};""")
+                        ) {id_where_clause};"""
+    )
 
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
         yield rows
 
     curs.close()
@@ -89,9 +94,13 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
 
     for record in institutions:
         try:
-            doc: InstitutionIndexDocument = create_institution_index_document(record, cfg)
+            doc: InstitutionIndexDocument = create_institution_index_document(
+                record, cfg
+            )
         except RequiredFieldException:
-            log.error("A required field was not found, so this document was not indexed.")
+            log.error(
+                "A required field was not found, so this document was not indexed."
+            )
             continue
 
         records_to_index.append(doc)

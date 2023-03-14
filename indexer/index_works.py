@@ -34,7 +34,7 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
 
     curs.execute(sql_query)
 
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
         yield rows
 
     curs.close()

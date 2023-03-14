@@ -16,7 +16,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
     log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
@@ -61,7 +61,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
 
     curs.execute(sql_query)
 
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
         yield rows
 
     curs.close()

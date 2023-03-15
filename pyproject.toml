@@ -25,6 +25,9 @@ name="testpypi"
 url="https://test.pypi.org/simple/"
 secondary=true
 
+[tool.black]
+line-length = 121
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

@@ -61,12 +61,10 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     # For consistency it's better to store the creator name with the dates attached!
     creator_name: Optional[str] = get_creator_name(source_marc_record)
     record_type_id: int = record["record_type"]
-    holding_record_id = f"{record['id']}h-{record['id']}"
 
     idx_document: HoldingIndexDocument = holding_index_document(
         marc_record,
         holding_id,
-        holding_record_id,
         membership_id,
         main_title,
         creator_name,
@@ -123,8 +121,7 @@ def _index_additional_institution_fields(record: pymarc.Record) -> dict:
 def holding_index_document(
     marc_record: pymarc.Record,
     holding_id: str,
-    record_id: str,
-    membership_id: str,
+    source_id: str,
     main_title: str,
     creator_name: Optional[str],
     record_type_id: int,
@@ -136,22 +133,26 @@ def holding_index_document(
 
     :param marc_record: A pymarc record instance
     :param holding_id: The holding record ID. In the case of MSS this is composed of the institution and source ids.
-    :param record_id: The id of the source record
-    :param membership_id: The id of the parent record; if no parent record, this is the same as the record_id.
+    :param source_id: The id of the parent record; if no parent record, this is the same as the record_id.
     :param main_title: The main title of the source record. Used primarily for link text, etc.
     :param creator_name: The name of the composer / author of the source. This is stored primarily for display.
     :return: A holding index document.
     """
+    if "-" in holding_id:
+        holding_id_alone, _ = holding_id.split("-")
+    else:
+        holding_id_alone = holding_id
+
     holding_core: dict = {
         "id": holding_id,
         "type": "holding",
-        "source_id": membership_id,
+        "source_id": source_id,
+        "holding_id": holding_id_alone,
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(marc_record),
         "main_title_s": main_title,
         "creator_name_s": creator_name,
-        "holding_id_sni": record_id,  # Convenience for URL construction; should not be used for lookups.
     }
 
     if mss_profile:

@@ -257,17 +257,14 @@ def _get_manuscript_holdings(
     if "852" not in record:
         return None
 
-    source_num: str = normalize_id(record["001"].value())
     holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
     # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
     # should result in a unique identifier for this holding record.
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
-    holding_record_id: str = f"{holding_institution_ident}-{source_num}"
 
     idx_doc: HoldingIndexDocument = holding_index_document(
         record,
         holding_id,
-        holding_record_id,
         source_id,
         main_title,
         creator_name,

@@ -262,6 +262,10 @@ def related_person(field: pymarc.Field, this_id: str, this_type: str, relationsh
         "this_type": this_type
     }
 
+    # The main entry (100) field does not have a relator code.
+    if not d.get("relationship") and field.tag != "100":
+        log.warning("A person was saved without a relator code. %s %s", this_id, d.get("name"))
+
     return {k: v for k, v in d.items() if v}
 
 
@@ -286,7 +290,7 @@ def get_related_people(record: pymarc.Record, record_id: str, record_type: str, 
     if set(fields).isdisjoint(record_tags):
         return None
 
-    people: Iterator[pymarc.Field] = record.get_fields(*fields)
+    people: list[pymarc.Field] = record.get_fields(*fields)
 
     # NB: enumeration starts at 1
     if ungrouped:
@@ -323,7 +327,7 @@ def get_related_places(record: pymarc.Record, record_id: str, record_type: str, 
     record_tags: set = {f.tag for f in record}
     if set(fields).isdisjoint(record_tags):
         return None
-    places: list = record.get_fields(*fields)
+    places: list[pymarc.Field] = record.get_fields(*fields)
 
     return [__related_place(p, record_id, record_type, i) for i, p in enumerate(places, 1) if p and '0' in p]
 
@@ -360,6 +364,9 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
         "relationship": relationship_code,
         "qualifier": field.get('g'),
     }
+
+    if not d.get("relationship"):
+        log.warning("An institution was saved without a relator code. %s %s", this_id, d.get("name"))
 
     return {k: v for k, v in d.items() if v}
 

@@ -109,9 +109,18 @@ def __incipit(
     country_codes: list[str],
 ) -> IncipitIndexDocument:
     record_id: str = normalize_id(record["001"].value())
+
+    work_num = field.get("a", "x")
+    mvt_num = field.get("b", "x")
+    inc_num = field.get("c", "x")
+
+    if not work_num.isdigit() or not mvt_num.isdigit() or not inc_num.isdigit():
+        log.error("Incipit numbering is not correct for %s (%s.%s.%s)", record_id, work_num, mvt_num, inc_num)
+
     work_number: str = (
         f"{field.get('a', 'x')}.{field.get('b', 'x')}.{field.get('c', 'x')}"
     )
+
     if work_number == "x.x.x":
         log.warning("Bad incipit number for %s", parent_record_id)
 

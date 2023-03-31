@@ -44,25 +44,27 @@ def create_institution_index_document(
     other_count: int = record.get("other_count", 0)
     total_count: int = record.get("total_source_count", 0)
 
+    now_in: Optional[list[dict]] = None
     related_institutions = record.get("related_institutions")
-    inst_lookup: dict = {}
     if related_institutions:
         all_related_institutions: list = related_institutions.split("\n")
-        for inst in all_related_institutions:
-            components: list = inst.split("|")
-            if len(components) == 2:
-                inst_lookup[components[0]] = {"name": components[1]}
-            elif len(components) == 3:
-                inst_lookup[components[0]] = {
-                    "name": components[2],
-                    "siglum": components[1],
-                }
-            else:
-                continue
+        related_institution_lookup = _process_related_institutions(all_related_institutions)
 
-    now_in: Optional[list[dict]] = _get_now_in_json(
-        marc_record, inst_lookup, institution_id
-    )
+        now_in = _get_now_in_json(
+            marc_record, related_institution_lookup, institution_id
+        )
+
+    contains: Optional[list[dict]] = None
+    contains_siglum: Optional[list] = None
+    referring_institutions: str = record.get("referring_institutions")
+    if referring_institutions:
+        all_referring_institutions: list = referring_institutions.split("\n")
+        referring_institution_lookup: dict = _process_related_institutions(all_referring_institutions)
+        contains = _get_contains_json(
+            referring_institution_lookup, institution_id
+        )
+        contains_siglum = [s['siglum'] for k, s in referring_institution_lookup.items() if s and 'siglum' in s]
+
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
         [f"dobject_{i}" for i in record["digital_objects"].split(",") if i]
@@ -78,11 +80,13 @@ def create_institution_index_document(
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
         "has_siglum_b": True if record.get("siglum") else False,
+        "contains_siglum_sm": contains_siglum,
         "source_count_i": source_count if rism_id != "40009305" else 0,
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
         "total_sources_i": total_count if rism_id != "40009305" else 0,
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
+        "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -95,8 +99,30 @@ def create_institution_index_document(
     return institution_core
 
 
+def _process_related_institutions(institutions: list) -> dict:
+    inst_lookup: dict = {}
+
+    for inst in institutions:
+        inst_id, siglum, name, place = inst.split("|")
+        d = {
+            "name": name
+        }
+
+        if siglum:
+            d['siglum'] = siglum
+
+        if place:
+            d['place'] = place
+
+        inst_lookup[inst_id] = d
+
+    return inst_lookup
+
+
 def _get_now_in_json(
-    record: pymarc.Record, related_institutions: dict, this_id: str
+        record: pymarc.Record,
+        related_institutions: dict,
+        this_id: str
 ) -> Optional[list[dict]]:
     if "580" not in record:
         return None
@@ -126,8 +152,38 @@ def _get_now_in_json(
         }
 
         if "siglum" in institution_info:
-            now_in["siglum"] = institution_info.get("siglum")
+            now_in["siglum"] = institution_info["siglum"]
+
+        if "place" in institution_info:
+            now_in["place"] = institution_info["place"]
 
         all_entries.append(now_in)
+
+    return all_entries
+
+
+def _get_contains_json(
+        contained_institutions: dict,
+        this_id: str
+) -> Optional[list[dict]]:
+    all_entries: list = []
+    for inst_id, inst_info in contained_institutions.items():
+        contained_by: dict = {
+            "id": f"{inst_id}",
+            "type": "institution",
+            "institution_id": f"institution_{inst_id}",
+            "name": inst_info['name'],
+            "relationship": "contained-by",
+            "this_id": this_id,
+            "this_type": "institution"
+        }
+
+        if "siglum" in inst_info:
+            contained_by["siglum"] = inst_info["siglum"]
+
+        if "place" in inst_info:
+            contained_by["place"] = inst_info["place"]
+
+        all_entries.append(contained_by)
 
     return all_entries

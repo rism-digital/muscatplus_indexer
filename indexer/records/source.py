@@ -168,6 +168,22 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     related_sources_json = orjson.dumps(related_sources).decode("utf-8") if related_sources else None
     works_catalogue_json = orjson.dumps(works_catalogue).decode("utf-8") if works_catalogue else None
+
+    related_institution_sigla = []
+    if a := record.get('additional_institution_info'):
+        all_institutions: list = a.split("\n") or []
+
+        for inst in all_institutions:
+            inst_components: list = inst.split("|:|")
+            if len(inst_components) != 4:
+                log.error("Could not parse institution entry %s", inst)
+                continue
+
+            inst_id, inst_name, relator_code, siglum = inst_components
+
+            if siglum:
+                related_institution_sigla.append(siglum)
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: dict = {
@@ -215,6 +231,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "work_ids": work_ids,
         "related_sources_json": related_sources_json,
         "works_catalogue_json": works_catalogue_json,
+        "related_institution_sigla_sm": related_institution_sigla,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

@@ -71,7 +71,12 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') 
                         FROM {dbname}.digital_object_links AS do 
                         WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id) 
-                        AS digital_objects
+                        AS digital_objects,
+                    (SELECT GROUP_CONCAT(DISTINCT ssi.relator_code SEPARATOR ',')
+                        FROM {dbname}.sources_to_institutions AS ssi
+                        LEFT JOIN {dbname}.sources AS sss ON ssi.source_id = sss.id
+                        WHERE i.id = ssi.institution_id AND sss.wf_stage = 1)
+                        AS source_relationships
                     FROM {dbname}.institutions AS i
                     WHERE i.siglum IS NOT NULL OR
                         ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR

@@ -45,17 +45,19 @@ def create_institution_index_document(
     total_count: int = record.get("total_source_count", 0)
 
     now_in: Optional[list[dict]] = None
+    now_in_sigla: Optional[list] = None
     related_institutions = record.get("related_institutions")
     if related_institutions:
         all_related_institutions: list = related_institutions.split("\n")
-        related_institution_lookup = _process_related_institutions(all_related_institutions)
+        related_institution_lookup: dict = _process_related_institutions(all_related_institutions)
 
         now_in = _get_now_in_json(
             marc_record, related_institution_lookup, institution_id
         )
+        now_in_sigla = [s['siglum'] for k, s in related_institution_lookup.items() if s and 'siglum' in s]
 
     contains: Optional[list[dict]] = None
-    contains_siglum: Optional[list] = None
+    contains_sigla: Optional[list] = None
     referring_institutions: str = record.get("referring_institutions")
     if referring_institutions:
         all_referring_institutions: list = referring_institutions.split("\n")
@@ -63,7 +65,7 @@ def create_institution_index_document(
         contains = _get_contains_json(
             referring_institution_lookup, institution_id
         )
-        contains_siglum = [s['siglum'] for k, s in referring_institution_lookup.items() if s and 'siglum' in s]
+        contains_sigla = [s['siglum'] for k, s in referring_institution_lookup.items() if s and 'siglum' in s]
 
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
@@ -71,16 +73,22 @@ def create_institution_index_document(
         if record.get("digital_objects")
         else []
     )
+    roles: list[str] = (
+        [s.strip() for s in record['source_relationships'].split(",") if s]
+        if record.get("source_relationships") else []
+    )
 
     institution_core: dict = {
         "id": institution_id,
         "type": "institution",
         "institution_id": institution_id,
         "rism_id": rism_id,
+        "roles_sm": roles,
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
         "has_siglum_b": True if record.get("siglum") else False,
-        "contains_siglum_sm": contains_siglum,
+        "contains_sigla_sm": contains_sigla,
+        "now_in_sigla_sm": now_in_sigla,
         "source_count_i": source_count if rism_id != "40009305" else 0,
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,

@@ -16,7 +16,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
     log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
@@ -27,14 +27,16 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         child.created_at AS created, child.updated_at AS updated, parent.marc_source AS parent_marc_source,
         child.record_type AS record_type, parent.std_title AS parent_title, parent.shelf_mark AS parent_shelfmark,
         parent.lib_siglum AS parent_siglum, parent.record_type AS parent_record_type,
-        (SELECT COUNT(hh.id) FROM {dbname}.holdings AS hh WHERE hh.source_id = child.id) AS holdings_count,
+        COUNT(DISTINCT h.id) AS holdings_count,
+        -- (SELECT COUNT(hh.id) FROM {dbname}.holdings AS hh WHERE hh.source_id = child.id) AS holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
-        (SELECT GROUP_CONCAT(DISTINCT srt.record_type SEPARATOR ',') FROM {dbname}.sources AS srt WHERE srt.source_id = child.id AND srt.source_id IS NOT NULL GROUP BY srt.source_id) AS child_record_types,
         (SELECT GROUP_CONCAT(DISTINCT parent_srt.record_type SEPARATOR ',') FROM {dbname}.sources AS parent_srt WHERE parent_srt.source_id = parent.id) AS parent_child_record_types,
         (SELECT GROUP_CONCAT(DISTINCT srm.composer SEPARATOR '\n') FROM {dbname}.sources AS srm WHERE srm.source_id IS NOT NULL AND srm.source_id = child.id) AS child_composer_list,
         (SELECT GROUP_CONCAT(DISTINCT ins.place SEPARATOR '|') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE ssi.marc_tag = '852' AND child.id = ssi.source_id) AS institution_places,
+        (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', ins.id, ins.name, IFNULL(ssi.relator_code, ''), IFNULL(ins.siglum, '')) SEPARATOR '\n') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE ssi.marc_tag != '852' AND child.id = ssi.source_id) AS additional_institution_info,
         (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', stos.relator_code, sours.marc_source) SEPARATOR '|~|') FROM {dbname}.sources_to_sources AS stos LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id WHERE marc_tag = '787' AND source_a_id = child.id) AS related_sources,
         (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Source' AND do.object_link_id = child.id) AS digital_objects,
+        (SELECT GROUP_CONCAT(DISTINCT sw.work_id SEPARATOR '\n') FROM {dbname}.sources_to_works AS sw WHERE sw.source_id = child.id) AS work_ids,
         GROUP_CONCAT(DISTINCT h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(DISTINCT hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,
@@ -60,7 +62,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
 
     curs.execute(sql_query)
 
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
         yield rows
 
     curs.close()

@@ -324,7 +324,9 @@ def process_date_statements(date_statements: list[str], record_id: str) -> Optio
     latest_dates: list[int] = []
 
     for statement in date_statements:
-        if not statement or statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)", "xxxx-xxxx", "uuuu-uuuu", "?", "??"):
+        if not statement or statement in {"[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]",
+                                          "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J",
+                                          "o.J.", "[s.n.]", "(s. d.)", "xxxx-xxxx", "uuuu-uuuu", "?", "??"}:
             continue
 
         try:

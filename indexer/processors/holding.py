@@ -7,7 +7,9 @@ from indexer.helpers.utilities import (
     to_solr_single,
     external_resource_data,
     get_related_people,
-    get_related_institutions, normalize_id, get_titles,
+    get_related_institutions,
+    normalize_id,
+    get_titles,
 )
 
 
@@ -22,21 +24,15 @@ def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     rism_id: str = normalize_id(record["001"].value())
     holding_id: str = f"holding_{rism_id}"
-    people = get_related_people(record, holding_id, "holding", fields=("700",), ungrouped=True)
-    if not people:
-        return None
-
-    return people
+    return get_related_people(
+        record, holding_id, "holding", fields=("700",), ungrouped=True
+    )
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
     rism_id: str = normalize_id(record["001"].value())
     holding_id: str = f"holding_{rism_id}"
-    institutions = get_related_institutions(record, holding_id, "holding", fields=("710",))
-    if not institutions:
-        return None
-
-    return institutions
+    return get_related_institutions(record, holding_id, "holding", fields=("710",))
 
 
 def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
@@ -46,7 +42,11 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ungrouped_ext_links: list = [external_resource_data(f) for f in record.get_fields("856") if f and ('8' not in f or f['8'] != "01")]
+    ungrouped_ext_links: list = [
+        external_resource_data(f)
+        for f in record.get_fields("856")
+        if f and ("8" not in f or f["8"] != "01")
+    ]
     if not ungrouped_ext_links:
         return None
 
@@ -59,7 +59,7 @@ def _has_external_resources(record: pymarc.Record) -> bool:
     :param record:
     :return:
     """
-    return '856' in record
+    return "856" in record
 
 
 def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:

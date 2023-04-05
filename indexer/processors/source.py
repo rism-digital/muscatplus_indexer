@@ -18,14 +18,15 @@ from indexer.helpers.utilities import (
     get_titles,
     related_person,
     related_institution,
-    get_catalogue_numbers, note_links
+    get_catalogue_numbers,
+    note_links,
 )
 
 log = logging.getLogger("muscat_indexer")
 
 
 def _get_has_incipits(record: pymarc.Record) -> bool:
-    return '031' in record
+    return "031" in record
 
 
 def _get_num_incipits(record: pymarc.Record) -> int:
@@ -33,18 +34,21 @@ def _get_num_incipits(record: pymarc.Record) -> int:
 
 
 def _get_creator_name(record: pymarc.Record) -> Optional[str]:
-    creator: pymarc.Field = record["100"]
-    if not creator:
+    if "100" not in record:
         return None
 
+    creator: pymarc.Field = record["100"]
     name: str = creator["a"].strip()
-    dates: str = f" ({d})" if (d := creator["d"]) else ""
+    dates: str = f" ({d})" if (d := creator.get("d")) else ""
 
     return f"{name}{dates}"
 
 
 def _get_creator_data(record: pymarc.Record) -> Optional[list]:
-    record_id: str = normalize_id(record['001'].value())
+    if "100" not in record:
+        return None
+
+    record_id: str = normalize_id(record["001"].value())
     source_id: str = f"source_{record_id}"
     creator = get_related_people(record, source_id, "source", fields=("100",))
     if not creator:
@@ -55,25 +59,20 @@ def _get_creator_data(record: pymarc.Record) -> Optional[list]:
 
 
 def _is_anonymous_creator(record: pymarc.Record) -> bool:
-    creator: Optional[pymarc.Field] = record["100"]
-    if not creator:
+    if "100" not in record:
         return False
 
-    person_id: str = creator['0']
-    return person_id == "30004985"
+    return to_solr_single(record, "100", "0") == "30004985"
 
 
 def _get_subjects(record: pymarc.Record) -> Optional[list[dict]]:
-    subject_fields: list[pymarc.Field] = record.get_fields("650")
-    if not subject_fields:
+    if "650" not in record:
         return None
+    subject_fields: list[pymarc.Field] = record.get_fields("650")
 
     ret: list = []
     for field in subject_fields:
-        d = {
-            "id": f"subject_{field['0']}",
-            "subject": field["a"]
-        }
+        d = {"id": f"subject_{field['0']}", "subject": field.get("a")}
         # Ensure we remove any None values
         ret.append({k: v for k, v in d.items() if v})
 
@@ -92,44 +91,52 @@ def _get_catalogue_numbers(record: pymarc.Record) -> Optional[list]:
     # all of them. The 'get_catalogue_numbers' function depends on having access to the
     # 240 field entry for the correct behaviour, so we also pass this in, even though
     # it doesn't hold any data for the catalogue numbers directly.
+    record_tags: set = {f.tag for f in record}
+    if {"240", "383", "690"}.isdisjoint(record_tags):
+        return None
+
     title_fields: list = record.get_fields("240")
-    if not title_fields:
-        return None
-
-    catalogue_record_fields: Optional[list[pymarc.Field]] = record.get_fields("383", "690")
-    if not catalogue_record_fields:
-        return None
-
-    catalogue_nums: list = get_catalogue_numbers(title_fields[0], catalogue_record_fields)
+    catalogue_record_fields: list[pymarc.Field] = record.get_fields("383", "690")
+    catalogue_nums: list = get_catalogue_numbers(
+        title_fields[0], catalogue_record_fields
+    )
 
     return catalogue_nums
 
 
 def _get_scoring_summary(record: pymarc.Record) -> Optional[list]:
     """Takes a list of instrument fields and ensures that they are split into a multi-valued representation. So a
-       value of:
-       ["V, orch", "B, guit"]
+    value of:
+    ["V, orch", "B, guit"]
 
-       Would result in an instrument list of:
+    Would result in an instrument list of:
 
-       ["V", "orch", "B", "guit"]
-       """
+    ["V", "orch", "B", "guit"]
+    """
     fields: Optional[list] = to_solr_multi(record, "240", "m")
     if not fields:
         return None
 
-    all_instruments: list = list({val.strip() for field in fields for val in field.split(",") if val and val.strip()})
+    all_instruments: list = list(
+        {
+            val.strip()
+            for field in fields
+            for val in field.split(",")
+            if val and val.strip()
+        }
+    )
     return all_instruments
 
 
 def _get_is_arrangement(record: pymarc.Record) -> bool:
-    fields: Optional[list] = record.get_fields("240")
-    if not fields:
+    if "240" not in record:
         return False
+
+    fields: Optional[list] = record.get_fields("240")
     valid_statements: tuple = ("Arr", "arr", "Arrangement")
     # if any 240 field has it, we mark the whole record as an arrangement.
     for field in fields:
-        if 'o' in field and field['o'] in valid_statements:
+        if "o" in field and field["o"] in valid_statements:
             return True
     return False
 
@@ -139,23 +146,23 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     if not date_statements:
         return None
 
-    record_id: str = normalize_id(record['001'].value())
+    record_id: str = normalize_id(record["001"].value())
 
     return process_date_statements(date_statements, record_id)
 
 
 def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[list]:
-    fields: list[pymarc.Field] = record.get_fields("510")
-    if not fields:
+    if "510" not in record:
         return None
+    fields: list[pymarc.Field] = record.get_fields("510")
 
     ret: list = []
 
     for field in fields:
         stmt: str = ""
-        if series := field['a']:
+        if series := field.get("a"):
             stmt += series
-        if ident := field['c']:
+        if ident := field.get("c"):
             stmt += f" {ident}"
 
         if stmt:
@@ -165,76 +172,65 @@ def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[list]:
 
 
 def __scoring(field: pymarc.Field) -> dict:
-    d = {
-        "voice_instrument": field["b"],
-        "number": field["c"]
-    }
+    d = {"voice_instrument": field.get("b"), "number": field.get("c")}
 
     return {k: v for k, v in d.items() if v}
 
 
 def _get_scoring_data(record: pymarc.Record) -> Optional[list[dict]]:
-    fields: list = record.get_fields("594")
-    if not fields:
+    if "594" not in record:
         return None
+    fields: list = record.get_fields("594")
 
     return [__scoring(i) for i in fields]
 
 
 def _get_dramatic_roles_data(record: pymarc.Record) -> Optional[list[dict]]:
-    fields: list[pymarc.Field] = record.get_fields("595")
-    if not fields:
+    if "595" not in record:
         return None
 
+    fields: list[pymarc.Field] = record.get_fields("595")
     ret: list = []
     for field in fields:
-        d = {
-            "standard_spelling": field['a'],
-            "source_spelling": field['u']
-        }
+        d = {"standard_spelling": field.get("a"), "source_spelling": field.get("u")}
         ret.append({k: v for k, v in d.items() if v})
 
     return ret
 
 
 def _get_rism_series_data(record: pymarc.Record) -> Optional[list[dict]]:
-    fields: list[pymarc.Field] = record.get_fields("596")
-    if not fields:
+    if "596" not in record:
         return None
+    fields: list[pymarc.Field] = record.get_fields("596")
 
     ret: list = []
     for field in fields:
-        d = {
-            "reference": field['a'],
-            "series_id": field['b']
-        }
+        d = {"reference": field.get("a"), "series_id": field.get("b")}
         ret.append({k: v for k, v in d.items() if v})
 
     return ret
 
 
 def _get_location_performance_data(record: pymarc.Record) -> Optional[list]:
+    if "651" not in record:
+        return None
+
     record_id: str = normalize_id(record["001"].value())
     source_id: str = f"source_{record_id}"
     places = get_related_places(record, source_id, "source", fields=("651",))
-    if not places:
-        return None
 
     return places
 
 
 def __liturgical_festival(field: pymarc.Field) -> dict:
-    d = {
-        "id": f"festival_{field['0']}",
-        "name": f"{field['a']}"
-    }
+    d = {"id": f"festival_{field['0']}", "name": f"{field.get('a', '')}"}
     return {k: v for k, v in d.items() if v}
 
 
 def _get_liturgical_festival_data(record: pymarc.Record) -> Optional[list[dict]]:
-    fields: list = record.get_fields("657")
-    if not fields:
+    if "657" not in record:
         return None
+    fields: list = record.get_fields("657")
 
     return [__liturgical_festival(f) for f in fields]
 
@@ -242,26 +238,31 @@ def _get_liturgical_festival_data(record: pymarc.Record) -> Optional[list[dict]]
 def __secondary_literature_data(field: pymarc.Field) -> dict:
     d = {
         "id": f"literature_{field['0']}",  # not used, but stored for now.
-        "reference": field['a'],
-        "number_page": field['n']
+        "reference": field.get("a"),
+        "number_page": field.get("n"),
     }
     return {k: v for k, v in d.items() if v}
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
-    source_id: str = f"source_{normalize_id(record['001'].value())}"
-    people = get_related_people(record, source_id, "source", fields=("700",), ungrouped=True)
-    if not people:
+    if "700" not in record:
         return None
+
+    source_id: str = f"source_{normalize_id(record['001'].value())}"
+    people = get_related_people(
+        record, source_id, "source", fields=("700",), ungrouped=True
+    )
 
     return people
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
-    source_id: str = f"source_{normalize_id(record['001'].value())}"
-    institutions = get_related_institutions(record, source_id, "source", fields=("710",))
-    if not institutions:
+    if "710" not in record:
         return None
+    source_id: str = f"source_{normalize_id(record['001'].value())}"
+    institutions = get_related_institutions(
+        record, source_id, "source", fields=("710",)
+    )
 
     return institutions
 
@@ -271,18 +272,18 @@ def _get_additional_titles_data(record: pymarc.Record) -> Optional[list]:
 
 
 def _get_source_membership(record: pymarc.Record) -> Optional[list]:
-    members: Optional[list] = record.get_fields("774")
-    if not members:
+    if "774" not in record:
         return None
+    members: Optional[list] = record.get_fields("774")
 
     ret: list = []
 
     for tag in members:
-        member_id: Optional[str] = tag["w"] or None
-        if not member_id:
+        if "w" not in tag:
             continue
+        member_id: str = tag["w"]
 
-        member_type: Optional[str] = tag["4"] or None
+        member_type: Optional[str] = tag.get("4")
         # Create an ID like "holding_12345" or "source_4567" (default)
         ret.append(
             f"{'source' if not member_type else member_type}_{normalize_id(member_id)}"
@@ -315,17 +316,16 @@ def _get_minimal_manuscript_holding_data(record: pymarc.Record) -> Optional[list
     :param record: A pymarc record
     :return: A dictionary containing enough information to link the holding institution and shelfmark.
     """
-    fields: list[pymarc.Field] = record.get_fields("852")
-    if not fields:
+    if "852" not in record:
         return None
-
+    fields: list[pymarc.Field] = record.get_fields("852")
     ret: list = []
     for field in fields:
         d = {
-            "siglum": field['a'],
-            "holding_institution_name": field['e'],
+            "siglum": field.get("a"),
+            "holding_institution_name": field.get("e"),
             "holding_institution_id": f"institution_{field['x']}",
-            "provenance": field['z']
+            "provenance": field.get("z"),
         }
         filtd: dict = {k: v for k, v in d.items() if v}
         ret.append(filtd)
@@ -340,11 +340,13 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ungrouped_ext_links: list = [external_resource_data(f) for f in record.get_fields("856") if f and ('8' not in f or f['8'] != "01")]
-    if not ungrouped_ext_links:
+    if "856" not in record:
         return None
-
-    return ungrouped_ext_links
+    return [
+        external_resource_data(f)
+        for f in record.get_fields("856")
+        if f and ("8" not in f or f["8"] != "01")
+    ]
 
 
 # Material Group Handling
@@ -358,11 +360,11 @@ def __mg_plate(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 028 can be either publisher number (30) or plate number (20), depending on the indicators
     # The default assumption is that it is a plate number, since this was the only value
     # available until 06/2021.
-    field_name: str = "publisher_numbers" if field.indicator1 == "3" else "plate_numbers"
+    field_name: str = (
+        "publisher_numbers" if field.indicator1 == "3" else "plate_numbers"
+    )
 
-    res: MaterialGroupFields = {
-        field_name: field.get_subfields('a')
-    }
+    res: MaterialGroupFields = {field_name: field.get_subfields("a")}
 
     return res
 
@@ -374,7 +376,7 @@ def __mg_pub(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
         "publisher_copyist": field.get_subfields("b"),
         "date_statements": field.get_subfields("c"),
         "printer_location": field.get_subfields("e"),
-        "printer_name": field.get_subfields("f")
+        "printer_name": field.get_subfields("f"),
     }
 
     return res
@@ -385,7 +387,7 @@ def __mg_phys(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     res: MaterialGroupFields = {
         "physical_extent": field.get_subfields("a"),
         "physical_details": field.get_subfields("b"),
-        "physical_dimensions": field.get_subfields("c")
+        "physical_dimensions": field.get_subfields("c"),
     }
 
     return res
@@ -398,7 +400,7 @@ def __mg_special(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # TODO: Remove $a when this is fixed in muscat.
     res: MaterialGroupFields = {
         "printing_techniques": field.get_subfields("a", "d"),
-        "book_formats": field.get_subfields("m")
+        "book_formats": field.get_subfields("m"),
     }
 
     return res
@@ -409,9 +411,7 @@ def __mg_general(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     note_values: list[str] = field.get_subfields("a")
     notes: list[str] = _reformat_notes(note_values)
 
-    res: MaterialGroupFields = {
-        "general_notes": notes
-    }
+    res: MaterialGroupFields = {"general_notes": notes}
 
     return res
 
@@ -421,17 +421,15 @@ def __mg_binding(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     note_values = field.get_subfields("a")
     notes = _reformat_notes(note_values)
 
-    res: MaterialGroupFields = {
-        "binding_notes": notes
-    }
+    res: MaterialGroupFields = {"binding_notes": notes}
 
     return res
 
 
 def __mg_parts(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 590
-    parts_held: list[str] = field.get_subfields('a')
-    parts_extent: list[str] = field.get_subfields('b')
+    parts_held: list[str] = field.get_subfields("a")
+    parts_extent: list[str] = field.get_subfields("b")
 
     part_held: str = parts_held[0] if len(parts_held) > 0 else ""
     part_extent: str = parts_extent[0] if len(parts_extent) > 0 else ""
@@ -439,7 +437,7 @@ def __mg_parts(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     res: MaterialGroupFields = {
         "parts_held": parts_held,
         "parts_extent": parts_extent,
-        "parts_held_extent": [f"{part_held}: {part_extent}"]
+        "parts_held_extent": [f"{part_held}: {part_extent}"],
     }
     return res
 
@@ -449,9 +447,7 @@ def __mg_watermark(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     note_values = field.get_subfields("a")
     notes = _reformat_notes(note_values)
 
-    res: MaterialGroupFields = {
-        "watermark_notes": notes
-    }
+    res: MaterialGroupFields = {"watermark_notes": notes}
     return res
 
 
@@ -459,8 +455,8 @@ def __mg_type(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 593
     # removes duplicate values
     res: MaterialGroupFields = {
-        "material_source_types": list(set(field.get_subfields('a'))),
-        "material_content_types": list(set(field.get_subfields('b')))
+        "material_source_types": list(set(field.get_subfields("a"))),
+        "material_content_types": list(set(field.get_subfields("b"))),
     }
 
     return res
@@ -474,9 +470,7 @@ def __mg_add_name(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
 
     # Use the same key in the output so that we can use the
     # same relationship serializer as we do for the full object.
-    res: MaterialGroupFields = {
-        "related_people_json": [person]
-    }
+    res: MaterialGroupFields = {"related_people_json": [person]}
 
     return res
 
@@ -485,18 +479,14 @@ def __mg_add_inst(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 710
     institution = related_institution(field, source_id, "material_group", 0)
 
-    res: MaterialGroupFields = {
-        "related_institutions_json": [institution]
-    }
+    res: MaterialGroupFields = {"related_institutions_json": [institution]}
 
     return res
 
 
 def __mg_external(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     # 856
-    res: MaterialGroupFields = {
-        "external_resources": [external_resource_data(field)]
-    }
+    res: MaterialGroupFields = {"external_resources": [external_resource_data(field)]}
     return res
 
 
@@ -539,24 +529,26 @@ def _get_material_groups(record: pymarc.Record) -> Optional[list[dict]]:
         "593": __mg_type,
         "700": __mg_add_name,
         "710": __mg_add_inst,
-        "856": __mg_external
+        "856": __mg_external,
     }
 
     # Filter any field instances that do not declare themselves part of a group ($8). This is
     # important especially for the fields that can occur on both the main record and in the
     # material group records, e.g., 700, 710, 856.
-    field_instances: list[pymarc.Field] = [f for f in record.get_fields(*member_fields.keys()) if '8' in f]
+    field_instances: list[pymarc.Field] = [
+        f for f in record.get_fields(*member_fields.keys()) if "8" in f
+    ]
 
     if not field_instances:
         return None
 
     # groupby needs the data to be pre-sorted.
-    data = sorted(field_instances, key=lambda f: str(f['8']))
+    data = sorted(field_instances, key=lambda f: str(f["8"]))
     field_groups: list = []
 
     # Organizes the fields by material groups. Creates a tuple of (groupnum, [fields...]) and appends
     # it to the field groups list.
-    for k, g in itertools.groupby(data, key=lambda f: str(f['8'])):
+    for k, g in itertools.groupby(data, key=lambda f: str(f["8"])):
         field_groups.append((k, list(g)))
 
     res: list = []
@@ -571,7 +563,7 @@ def _get_material_groups(record: pymarc.Record) -> Optional[list[dict]]:
             "id": f"mg_{gpnum}",
             "type": "material-group",
             "group_num": f"{gpnum}",
-            "source_id": source_id
+            "source_id": source_id,
         }
 
         for field in fields:

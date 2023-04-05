@@ -6,7 +6,10 @@ from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.institution import InstitutionIndexDocument, create_institution_index_document
+from indexer.records.institution import (
+    InstitutionIndexDocument,
+    create_institution_index_document,
+)
 
 log = logging.getLogger("muscat_indexer")
 
@@ -14,13 +17,14 @@ log = logging.getLogger("muscat_indexer")
 def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"AND i.id = {cfg['id']}"
 
-    curs.execute(f"""SELECT i.id, i.marc_source, i.siglum,
+    curs.execute(
+        f"""SELECT i.id, i.marc_source, i.siglum,
                         i.created_at AS created, i.updated_at AS updated,
                     (SELECT COUNT(DISTINCT allids)
                         FROM (
@@ -54,12 +58,25 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                        WHERE si.institution_id = i.id AND si.marc_tag = '710' 
                             AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
                        AS other_count,
-                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, reli.siglum, reli.name) SEPARATOR '\n')
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_b_id
                         WHERE rela.institution_a_id = i.id)
                         AS related_institutions,
-                    (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id) AS digital_objects
+                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                        FROM {dbname}.institutions_to_institutions AS rela
+                        LEFT JOIN muscat_development.institutions AS reli ON  reli.id = rela.institution_a_id
+                        WHERE rela.institution_b_id = i.id)
+                        AS referring_institutions,
+                    (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') 
+                        FROM {dbname}.digital_object_links AS do 
+                        WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id) 
+                        AS digital_objects,
+                    (SELECT GROUP_CONCAT(DISTINCT ssi.relator_code SEPARATOR ',')
+                        FROM {dbname}.sources_to_institutions AS ssi
+                        LEFT JOIN {dbname}.sources AS sss ON ssi.source_id = sss.id
+                        WHERE i.id = ssi.institution_id AND sss.wf_stage = 1)
+                        AS source_relationships
                     FROM {dbname}.institutions AS i
                     WHERE i.siglum IS NOT NULL OR
                         ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
@@ -67,9 +84,10 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                          (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
-                        ) {id_where_clause};""")
+                        ) {id_where_clause};"""
+    )
 
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
         yield rows
 
     curs.close()
@@ -89,9 +107,13 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
 
     for record in institutions:
         try:
-            doc: InstitutionIndexDocument = create_institution_index_document(record, cfg)
+            doc: InstitutionIndexDocument = create_institution_index_document(
+                record, cfg
+            )
         except RequiredFieldException:
-            log.error("A required field was not found, so this document was not indexed.")
+            log.error(
+                "A required field was not found, so this document was not indexed."
+            )
             continue
 
         records_to_index.append(doc)

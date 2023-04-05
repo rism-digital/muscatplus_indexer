@@ -6,8 +6,13 @@ import pymarc
 import orjson
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.utilities import to_solr_single_required, to_solr_multi, to_solr_multi_required, to_solr_single, \
+from indexer.helpers.utilities import (
+    to_solr_single_required,
+    to_solr_multi,
+    to_solr_multi_required,
+    to_solr_single,
     note_links
+)
 
 log = logging.getLogger("muscat_indexer")
 
@@ -25,21 +30,22 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             solr_document[solr_field] = field_config['value']
         elif 'processor' in field_config:
             # a processor function is configured for this field.
-            to_json = field_config.get("json", False)
-            fn_name = field_config['processor']
-            fn_exists = hasattr(processors, fn_name)
+            to_json: bool = field_config.get("json", False)
+            fn_name: str = field_config['processor']
+            fn_exists: bool = hasattr(processors, fn_name)
 
             if not fn_exists:
-                log.warning("Could not process Solr field %s for record %s; %s is a function that does not exist.", solr_field, doc_id, fn_name)
+                log.warning("Could not process Solr field %s for record %s; %s is a function that does not exist.",
+                            solr_field, doc_id, fn_name)
                 continue
 
             processor_fn: Callable = getattr(processors, fn_name)
             field_result: Any = processor_fn(marc)
 
             if required is True and field_result is None:
-                log.critical("%s requires a value, but one was not found for %s. Skipping this field.", solr_field, doc_id)
+                log.critical("%s requires a value, but one was not found for %s. Skipping this field.",
+                             solr_field, doc_id)
                 continue
-                # raise RequiredFieldException(f"{solr_field} requires a value, but one was not found for {doc_id}.")
 
             if field_result is None:
                 # don't bother to add this to the result, since it would
@@ -47,7 +53,7 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
                 continue
 
             if to_json:
-                field_result = orjson.dumps(field_result).decode("utf-8")
+                field_result: str = orjson.dumps(field_result).decode("utf-8")
 
             solr_document[solr_field] = field_result
         else:
@@ -76,7 +82,8 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             try:
                 field_result = processor_fn(marc, marc_field, marc_subfield, grouping, sortout)
             except RequiredFieldException:
-                log.critical("%s requires a value, but one was not found for %s. Skipping this field.", solr_field, doc_id)
+                log.critical("%s requires a value, but one was not found for %s. Skipping this field.",
+                             solr_field, doc_id)
                 continue
 
             if field_result is None:
@@ -97,7 +104,7 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
                 field_result = full_result
 
             if multiple and links:
-                link_result = []
+                link_result: list = []
                 for res in field_result:
                     linked = note_links(res)
                     link_result.append(linked)
@@ -114,7 +121,8 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
                     solr_document[solr_field] = prefixed_value
                 else:
                     value_type = type(field_result)
-                    log.warning("A value prefix was configured for %s on %s, but %s cannot be prefixed!", solr_field, doc_id, value_type)
+                    log.warning("A value prefix was configured for %s on %s, but %s cannot be prefixed!",
+                                solr_field, doc_id, value_type)
                     continue
             else:
                 solr_document[solr_field] = field_result

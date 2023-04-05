@@ -16,25 +16,7 @@ class RecordTypes(IntEnum):
     LIBRETTO_EDITION_CONTENT = 9
     THEORETICA_EDITION_CONTENT = 10
     COMPOSITE_VOLUME = 11
-
-
-RECORD_TYPES: dict = {
-    "unspecified": RecordTypes.UNSPECIFIED,
-    "collection": RecordTypes.COLLECTION,
-    "source": RecordTypes.SOURCE,
-    "edition_content": RecordTypes.EDITION_CONTENT,
-    "libretto_source": RecordTypes.LIBRETTO_SOURCE,
-    "libretto_edition": RecordTypes.LIBRETTO_EDITION,
-    "theoretica_source": RecordTypes.THEORETICA_SOURCE,
-    "theoretica_edition": RecordTypes.THEORETICA_EDITION,
-    "edition": RecordTypes.EDITION,
-    "libretto_edition_content": RecordTypes.LIBRETTO_EDITION_CONTENT,
-    "theoretica_edition_content": RecordTypes.THEORETICA_EDITION_CONTENT,
-    "composite_volume": RecordTypes.COMPOSITE_VOLUME,
-}
-
-# Invert record types table for lookups
-RECORD_TYPES_BY_ID: dict = {v: k for k, v in RECORD_TYPES.items()}
+    WORK = 99  # Special case, so we can index record types within Incipits
 
 
 def get_record_type(record_type_id: int) -> str:
@@ -45,10 +27,10 @@ def get_record_type(record_type_id: int) -> str:
             RecordTypes.THEORETICA_EDITION
     ):
         return "collection"
-    elif record_type_id in (
-            RecordTypes.COMPOSITE_VOLUME,
-    ):
+    elif record_type_id == RecordTypes.COMPOSITE_VOLUME:
         return "composite"
+    elif record_type_id == RecordTypes.WORK:
+        return "work"
     else:
         return "item"
 
@@ -70,10 +52,10 @@ def get_source_type(record_type_id: int) -> str:
             RecordTypes.THEORETICA_SOURCE
     ):
         return "manuscript"
-    elif record_type_id in (
-            RecordTypes.COMPOSITE_VOLUME,
-    ):
+    elif record_type_id == RecordTypes.COMPOSITE_VOLUME:
         return "composite"
+    elif record_type_id == RecordTypes.WORK:
+        return "work"
     else:
         return "unspecified"
 
@@ -114,24 +96,6 @@ def country_code_from_siglum(siglum: str) -> str:
     split_sig = siglum.split("-")
     return split_sig[0] if len(split_sig) > 0 else siglum
 
-
-# Until the data is cleaned up in Muscat, we can map these letters to
-# their appropriate values. This data comes from the old Kalliope database,
-# and the letters were used to indicate the following values:
-# K = Körperschaft
-# B = Bibliothek
-# V = Verleger
-# C = Kongress
-# F = Forschungsinstitut
-#
-# These then map to the "accepted" muscat values as follows.
-KALLIOPE_MAPPING = {
-    "K": "Institution",
-    "B": "Library",
-    "V": "Publisher",
-    "C": "Congress",
-    "F": "Research institute",
-}
 
 COUNTRY_CODE_MAPPING = {
     "A": ["Austria", "L'Autriche", "Österreich", ],

@@ -472,10 +472,14 @@ description = "Read, write and modify MARC bibliographic data"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-files = [
-    {file = "pymarc-4.2.2-py3-none-any.whl", hash = "sha256:569ba7f74d3fbbbee2158a3e8d9fdbd59466a1a8fb096bf60c26c8f986183a83"},
-    {file = "pymarc-4.2.2.tar.gz", hash = "sha256:a4a8a952e38f0e4714c58354b510abf09cbf3a45b0b991765bef0ce3f30b01dd"},
-]
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://gitlab.com/ahankinson/pymarc.git"
+reference = "update-records-fields-etc"
+resolved_reference = "5be3e00664a554d2f9e552375b726b6986bc5b67"
 
 [[package]]
 name = "pyparsing"
@@ -788,4 +792,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "72e67837179783bff79b6eb02c90f2bb19494fc9c98b698899a7f737433034db"
+content-hash = "2e8da202a5ee65e44f69b5bcd44823a87a782107c7c0a7088992435b2bc19423"

@@ -13,7 +13,7 @@ from indexer.helpers.utilities import (
     get_related_institutions,
     get_related_places,
     external_resource_data,
-    tokenize_variants
+    tokenize_variants,
 )
 
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
@@ -24,12 +24,17 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_external_ids(record: pymarc.Record) -> Optional[list]:
-    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later. """
-    ids: list = record.get_fields('024')
-    if not ids:
+    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later."""
+    if "024" not in record:
         return None
 
-    return [f"{idf['2'].lower()}:{idf['a']}" for idf in ids if (idf and idf['2'])]
+    ids: list = record.get_fields("024")
+
+    return [
+        f"{idf['2'].lower()}:{idf['a']}"
+        for idf in ids
+        if (idf and idf.get("2") and idf.get("a"))
+    ]
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
@@ -37,7 +42,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     if not date_statements:
         return None
 
-    record_id: str = normalize_id(record['001'].value())
+    record_id: str = normalize_id(record["001"].value())
 
     return process_date_statements(date_statements, record_id)
 
@@ -52,18 +57,19 @@ def _get_name_variants(record: pymarc.Record) -> Optional[list[str]]:
 
 
 def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
-    name_variants = record.get_fields("400")
-    if not name_variants:
+    if "400" not in record:
         return None
+
+    name_variants = record.get_fields("400")
 
     names = defaultdict(list)
     for subf in name_variants:
-        if not (n := subf["a"]):
+        if "a" not in subf:
             continue
         # If no $j, then use the "xx" code which will represent "unknown".
         # NB: Some records have "xx" for $j as well, even though it's not an 'official' code.
-        category: str = subf["j"] or "xx"
-        names[category].append(n)
+        category: str = subf.get("j", "xx")
+        names[category].append(subf["a"])
 
     # Sort the variants alphabetically and format as list
     name_variants: list = [{"type": k, "variants": sorted(v)} for k, v in names.items()]
@@ -74,21 +80,25 @@ def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     record_id: str = normalize_id(record["001"].value())
     person_id: str = f"person_{record_id}"
-    people: Optional[list] = get_related_people(record, person_id, "person", ungrouped=True)
+    people: Optional[list] = get_related_people(
+        record, person_id, "person", ungrouped=True
+    )
 
     return people
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
-    record_id: str = normalize_id(record['001'].value())
+    record_id: str = normalize_id(record["001"].value())
     person_id: str = f"person_{record_id}"
-    institutions: Optional[list] = get_related_institutions(record, person_id, "person", ungrouped=True)
+    institutions: Optional[list] = get_related_institutions(
+        record, person_id, "person", ungrouped=True
+    )
 
     return institutions
 
 
 def _get_related_places_data(record: pymarc.Record) -> Optional[list]:
-    record_id: str = normalize_id(record['001'].value())
+    record_id: str = normalize_id(record["001"].value())
     person_id: str = f"person_{record_id}"
     places: Optional[list] = get_related_places(record, person_id, "person")
 
@@ -101,8 +111,7 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     :param record: A pymarc record
     :return: A list of external links. This will be serialized to a string for storage in Solr.
     """
-    ext_links: list = [external_resource_data(f) for f in record.get_fields("856")]
-    if not ext_links:
+    if "856" not in record:
         return None
 
-    return ext_links
+    return [external_resource_data(f) for f in record.get_fields("856")]

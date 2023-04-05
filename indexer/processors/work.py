@@ -6,18 +6,21 @@ from indexer.helpers.utilities import normalize_id, get_related_people
 
 
 def _get_creator_name(record: pymarc.Record) -> Optional[str]:
-    creator: pymarc.Field = record["100"]
-    if not creator:
+    if "100" not in record:
         return None
 
-    name: str = creator["a"].strip()
-    dates: str = f" ({d})" if (d := creator["d"]) else ""
+    creator: pymarc.Field = record["100"]
+    name: str = creator.get("a", "").strip()
+    dates: str = f" ({d})" if (d := creator.get("d")) else ""
 
     return f"{name}{dates}"
 
 
 def _get_creator_data(record: pymarc.Record) -> Optional[list]:
-    record_id: str = normalize_id(record['001'].value())
+    if "100" not in record:
+        return None
+
+    record_id: str = normalize_id(record["001"].value())
     source_id: str = f"source_{record_id}"
     creator = get_related_people(record, source_id, "source", fields=("100",))
     if not creator:

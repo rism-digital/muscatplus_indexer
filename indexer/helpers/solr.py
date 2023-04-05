@@ -38,8 +38,7 @@ def submit_to_solr(records: list, cfg: dict) -> bool:
     log.debug("Indexing records to Solr")
     res = httpx.post(f"{solr_idx_server}/update",
                      content=orjson.dumps(records),
-                     headers={"Content-Type": "application/json",
-                              "Content-Encoding": "gzip"},
+                     headers={"Content-Type": "application/json"},
                      timeout=None,
                      verify=False)
 

@@ -14,7 +14,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict, None, None]:
     log.info("Getting list of digital objects to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
@@ -28,7 +28,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict, None, None]:
        {id_where_clause};"""
 
     curs.execute(sql_query)
-    while rows := curs._cursor.fetchmany(cfg['mysql']['resultsize']):  # noqa
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
         yield rows
 
     curs.close()

@@ -11,13 +11,14 @@ def index_places(cfg: dict) -> bool:
     log.info("Indexing Places")
     conn = mysql_pool.connection()
     curs = conn.cursor()
-    dbname: str = cfg['mysql']['database']
+    dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"AND p.id = {cfg['id']}"
 
-    curs.execute(f"""SELECT
+    curs.execute(
+        f"""SELECT
                 p.id AS id,
                 p.name AS name,
                 p.country AS country,
@@ -36,7 +37,8 @@ def index_places(cfg: dict) -> bool:
                 (SELECT COUNT(pp.person_id) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) > 0 OR
                 (SELECT COUNT(ip.institution_id) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) > 0 OR
                 (SELECT COUNT(hp.holding_id) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0 
-                {id_where_clause};""")
+                {id_where_clause};"""
+    )
 
     all_places: list[dict] = curs._cursor.fetchall()
 

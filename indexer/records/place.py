@@ -23,7 +23,7 @@ def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
     :param place: A dictionary result from the places table
     :return: A Solr index document.
     """
-    rism_id: str = place.get('id')
+    rism_id: str = place.get("id")
     d: PlaceIndexDocument = {
         "id": f"place_{rism_id}",
         "rism_id": rism_id,
@@ -37,7 +37,7 @@ def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
         "sources_count_i": place.get("sources_count", 0),
         "people_count_i": place.get("people_count", 0),
         "institutions_count_i": place.get("institutions_count", 0),
-        "holdings_count_i": place.get("holdings_count", 0)
+        "holdings_count_i": place.get("holdings_count", 0),
     }
 
     return d

@@ -11,7 +11,7 @@ from indexer.helpers.utilities import normalize_id
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
-institution_profile: dict = yaml.full_load(open('profiles/institutions.yml', 'r'))
+institution_profile: dict = yaml.full_load(open("profiles/institutions.yml", "r"))
 
 
 class InstitutionIndexDocument(TypedDict):
@@ -32,8 +32,10 @@ class InstitutionIndexDocument(TypedDict):
     location_loc: Optional[str]
 
 
-def create_institution_index_document(record: dict, cfg: dict) -> InstitutionIndexDocument:
-    marc_record: pymarc.Record = create_marc(record['marc_source'])
+def create_institution_index_document(
+    record: dict, cfg: dict
+) -> InstitutionIndexDocument:
+    marc_record: pymarc.Record = create_marc(record["marc_source"])
     rism_id: str = normalize_id(marc_record["001"].value())
     institution_id: str = f"institution_{rism_id}"
 
@@ -42,55 +44,102 @@ def create_institution_index_document(record: dict, cfg: dict) -> InstitutionInd
     other_count: int = record.get("other_count", 0)
     total_count: int = record.get("total_source_count", 0)
 
+    now_in: Optional[list[dict]] = None
+    now_in_sigla: Optional[list] = None
     related_institutions = record.get("related_institutions")
-    inst_lookup: dict = {}
     if related_institutions:
         all_related_institutions: list = related_institutions.split("\n")
-        for inst in all_related_institutions:
-            components: list = inst.split("|")
-            if len(components) == 2:
-                inst_lookup[components[0]] = {"name": components[1]}
-            elif len(components) == 3:
-                inst_lookup[components[0]] = {"name": components[2], "siglum": components[1]}
-            else:
-                continue
+        related_institution_lookup: dict = _process_related_institutions(all_related_institutions)
 
-    now_in: Optional[list[dict]] = _get_now_in_json(marc_record, inst_lookup, institution_id)
+        now_in = _get_now_in_json(
+            marc_record, related_institution_lookup, institution_id
+        )
+        now_in_sigla = [s['siglum'] for k, s in related_institution_lookup.items() if s and 'siglum' in s]
+
+    contains: Optional[list[dict]] = None
+    contains_sigla: Optional[list] = None
+    referring_institutions: str = record.get("referring_institutions")
+    if referring_institutions:
+        all_referring_institutions: list = referring_institutions.split("\n")
+        referring_institution_lookup: dict = _process_related_institutions(all_referring_institutions)
+        contains = _get_contains_json(
+            referring_institution_lookup, institution_id
+        )
+        contains_sigla = [s['siglum'] for k, s in referring_institution_lookup.items() if s and 'siglum' in s]
+
     has_digital_objects: bool = record.get("digital_objects") is not None
-    digital_object_ids: list[str] = [f"dobject_{i}" for i in record['digital_objects'].split(",") if i] if record.get('digital_objects') else []
+    digital_object_ids: list[str] = (
+        [f"dobject_{i}" for i in record["digital_objects"].split(",") if i]
+        if record.get("digital_objects")
+        else []
+    )
+    roles: list[str] = (
+        [s.strip() for s in record['source_relationships'].split(",") if s]
+        if record.get("source_relationships") else []
+    )
 
     institution_core: dict = {
         "id": institution_id,
         "type": "institution",
         "institution_id": institution_id,
         "rism_id": rism_id,
+        "roles_sm": roles,
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
         "has_siglum_b": True if record.get("siglum") else False,
+        "contains_sigla_sm": contains_sigla,
+        "now_in_sigla_sm": now_in_sigla,
         "source_count_i": source_count if rism_id != "40009305" else 0,
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
         "total_sources_i": total_count if rism_id != "40009305" else 0,
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
+        "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ")
+        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
-    additional_fields: dict = process_marc_profile(institution_profile, institution_id, marc_record, institution_processor)
+    additional_fields: dict = process_marc_profile(
+        institution_profile, institution_id, marc_record, institution_processor
+    )
     institution_core.update(additional_fields)
 
     return institution_core
 
 
-def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id: str) -> Optional[list[dict]]:
-    now_in_fields: list[pymarc.Field] = record.get_fields("580")
-    if not now_in_fields:
+def _process_related_institutions(institutions: list) -> dict:
+    inst_lookup: dict = {}
+
+    for inst in institutions:
+        inst_id, siglum, name, place = inst.split("|")
+        d = {
+            "name": name
+        }
+
+        if siglum:
+            d['siglum'] = siglum
+
+        if place:
+            d['place'] = place
+
+        inst_lookup[inst_id] = d
+
+    return inst_lookup
+
+
+def _get_now_in_json(
+        record: pymarc.Record,
+        related_institutions: dict,
+        this_id: str
+) -> Optional[list[dict]]:
+    if "580" not in record:
         return None
 
+    now_in_fields: list[pymarc.Field] = record.get_fields("580")
     all_entries: list = []
 
     for num, entry in enumerate(now_in_fields, 1):
-        institution_id = entry["0"]
+        institution_id = entry.get("0")
         if not institution_id:
             log.warning(f"Got a 'now in' record with no identifier.")
             continue
@@ -107,14 +156,42 @@ def _get_now_in_json(record: pymarc.Record, related_institutions: dict, this_id:
             "name": f"{institution_info.get('name')}",
             "relationship": "now-in",
             "this_id": this_id,
-            "this_type": "institution"
+            "this_type": "institution",
         }
 
         if "siglum" in institution_info:
-            now_in["siglum"] = institution_info.get("siglum")
+            now_in["siglum"] = institution_info["siglum"]
+
+        if "place" in institution_info:
+            now_in["place"] = institution_info["place"]
 
         all_entries.append(now_in)
 
     return all_entries
 
 
+def _get_contains_json(
+        contained_institutions: dict,
+        this_id: str
+) -> Optional[list[dict]]:
+    all_entries: list = []
+    for inst_id, inst_info in contained_institutions.items():
+        contained_by: dict = {
+            "id": f"{inst_id}",
+            "type": "institution",
+            "institution_id": f"institution_{inst_id}",
+            "name": inst_info['name'],
+            "relationship": "contained-by",
+            "this_id": this_id,
+            "this_type": "institution"
+        }
+
+        if "siglum" in inst_info:
+            contained_by["siglum"] = inst_info["siglum"]
+
+        if "place" in inst_info:
+            contained_by["place"] = inst_info["place"]
+
+        all_entries.append(contained_by)
+
+    return all_entries

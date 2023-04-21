@@ -11,6 +11,8 @@ solr:
   server: http://localhost:8983/solr
   indexing_core: muscatplus_indexing
   live_core: muscatplus_live
+  diamm_indexing_core: mp_diamm_indexing
+  diamm_live_core: mp_diamm_live
 
 indexing:
   extended_incipits: yes

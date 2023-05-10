@@ -437,6 +437,9 @@ initial_entry_s:
 siglum_s:
   field: "852"
   subfield: "a"
+department_s:
+  field: "852"
+  subfield: "b"
 shelfmark_s:
   field: "852"
   subfield: "c"

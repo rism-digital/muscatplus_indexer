@@ -11,12 +11,13 @@ mysqlclient = "^2.0.1"
 pyyaml = "^6.0.0"
 uvloop = "^0.17.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
-httpx = "^0.23.0"
+httpx = "^0.24.0"
 verovio = { version = "^3.14.0", allow-prereleases = true }
 sentry-sdk = "^1.10.1"
 orjson = "^3.8.3"
-pymarc = {git = "https://gitlab.com/ahankinson/pymarc.git", rev = "update-records-fields-etc"}
+pymarc = "^5.0.0"
 psycopg = {extras = ["pool"], version = "^3.1.8"}
+small-asc = {git = "https://github.com/rism-digital/small-asc.git", rev = "main"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.0"

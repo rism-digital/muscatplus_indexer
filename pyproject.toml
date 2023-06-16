@@ -23,9 +23,13 @@ small-asc = {git = "https://github.com/rism-digital/small-asc.git", rev = "main"
 ipython = "^8.0.0"
 
 [[tool.poetry.source]]
-name="testpypi"
-url="https://test.pypi.org/simple/"
-secondary=true
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+priority = "supplemental"
 
 [tool.black]
 line-length = 121

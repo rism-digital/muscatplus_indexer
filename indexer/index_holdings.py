@@ -17,10 +17,10 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
 
     # work around a bug with collations
     curs.execute(
-        f"""alter table {dbname}.institutions
-            modify siglum varchar(32) collate utf8mb4_0900_as_cs null;
-        alter table {dbname}.holdings
-            modify lib_siglum varchar(255) collate utf8mb4_0900_as_cs null;"""
+        f"""alter table {dbname}.holdings
+            modify lib_siglum varchar(32) collate utf8mb4_0900_as_cs null;
+            alter table {dbname}.sources
+            modify lib_siglum varchar(32) collate utf8mb4_0900_as_cs null;"""
     )
 
     id_where_clause: str = ""

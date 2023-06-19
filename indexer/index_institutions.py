@@ -58,12 +58,12 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                        WHERE si.institution_id = i.id AND si.marc_tag = '710' 
                             AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
                        AS other_count,
-                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_b_id
                         WHERE rela.institution_a_id = i.id)
                         AS related_institutions,
-                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_a_id
                         WHERE rela.institution_b_id = i.id)

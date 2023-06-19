@@ -6,10 +6,19 @@ import orjson
 log = logging.getLogger("muscat_indexer")
 
 
+def empty_diamm_solr_core(cfg: dict) -> bool:
+    idx_core = cfg["solr"]["diamm_indexing_core"]
+    return _empty_solr_core(cfg, idx_core)
+
+
 def empty_solr_core(cfg: dict) -> bool:
+    idx_core = cfg['solr']['indexing_core']
+    return _empty_solr_core(cfg, idx_core)
+
+
+def _empty_solr_core(cfg: dict, core: str) -> bool:
     solr_address = cfg['solr']['server']
-    solr_idx_core = cfg['solr']['indexing_core']
-    solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
+    solr_idx_server: str = f"{solr_address}/{core}"
 
     res = httpx.post(f"{solr_idx_server}/update?commit=true",
                      content=orjson.dumps({"delete": {"query": "*:*"}}),
@@ -23,7 +32,17 @@ def empty_solr_core(cfg: dict) -> bool:
     return False
 
 
+def submit_to_diamm_solr(records: list, cfg: dict) -> bool:
+    solr_idx_core = cfg['solr']['diamm_indexing_core']
+    return _submit_to_solr(records, cfg, solr_idx_core)
+
+
 def submit_to_solr(records: list, cfg: dict) -> bool:
+    solr_idx_core = cfg['solr']['indexing_core']
+    return _submit_to_solr(records, cfg, solr_idx_core)
+
+
+def _submit_to_solr(records: list, cfg: dict, core: str) -> bool:
     """
     Submits a set of records to a Solr server.
 
@@ -32,8 +51,7 @@ def submit_to_solr(records: list, cfg: dict) -> bool:
     :return: True if successful, false if not.
     """
     solr_address = cfg['solr']['server']
-    solr_idx_core = cfg['solr']['indexing_core']
-    solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
+    solr_idx_server: str = f"{solr_address}/{core}"
 
     log.debug("Indexing records to Solr")
     res = httpx.post(f"{solr_idx_server}/update",
@@ -51,10 +69,19 @@ def submit_to_solr(records: list, cfg: dict) -> bool:
     return False
 
 
+def diamm_commit_changes(cfg: dict) -> bool:
+    solr_idx_core = cfg['solr']['diamm_indexing_core']
+    return _commit_changes(cfg, solr_idx_core)
+
+
 def commit_changes(cfg: dict) -> bool:
-    solr_address = cfg['solr']['server']
     solr_idx_core = cfg['solr']['indexing_core']
-    solr_idx_server: str = f"{solr_address}/{solr_idx_core}"
+    return _commit_changes(cfg, solr_idx_core)
+
+
+def _commit_changes(cfg: dict, core: str) -> bool:
+    solr_address = cfg['solr']['server']
+    solr_idx_server: str = f"{solr_address}/{core}"
 
     log.info("Committing changes")
     res = httpx.get(f"{solr_idx_server}/update?commit=true",

@@ -17,18 +17,18 @@ def _parse_field(line: str) -> pymarc.Field:
         indicators: list = list(ind_value)
         sub_value: str = line[9:]
         subf_list: list = sub_value.split("$") if sub_value else []
-        subfields: list[pymarc.CodedSubfield] = [_parse_subf(itm) for itm in subf_list if itm != '']
+        subfields: list[pymarc.Subfield] = [_parse_subf(itm) for itm in subf_list if itm != '']
         return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 
-def _parse_subf(subf_value: str) -> pymarc.CodedSubfield:
+def _parse_subf(subf_value: str) -> pymarc.Subfield:
     code: str = subf_value[0]
     value: str = subf_value[1:].strip()
 
     if "_DOLLAR_" in value:
         value = value.replace("_DOLLAR_", "$")
 
-    return pymarc.CodedSubfield(code, value)
+    return pymarc.Subfield(code, value)
 
 
 def create_marc(record: str) -> pymarc.Record:

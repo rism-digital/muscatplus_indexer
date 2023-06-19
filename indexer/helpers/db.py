@@ -1,8 +1,11 @@
+import logging
+
 import MySQLdb
 import yaml
 from MySQLdb.cursors import SSDictCursor
 from dbutils.pooled_db import PooledDB
 
+log = logging.getLogger("muscat_indexer")
 idx_config: dict = yaml.full_load(open('index_config.yml', 'r'))
 
 config: dict = {
@@ -26,3 +29,23 @@ mysql_pool = PooledDB(
     charset="utf8mb4",
     use_unicode=True
 )
+
+
+def run_preflight_queries(cfg: dict) -> bool:
+    """ Run queries on the database before doing the indexing. Helps work around some issues
+        that sometimes pop up with Muscat.
+    """
+    log.info("Running preflight queries.")
+    conn = mysql_pool.connection()
+    curs = conn.cursor()
+    dbname: str = cfg["mysql"]["database"]
+
+    # work around a bug with collations.
+    curs.execute(
+        f"""alter table {dbname}.holdings
+            modify lib_siglum varchar(32) collate utf8mb4_0900_as_cs null;
+            alter table {dbname}.sources
+            modify lib_siglum varchar(32) collate utf8mb4_0900_as_cs null;"""
+    )
+
+    return True

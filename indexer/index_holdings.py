@@ -15,14 +15,6 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
 
-    # work around a bug with collations
-    curs.execute(
-        f"""alter table {dbname}.holdings
-            modify lib_siglum varchar(32) collate utf8mb4_0900_as_cs null;
-            alter table {dbname}.sources
-            modify lib_siglum varchar(32) collate utf8mb4_0900_as_cs null;"""
-    )
-
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"AND holdings.id = {cfg['id']}"

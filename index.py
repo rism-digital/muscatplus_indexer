@@ -9,6 +9,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
 
+from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
 from indexer.helpers.utilities import elapsedtime
 from indexer.index_digital_objects import index_digital_objects
@@ -109,6 +110,9 @@ def main(args: argparse.Namespace) -> bool:
 
     # Add a parameter indicating whether this is a dry run to the config.
     idx_config.update({"dry": args.dry})
+
+    if not args.dry:
+        res |= run_preflight_queries(idx_config)
 
     for record_type in inc:
         if record_type == "sources" and "sources" not in args.exclude:

@@ -52,6 +52,7 @@ general_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  sorted: false
 
 related_people_json:
   processor: "_get_related_people_data"

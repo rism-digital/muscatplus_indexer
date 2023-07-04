@@ -191,6 +191,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
+        "diamm_b": False,  # if the record is in DIAMM, this will get set to True by the DIAMM indexer
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(marc_record),

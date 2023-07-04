@@ -9,6 +9,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
 
+from diamm_indexer.index import index_diamm
 from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
 from indexer.helpers.utilities import elapsedtime
@@ -46,6 +47,13 @@ def index_indexer(cfg: dict, start: float, end: float) -> bool:
     return check
 
 
+def only_diamm(cfg: dict) -> bool:
+    res: bool = True
+    res &= index_diamm(cfg)
+
+    return res
+
+
 @elapsedtime
 def main(args: argparse.Namespace) -> bool:
     idx_start: float = timeit.default_timer()
@@ -76,6 +84,9 @@ def main(args: argparse.Namespace) -> bool:
     if version.startswith("v"):
         release = version[1:]
 
+    # Add a parameter indicating whether this is a dry run to the config.
+    idx_config.update({"dry": args.dry})
+
     debug_mode: bool = idx_config["common"]["debug"]
     if debug_mode is False:
         sentry_sdk.init(
@@ -85,7 +96,16 @@ def main(args: argparse.Namespace) -> bool:
             release=f"muscatplus_indexer@{release}"
         )
 
+    # Track the status of the various sub-tasks by &= against a boolean.
     res = True
+
+    if args.only_diamm:
+        log.info("Only running the DIAMM indexer.")
+        res &= only_diamm(idx_config)
+        # force a core reload to ensure it's up-to-date
+        res &= reload_core(idx_config['solr']['server'],
+                           idx_config['solr']['indexing_core'])
+        return res
 
     inc: list
     if not args.include:
@@ -103,36 +123,36 @@ def main(args: argparse.Namespace) -> bool:
 
     if args.empty and not args.dry:
         log.info("Emptying Solr indexing core")
-        res |= empty_solr_core(idx_config)
+        res &= empty_solr_core(idx_config)
 
     if args.only_id:
         idx_config.update({"id": args.only_id})
 
-    # Add a parameter indicating whether this is a dry run to the config.
-    idx_config.update({"dry": args.dry})
-
     if not args.dry:
-        res |= run_preflight_queries(idx_config)
+        res &= run_preflight_queries(idx_config)
 
     for record_type in inc:
         if record_type == "sources" and "sources" not in args.exclude:
-            res |= index_sources(idx_config)
+            res &= index_sources(idx_config)
         elif record_type == "people" and "people" not in args.exclude:
-            res |= index_people(idx_config)
+            res &= index_people(idx_config)
         elif record_type == "places" and "places" not in args.exclude:
-            res |= index_places(idx_config)
+            res &= index_places(idx_config)
         elif record_type == "institutions" and "institutions" not in args.exclude:
-            res |= index_institutions(idx_config)
+            res &= index_institutions(idx_config)
         elif record_type == "holdings" and "holdings" not in args.exclude:
-            res |= index_holdings(idx_config)
+            res &= index_holdings(idx_config)
         elif record_type == "subjects" and "subjects" not in args.exclude:
-            res |= index_subjects(idx_config)
+            res &= index_subjects(idx_config)
         elif record_type == "festivals" and "festivals" not in args.exclude:
-            res |= index_liturgical_festivals(idx_config)
+            res &= index_liturgical_festivals(idx_config)
         elif record_type == "digital-objects" and "digital-objects" not in args.exclude:
-            res |= index_digital_objects(idx_config)
+            res &= index_digital_objects(idx_config)
         elif record_type == "works" and "works" not in args.exclude:
-            res |= index_works(idx_config)
+            res &= index_works(idx_config)
+
+    if not args.skip_diamm:
+        res &= index_diamm(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()
@@ -142,16 +162,16 @@ def main(args: argparse.Namespace) -> bool:
     if res and not args.dry:
         # Add a single record that records some metadata about this index run
         log.info("Adding indexer record.")
-        res |= index_indexer(idx_config, idx_start, idx_end)
+        res &= index_indexer(idx_config, idx_start, idx_end)
 
         # force a core reload to ensure it's up-to-date
-        res |= reload_core(idx_config['solr']['server'],
+        res &= reload_core(idx_config['solr']['server'],
                            idx_config['solr']['indexing_core'])
 
     # Finally, if all the previous statuses are True, we're supposed to swap the cores, and we're not in a dry run,
     # then consider that indexing was successful and swap the indexer core with the live core.
     if res and args.swap_cores and not args.dry:
-        res |= swap_cores(idx_config['solr']['server'],
+        res &= swap_cores(idx_config['solr']['server'],
                           idx_config['solr']['indexing_core'],
                           idx_config['solr']['live_core'])
 
@@ -175,6 +195,9 @@ if __name__ == "__main__":
     parser.add_argument("--exclude", action="extend", nargs="*", default=[])
 
     parser.add_argument("--id", dest="only_id", help="Only index a single ID")
+
+    parser.add_argument("--skip-diamm", dest="skip_diamm", action="store_true", help="Skip DIAMM indexing.")
+    parser.add_argument("--only-diamm", dest="only_diamm", action="store_true", help="Only index DIAMM into the indexing core. Does not swap afterwards.")
 
     input_args: argparse.Namespace = parser.parse_args()
 

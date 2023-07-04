@@ -13,6 +13,7 @@ solr:
   live_core: muscatplus_live
   diamm_indexing_core: mp_diamm_indexing
   diamm_live_core: mp_diamm_live
+  diamm_index_file: "external_in_diamm"
 
 indexing:
   extended_incipits: yes

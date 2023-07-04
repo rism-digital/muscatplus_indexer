@@ -1,5 +1,7 @@
 import logging
 
+from indexer.helpers.identifiers import ProjectIdentifiers
+
 log = logging.getLogger("muscat_indexer")
 
 
@@ -8,7 +10,7 @@ def create_organization_index_document(record, cfg: dict) -> dict:
     d = {
         "id": f"diamm_organization_{record['id']}",
         "type": "institution",
-        "db_s": "diamm",
+        "project_s": ProjectIdentifiers.DIAMM,
         "name_s": record['name'],
         "city_s": record['city_name'],
         "has_siglum_b": False,

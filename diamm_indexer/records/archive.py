@@ -1,22 +1,20 @@
 import logging
 from typing import Optional
 
+from indexer.helpers.identifiers import ProjectIdentifiers
+
 log = logging.getLogger("muscat_indexer")
 
 
 def create_archive_index_document(record, cfg: dict) -> dict:
     log.debug("Indexing archive %s", record['name'])
-    siglum = record["siglum"]
-    siglum_lookup: dict = cfg['sigla_lookup']
-
-    rism_id: Optional[str] = None
-    if siglum in siglum_lookup:
-        rism_id = f"institution_{siglum_lookup[siglum]}"
+    rism_id_val: Optional[str] = record.get("rism_identifier")
+    rism_id = rism_id_val.replace("institutions/", "institution_") if rism_id_val else None
 
     d = {
         "id": f"diamm_archive_{record['id']}",
         "type": "institution",
-        "db_s": "diamm",
+        "project_s": ProjectIdentifiers.DIAMM,
         "rism_id": rism_id,
         "name_s": record['name'],
         "siglum_s": record['siglum'],

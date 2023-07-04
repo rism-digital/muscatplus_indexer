@@ -2,6 +2,12 @@ from enum import unique, IntEnum
 from typing import Optional
 
 
+class ProjectIdentifiers:
+    DIAMM = "diamm"
+    CANTUS = "cantus"
+    RISM = "rism"
+
+
 @unique
 class RecordTypes(IntEnum):
     UNSPECIFIED = 0

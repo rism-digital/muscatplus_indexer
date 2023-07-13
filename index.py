@@ -9,7 +9,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
 
-from diamm_indexer.index import index_diamm
+from diamm_indexer.index import index_diamm, clean_diamm
 from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
 from indexer.helpers.utilities import elapsedtime
@@ -49,7 +49,19 @@ def index_indexer(cfg: dict, start: float, end: float) -> bool:
 
 def only_diamm(cfg: dict) -> bool:
     res: bool = True
+    res &= swap_cores(cfg['solr']['server'],
+                      cfg['solr']['live_core'],
+                      cfg['solr']['indexing_core'])
+
+    res &= clean_diamm(cfg)
     res &= index_diamm(cfg)
+
+    res &= reload_core(cfg['solr']['server'],
+                       cfg['solr']['indexing_core'])
+
+    res &= swap_cores(cfg['solr']['server'],
+                      cfg['solr']['indexing_core'],
+                      cfg['solr']['live_core'])
 
     return res
 
@@ -103,8 +115,6 @@ def main(args: argparse.Namespace) -> bool:
         log.info("Only running the DIAMM indexer.")
         res &= only_diamm(idx_config)
         # force a core reload to ensure it's up-to-date
-        res &= reload_core(idx_config['solr']['server'],
-                           idx_config['solr']['indexing_core'])
         return res
 
     inc: list

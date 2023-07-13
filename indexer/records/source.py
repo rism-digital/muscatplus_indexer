@@ -191,7 +191,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
-        "diamm_b": False,  # if the record is in DIAMM, this will get set to True by the DIAMM indexer
+        "has_external_record_b": False,  # if the record is also in another external site (DIAMM, Cantus, etc.) then that indexer will set this to True.
         "record_type_s": get_record_type(record_type_id),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(marc_record),
@@ -233,6 +233,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "related_sources_json": related_sources_json,
         "works_catalogue_json": works_catalogue_json,
         "related_institution_sigla_sm": related_institution_sigla,
+        # purposefully left empty so we can fill this up later.
+        "external_records_jsonm": [],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

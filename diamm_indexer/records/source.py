@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import orjson
 
@@ -8,12 +9,28 @@ from indexer.helpers.identifiers import ProjectIdentifiers
 log = logging.getLogger("muscat_indexer")
 
 
-def update_rism_source_document(record, cfg: dict) -> dict:
-    document_id: str = transform_rism_id(record.get("rism_id"))
+def update_rism_source_document(record, cfg: dict) -> Optional[dict]:
+    document_id: Optional[str] = transform_rism_id(record.get("rism_id"))
+    if not document_id:
+        return None
+
+    diamm_id = record['id']
+    entry: dict = {
+        "id": f"{diamm_id}",
+        "type": "source",
+        "project": "diamm",
+        "label": f'{record.get("siglum", "")} {record.get("shelfmark", "")}'
+    }
+
+    if n := record.get("name"):
+        entry['name'] = n
+
+    entry_s: str = orjson.dumps(entry).decode("utf-8")
 
     return {
         "id": document_id,
-        "diamm_b": {"set": True},
+        "has_external_record_b": {"set": True},
+        "external_records_jsonm": {"add-distinct": entry_s}
     }
 
 
@@ -32,25 +49,51 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     if nm := record.get("name"):
         display_label = f"{display_label} ({nm})"
 
-    source_record = {
+    general_description: Optional[list] = _get_general_notes(record['general_notes']) if record.get("general_notes") else None
+
+    source_record: dict = {
         "id": f"diamm_source_{record['id']}",
         "type": "source",
         "project_s": ProjectIdentifiers.DIAMM,
-        "resource_uri_sni": f"https://www.diamm.ac.uk/sources/{record['id']}",
+        "record_uri_sni": f"https://www.diamm.ac.uk/sources/{record['id']}",
         "rism_id": transform_rism_id(record['rism_id']),
         "diamm_id": record['id'],
         "record_type_s": "collection",
         "source_type_s": "manuscript",
         "content_types_sm": ["musical"],
+        "material_source_types_sm": ["Manuscript copy"],
+        "material_content_types_sm": ["Notated music"],
+        "num_physical_copies_i": 1,  # Only MSS in DIAMM!
+        "is_contents_record_b": False,
+        "is_collection_record_b": True,
+        "is_composite_volume_b": False,
+        "has_digitization_b": record["has_images"],  # TODO: Figure out how to fill this out w/ DIAMM images
         "display_label_s": display_label,
         "shelfmark_s": record['shelfmark'],
         "date_statements_sm": [record["date_statement"]],
         "common_name_s": record['name'],
         "date_ranges_im": [record['start_date'], record['end_date']],
+        "book_formats_sm": [record['book_format']],
+        "physical_dimensions_s": record["measurements"],
         "people_names_sm": composer_names,
+        "source_member_composers_sm": composer_names,
         "siglum_s": record['siglum'],
-        "source_title_s": record["name"],
+        "additional_title_s": record["name"],
+        "general_notes_sm": general_description,
+        "source_general_notes_smni": general_description,
         "standard_titles_json": orjson.dumps(_get_standard_titles_json(record)).decode("utf-8"),
+        "holding_institutions_sm": [
+            record["archive_name"]
+        ],
+        "holding_institutions_identifiers_sm": _get_full_diamm_holding_identifiers(record),
+        "holding_institutions_ids": [
+            f"diamm_archive_{record['archive_id']}"
+        ],
+        "holding_institutions_places_sm": [
+            record["city_name"]
+        ],
+        "country_codes_sm": [],
+        "minimal_mss_holding_json": orjson.dumps(_get_minimal_manuscript_holding_data_diamm(record)).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -68,7 +111,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "siglum_s": record["siglum"],
         "shelfmark_s": record["shelfmark"],
         "institution_name_s": record["archive_name"],
-        "institution_id": f"diamm_institution_{record['archive_id']}",
+        "institution_id": f"diamm_archive_{record['archive_id']}",
     }
 
     return [source_record, manuscript_holding]
@@ -102,3 +145,26 @@ def _get_standard_titles_json(record) -> list[dict]:
         "holding_shelfmark": record["shelfmark"],
         "source_type": "Manuscript copy"
     }]
+
+
+def _get_general_notes(notes: str) -> list:
+    note_block: list = notes.split("|:|")
+    all_notes = [j for n in note_block for j in n.split("\r\n")]
+    return list(filter(None, all_notes))
+
+
+def _get_minimal_manuscript_holding_data_diamm(record) -> list:
+    d = {
+        "siglum": record["siglum"],
+        "holding_institution_name": record["archive_name"],
+        "holding_institution_id": f"diamm_institution_{record['archive_id']}",
+    }
+    return [d]
+
+
+def _get_full_diamm_holding_identifiers(record) -> list[str]:
+    institution_sig = record["siglum"]
+    institution_name = record["archive_name"]
+    institution_shelfmark = record["shelfmark"]
+
+    return [f"{institution_name} {institution_sig} {institution_shelfmark}"]

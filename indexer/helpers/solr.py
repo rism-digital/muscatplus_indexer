@@ -32,6 +32,23 @@ def _empty_solr_core(cfg: dict, core: str) -> bool:
     return False
 
 
+def empty_diamm_records(cfg: dict) -> bool:
+    solr_address = cfg['solr']['server']
+    idx_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{idx_core}"
+
+    res = httpx.post(f"{solr_idx_server}/update?commit=true",
+                     content=orjson.dumps({"delete": {"query": f"project_s:diamm"}}),
+                     headers={"Content-Type": "application/json"},
+                     timeout=None,
+                     verify=False)
+
+    if 200 <= res.status_code < 400:
+        log.debug("Deletion was successful")
+        return True
+    return False
+
+
 def submit_to_diamm_solr(records: list, cfg: dict) -> bool:
     solr_idx_core = cfg['solr']['diamm_indexing_core']
     return _submit_to_solr(records, cfg, solr_idx_core)

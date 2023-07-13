@@ -26,8 +26,8 @@ ANOTHER_CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})\.(?P<adjective
 CENTURY_DASHES_REGEX: Pattern = re.compile(r'^(\d\d)(?:--|\?\?)$')
 CENTURY_TRUNCATED_REGEX: Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
 
-# Some date ranges are given as "YYYY-MM-DD-YYYY-MM-DD" so we want to swap the second hyphen for a slash.
-MULTI_YEAR_REGEX: Pattern = re.compile(r'^(?P<first>\d{4}-\d{2}-\d{2})-(?P<second>\d{4}-\d{2}-\d{2})')
+# Some date ranges are given as "YYYY-MM-DD-YYYY-MM-DD". We only want the years, though.
+MULTI_YEAR_REGEX: Pattern = re.compile(r'^(?P<first>\d{4})-\d{2}-\d{2}-(?P<second>\d{4})-\d{2}-\d{2}')
 # A lot of dates have a letters attached to them for some odd reason.
 STRIP_LETTERS: Pattern = re.compile(r"(?P<year>\d{3,4})(?:c|p|q|a|!])")
 # Find any cases like "between XXXX and YYYY". Also handles French ('entre XXXX et YYYY') and german ('um XXXX bis um XXXX)
@@ -37,8 +37,8 @@ EXPLICIT_BETWEEN: Pattern = re.compile(r"^.*(?:between|entre|um|von|vor|et).*(?P
 # a single regex statement afterwards.
 PARENTHETICAL_APPENDAGES1: Pattern = re.compile(r"(?P<year>\d{4}-\d{4})\s+\(.*\)")
 PARENTHETICAL_APPENDAGES2: Pattern = re.compile(r"(?P<year>\d{4})\s+\(.*\)")
-# Deal with years that have zeros as the day, e.g., 1999-10-00
-ZERO_DAY_REGEX: Pattern = re.compile(r"(?P<year>\d{4})-\d{2}-00")
+# Deal with years that have zeros or Xs as the day, e.g., 1999-10-00, 1999-10-XX
+ZERO_DAY_REGEX: Pattern = re.compile(r"^(?P<year>\d{4})-\d{2}-(00|XX)$")
 # Deal with dates that are mushed together, e.g., 19991010-19991020
 MUSHED_TOGETHER_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}")
 MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}-(?P<second>\d{4})\d{4}")
@@ -125,7 +125,6 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
     if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "[s.d.]", "[s. d.]", "s. d.", "s.d.", "[n.d.]",
                                                 "[o.J]", "o.J", "[s.n.]", "(s. d.)", "[s.l.]", "[s.a]"):
         return None, None
-
     if "\u200f" in date_statement:
         log.warning("A right-to-left unicode character was detected in %s", date_statement)
 
@@ -229,6 +228,7 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
         try:
             parsed_date_string: Optional[str] = edtf.text_to_edtf(simplified_date_statement)
             if not parsed_date_string:
+                log.debug("Edtf parsing failed for %s, simplified to %s", date_statement, simplified_date_statement)
                 return None, None
             log.debug("Edtf parsed as %s", parsed_date_string)
             parsed_date = edtf.parse_edtf(parsed_date_string)
@@ -325,10 +325,10 @@ def process_date_statements(date_statements: list[str], record_id: str) -> Optio
     latest_dates: list[int] = []
 
     for statement in date_statements:
-        if not statement or statement in {"[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]",
-                                          "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J",
-                                          "o.J.", "[s.n.]", "(s. d.)", "[s.l.]", "[s.a]", "xxxx-xxxx", "uuuu-uuuu",
-                                          "?", "??"}:
+        if not statement or statement in {"[s.a.]", "[s. a.]", "s.a.", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]",
+                                          "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]",
+                                          "o.J", "o.J.", "[s.n.]", "(s. d.)", "[s.l.]", "[s.a]", "xxxx-xxxx",
+                                          "uuuu-uuuu", "?", "??", "[s..d]", "s/f"}:
             continue
 
         try:

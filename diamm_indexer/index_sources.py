@@ -6,7 +6,7 @@ from psycopg.rows import dict_row
 from diamm_indexer.helpers.db import postgres_pool
 from diamm_indexer.records.source import create_source_index_documents, update_rism_source_document
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.solr import submit_to_diamm_solr, submit_to_solr
+from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 
 log = logging.getLogger("muscat_indexer")
@@ -40,7 +40,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                 WHERE ddsa.source_id IS NULL OR ddsa.identifier_type != 1
                 ORDER BY dds.id;""")
 
-        while rows := curs.fetchmany(size=500):
+        while rows := curs.fetchmany(size=cfg['postgres']['resultsize']):
             yield rows
 
 
@@ -55,7 +55,7 @@ def _get_diamm_concordance(cfg: dict) -> Generator[dict, None, None]:
                         WHERE ddsa.source_id IS NOT NULL OR ddsa.identifier_type = 1
                         ORDER BY dds.id""")
 
-        while rows := curs.fetchmany(size=500):
+        while rows := curs.fetchmany(size=cfg['postgres']['resultsize']):
             yield rows
 
 

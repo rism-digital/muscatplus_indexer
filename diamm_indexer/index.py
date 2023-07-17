@@ -19,10 +19,10 @@ def index_diamm(idx_config: dict) -> bool:
     for record_type in inc:
         if record_type == "sources":
             res &= index_sources(idx_config)
-        elif record_type == "institutions":
-            res &= index_institutions(idx_config)
-        elif record_type == "people":
-            res &= index_people(idx_config)
+        # elif record_type == "institutions":
+        #     res &= index_institutions(idx_config)
+        # elif record_type == "people":
+        #     res &= index_people(idx_config)
     return res
 
 

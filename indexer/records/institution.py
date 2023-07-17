@@ -93,6 +93,7 @@ def create_institution_index_document(
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
         "total_sources_i": total_count if rism_id != "40009305" else 0,
+        "num_sources_s": _get_num_sources_facet(total_count),
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
         "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -195,3 +196,18 @@ def _get_contains_json(
         all_entries.append(contained_by)
 
     return all_entries
+
+
+def _get_num_sources_facet(num: int) -> Optional[str]:
+    if num == 0:
+        return None
+    elif num == 1:
+        return "1"
+    elif 2 <= num <= 10:
+        return "2 to 10"
+    elif 11 <= num <= 100:
+        return "11 to 100"
+    elif num > 100:
+        return "more than 100"
+    else:
+        return None

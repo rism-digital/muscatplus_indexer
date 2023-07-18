@@ -15,5 +15,5 @@ config: dict = {
 }
 
 postgres_pool = ConnectionPool(
-    f"dbname={config['db']} user={config['user']} password={config['password']}"
+    f"hostaddr={config['host']} dbname={config['db']} user={config['user']} password={config['password']}"
 )

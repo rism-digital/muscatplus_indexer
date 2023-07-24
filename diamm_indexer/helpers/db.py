@@ -14,6 +14,13 @@ config: dict = {
     "host": idx_config['postgres']['server'],
 }
 
+server_connection: str
+if idx_config['postgres']['server']:
+    server_connection = f"hostaddr={config['host']}"
+else:
+    server_connection = ""
+
+
 postgres_pool = ConnectionPool(
-    f"hostaddr={config['host']} dbname={config['db']} user={config['user']} password={config['password']}"
+    f"{server_connection} dbname={config['db']} user={config['user']} password={config['password']}"
 )

@@ -19,26 +19,27 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                 dds.end_date AS end_date, dds.date_statement AS date_statement, dds.measurements AS measurements,
                 dds.format AS book_format,
                 dds.created AS created, dds.updated AS updated, dda.id AS archive_id, dda.name AS archive_name, dda.siglum AS siglum,
-                ddg.name AS city_name, ddsa.identifier AS rism_id,
+                ddg.name AS city_name, ddsa.identifier AS rism_id, ddai.identifier AS archive_rism_identifier,
                 (EXISTS(SELECT FROM diamm_data_page ddp WHERE ddp.source_id = dds.id)) AS has_images,
-                (SELECT string_agg(DISTINCT concat_ws('|', COALESCE(ddp.last_name, ''), COALESCE(ddp.first_name, ''),
-                                                      COALESCE(ddp.earliest_year, -1), COALESCE(ddp.earliest_year_approximate, FALSE),
-                                                      COALESCE(ddp.latest_year, -1), COALESCE(ddp.latest_year_approximate, FALSE), ddp.id), '$')
-                 FROM diamm_data_item ddi
-                          LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
-                          LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
-                          LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
-                 WHERE ddi.source_id = dds.id AND ddp.id IS NOT NULL
-                ) AS composer_names,
-                (SELECT string_agg(ddsn.note, '|:|') FROM diamm_data_sourcenote ddsn
-                 WHERE ddsn.source_id = dds.id AND ddsn.type = 1
-                ) AS general_notes
-                FROM diamm_data_source dds
-                         LEFT JOIN diamm_data_archive dda on dds.archive_id = dda.id
-                         LEFT JOIN diamm_data_geographicarea ddg on dda.city_id = ddg.id
-                         LEFT JOIN diamm_data_sourceauthority ddsa ON ddsa.source_id = dds.id
-                WHERE ddsa.source_id IS NULL OR ddsa.identifier_type != 1
-                ORDER BY dds.id;""")
+                    (SELECT string_agg(DISTINCT concat_ws('|', COALESCE(ddp.last_name, ''), COALESCE(ddp.first_name, ''),
+                                                          COALESCE(ddp.earliest_year, -1), COALESCE(ddp.earliest_year_approximate, FALSE),
+                                                          COALESCE(ddp.latest_year, -1), COALESCE(ddp.latest_year_approximate, FALSE), ddp.id), '$')
+                     FROM diamm_data_item ddi
+                              LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
+                              LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
+                              LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
+                     WHERE ddi.source_id = dds.id AND ddp.id IS NOT NULL
+                    ) AS composer_names,
+                            (SELECT string_agg(ddsn.note, '|:|') FROM diamm_data_sourcenote ddsn
+                             WHERE ddsn.source_id = dds.id AND ddsn.type = 1
+                            ) AS general_notes
+            FROM diamm_data_source dds
+                     LEFT JOIN diamm_data_archive dda on dds.archive_id = dda.id
+                     LEFT JOIN diamm_data_archiveidentifier ddai ON dda.id = ddai.archive_id AND ddai.identifier_type = 1
+                LEFT JOIN diamm_data_geographicarea ddg on dda.city_id = ddg.id
+                LEFT JOIN diamm_data_sourceauthority ddsa ON ddsa.source_id = dds.id
+            WHERE ddsa.source_id IS NULL OR ddsa.identifier_type != 1
+            ORDER BY dds.id;""")
 
         while rows := curs.fetchmany(size=cfg['postgres']['resultsize']):
             yield rows

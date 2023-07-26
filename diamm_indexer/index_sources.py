@@ -34,10 +34,10 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                              WHERE ddsn.source_id = dds.id AND ddsn.type = 1
                             ) AS general_notes
             FROM diamm_data_source dds
-                     LEFT JOIN diamm_data_archive dda on dds.archive_id = dda.id
-                     LEFT JOIN diamm_data_archiveidentifier ddai ON dda.id = ddai.archive_id AND ddai.identifier_type = 1
-                LEFT JOIN diamm_data_geographicarea ddg on dda.city_id = ddg.id
-                LEFT JOIN diamm_data_sourceauthority ddsa ON ddsa.source_id = dds.id
+                 LEFT JOIN diamm_data_archive dda on dds.archive_id = dda.id
+                 LEFT JOIN diamm_data_archiveidentifier ddai ON dda.id = ddai.archive_id AND ddai.identifier_type = 1
+                 LEFT JOIN diamm_data_geographicarea ddg on dda.city_id = ddg.id
+                 LEFT JOIN diamm_data_sourceauthority ddsa ON ddsa.source_id = dds.id
             WHERE ddsa.source_id IS NULL OR ddsa.identifier_type != 1
             ORDER BY dds.id;""")
 
@@ -71,6 +71,7 @@ def index_sources(cfg: dict) -> bool:
 
 
 def index_source_groups(sources: list, cfg: dict) -> bool:
+    log.info("Indexing DIAMM-only Sources")
     records_to_index = []
 
     for record in sources:
@@ -86,7 +87,7 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
 
 
 def update_source_records_with_diamm_info(sources: list, cfg: dict) -> bool:
-    log.info("Updating source records with DIAMM info")
+    log.info("Updating RISM source records with DIAMM info")
 
     records = []
 

@@ -11,6 +11,7 @@ def create_organization_index_document(record, cfg: dict) -> dict:
         "id": f"diamm_organization_{record['id']}",
         "type": "institution",
         "project_s": ProjectIdentifiers.DIAMM,
+        "record_uri_sni": f"https://www.diamm.ac.uk/organizations/{record['id']}",
         "name_s": record['name'],
         "city_s": record['city_name'],
         "has_siglum_b": False,

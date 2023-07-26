@@ -1,6 +1,28 @@
+import logging
 from typing import Optional
 
+from diamm_indexer.helpers.identifiers import transform_rism_id
 from indexer.helpers.identifiers import ProjectIdentifiers
+from indexer.helpers.solr import exists
+
+log = logging.getLogger("muscat_indexer")
+
+
+def update_rism_person_document(record, cfg: dict) -> Optional[dict]:
+    document_id: Optional[str] = transform_rism_id(record.get('rism_id'))
+    if not document_id:
+        return None
+
+    if not exists(document_id, cfg):
+        log.error("Document %s does not actually exist in RISM!", document_id)
+        return None
+
+    d = {
+        "id": document_id,
+        "has_external_record_b": {"set": True}
+    }
+
+    return d
 
 
 def create_person_index_document(record, cfg: dict) -> dict:
@@ -8,6 +30,7 @@ def create_person_index_document(record, cfg: dict) -> dict:
         "id": f"diamm_person_{record['id']}",
         "type": "person",
         "project_s": ProjectIdentifiers.DIAMM,
+        "record_uri_sni": f"https://www.diamm.ac.uk/people/{record['id']}",
         "name_s": _get_name(record),
         "last_name_s": record.get("last_name"),
         "first_name_s": record.get("first_name"),

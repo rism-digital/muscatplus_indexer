@@ -154,3 +154,22 @@ def reload_core(server_address: str, core_name: str) -> bool:
 
     log.error("Core reload for %s was not successful. Status: %s", core_name, admconn.text)
     return False
+
+
+def exists(document_id: str, cfg: dict) -> bool:
+    solr_address = cfg['solr']['server']
+    solr_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{solr_core}"
+
+    log.info("Committing changes")
+    res = httpx.get(f"{solr_idx_server}/get?id={document_id}&fl=id",
+                    timeout=None,
+                    verify=False)
+    if 200 <= res.status_code < 400:
+        json_body = res.json()
+        if "doc" in json_body and json_body["doc"] is not None:
+            return True
+        return False
+
+    log.error("Could not commit to Solr. %s: %s", res.status_code, res.text)
+    return False

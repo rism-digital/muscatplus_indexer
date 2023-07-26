@@ -5,6 +5,7 @@ import orjson
 
 from diamm_indexer.helpers.identifiers import transform_rism_id
 from indexer.helpers.identifiers import ProjectIdentifiers, country_code_from_siglum, COUNTRY_CODE_MAPPING
+from indexer.helpers.solr import exists
 
 log = logging.getLogger("muscat_indexer")
 
@@ -12,6 +13,10 @@ log = logging.getLogger("muscat_indexer")
 def update_rism_source_document(record, cfg: dict) -> Optional[dict]:
     document_id: Optional[str] = transform_rism_id(record.get("rism_id"))
     if not document_id:
+        return None
+
+    if not exists(document_id, cfg):
+        log.error("Document %s does not actually exist in RISM!", document_id)
         return None
 
     diamm_id = record['id']

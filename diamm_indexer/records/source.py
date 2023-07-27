@@ -122,6 +122,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "shelfmark_s": record["shelfmark"],
         "institution_name_s": record["archive_name"],
         "institution_id": holding_institution_id,
+        "city_s": record['city_name'],
         "external_institution_id": f"diamm_archive_{record['archive_id']}",
         "external_resources_json": orjson.dumps(_get_external_institution_resource(record)).decode("utf-8")
     }

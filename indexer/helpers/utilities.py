@@ -338,6 +338,7 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     this_type: str
     name: Optional[str]
     type: str
+    place: Optional[str]
     department: Optional[str]
     institution_id: Optional[str]
     relationship: Optional[str]
@@ -359,6 +360,7 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
         "this_id": this_id,
         "this_type": this_type,
         "name": field.get("a"),
+        "place": field.get("c"),
         "department": field.get("d"),
         "institution_id": f"institution_{field['0']}",
         "relationship": relationship_code,

@@ -14,6 +14,7 @@ def create_archive_index_document(record, cfg: dict) -> dict:
     d = {
         "id": f"diamm_archive_{record['id']}",
         "type": "institution",
+        "project_type_s": "archive",
         "project_s": ProjectIdentifiers.DIAMM,
         "rism_id": rism_id,
         "name_s": record['name'],

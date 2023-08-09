@@ -16,7 +16,7 @@ def update_rism_source_document(record, cfg: dict) -> Optional[dict]:
         return None
 
     if not exists(document_id, cfg):
-        log.error("Document %s does not actually exist in RISM!", document_id)
+        log.error("Source %s does not actually exist in RISM!", document_id)
         return None
 
     diamm_id = record['id']

@@ -10,6 +10,19 @@ standard_titles_json:
   processor: "_get_standard_titles_data"
   json: true
 
+format_extent_sm:
+  field: "300"
+  subfield: "a"
+  multiple: true
+physical_details_sm:
+  field: "300"
+  subfield: "b"
+  multiple: true
+physical_dimensions_sm:
+  field: "300"
+  subfield: "c"
+  multiple: true
+
 general_notes_sm:
   field: "500"
   subfield: "a"
@@ -54,6 +67,16 @@ watermark_notes_sm:
   subfield: "a"
   multiple: true
   breaks: true
+
+material_source_types_sm:
+  field: "593"
+  subfield: "a"
+  multiple: true
+
+material_content_types_sm:
+  field: "593"
+  subfield: "b"
+  multiple: true
 
 related_people_ids:
   field: "700"

@@ -61,13 +61,17 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     main_title: str = record["std_title"]
 
     log.debug("Indexing %s", source_id)
+    child_marc_records: list[pymarc.Record] = create_marc_list(record.get("child_marc_records"))
+    child_composers: set[str] = set()
+    for child_record in child_marc_records:
+        c: Optional[str] = get_creator_name(child_record)
+        if not c:
+            continue
+        child_composers.add(c)
 
     creator_name: Optional[str] = get_creator_name(marc_record)
     institution_places: list[str] = (
         [s for s in record["institution_places"].split("|") if s] if record.get("institution_places") else []
-    )
-    source_member_composers: list[str] = (
-        [s.strip() for s in record["child_composer_list"].split("\n") if s] if record.get("child_composer_list") else []
     )
 
     holdings_marc: list[pymarc.Record] = create_marc_list(record.get("holdings_marc"))
@@ -197,7 +201,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "content_types_sm": get_content_types(marc_record),
         # The 'source membership' fields refer to the relationship between this source and a parent record, if
         # such a relationship exists.
-        "source_member_composers_sm": source_member_composers,
+        "source_member_composers_sm": list(child_composers),
         "source_membership_id": f"source_{membership_id}",
         # the title of the parent record; can be NULL.
         "source_membership_title_s": record.get("parent_title"),

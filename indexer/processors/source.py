@@ -253,7 +253,7 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
         record, source_id, "source", fields=("700",), ungrouped=True
     )
 
-    return people
+    return people or None
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
@@ -264,7 +264,7 @@ def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
         record, source_id, "source", fields=("710",)
     )
 
-    return institutions
+    return institutions or None
 
 
 def _get_additional_titles_data(record: pymarc.Record) -> Optional[list]:

@@ -140,6 +140,9 @@ def holding_index_document(
     :param source_id: The id of the parent record; if no parent record, this is the same as the record_id.
     :param main_title: The main title of the source record. Used primarily for link text, etc.
     :param creator_name: The name of the composer / author of the source. This is stored primarily for display.
+    :param record_type_id: The value of the record type identifier from the Muscat DB
+    :param source_single_item: An indicator of whether the source record is a "single item" -- no parents, no children.
+    :param mss_profile: Whether to use the Manuscripts profile ('holdingsmss.yml') for creating an exemplar record.
     :return: A holding index document.
     """
     if "-" in holding_id:

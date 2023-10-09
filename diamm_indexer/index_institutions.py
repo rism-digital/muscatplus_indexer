@@ -5,7 +5,6 @@ from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
 from diamm_indexer.helpers.solr import record_indexer
-from diamm_indexer.records.archive import create_archive_index_document
 from diamm_indexer.records.organization import create_organization_index_document, update_rism_institution_document
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
@@ -66,24 +65,6 @@ def update_institution_records_with_diamm_organizations(orgs: list, cfg: dict) -
     return submit_to_solr(records, cfg)
 
 
-def _get_archives(cfg: dict):
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
-        curs.execute("""SELECT dda.id AS id, dda.name AS name, dda.created AS created, dda.updated AS updated,
-                        dda.siglum AS siglum,
-                        (SELECT name FROM diamm_data_geographicarea ddg WHERE ddg.id = dda.city_id) AS city_name,
-                        (SELECT COUNT(*) FROM diamm_data_source dds WHERE dds.archive_id = dda.id) AS source_count,
-                        (SELECT identifier
-                            FROM diamm_data_archiveidentifier ddai
-                            WHERE ddai.archive_id = dda.id AND ddai.identifier_type = 1
-                            LIMIT 1) AS rism_identifier
-                        FROM diamm_data_archive dda
-                        ORDER BY dda.id;""")
-
-        while rows := curs.fetchmany(size=500):
-            yield rows
-
-
 def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
@@ -97,10 +78,7 @@ def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
             yield rows
 
 
-def index_archives(cfg: dict) -> bool:
-    archive_groups = _get_archives(cfg)
-    parallelise(archive_groups, record_indexer, create_archive_index_document, cfg)
-
+def update_archives(cfg: dict) -> bool:
     rism_archives = _get_linked_diamm_archives(cfg)
     parallelise(rism_archives, update_institution_records_with_diamm_archives, cfg)
 
@@ -123,7 +101,7 @@ def update_institution_records_with_diamm_archives(archives: list, cfg: dict) ->
 def index_institutions(cfg: dict) -> bool:
     res = True
     res |= index_organizations(cfg)
-    res |= index_archives(cfg)
+    res |= update_archives(cfg)
 
     return res
 

@@ -99,8 +99,6 @@ def commit_changes(cfg: dict) -> bool:
 def _commit_changes(cfg: dict, core: str) -> bool:
     solr_address = cfg['solr']['server']
     solr_idx_server: str = f"{solr_address}/{core}"
-
-    log.info("Committing changes")
     res = httpx.get(f"{solr_idx_server}/update?commit=true",
                     timeout=None,
                     verify=False)
@@ -161,7 +159,6 @@ def exists(document_id: str, cfg: dict) -> bool:
     solr_core = cfg['solr']['indexing_core']
     solr_idx_server: str = f"{solr_address}/{solr_core}"
 
-    log.info("Committing changes")
     res = httpx.get(f"{solr_idx_server}/get?id={document_id}&fl=id",
                     timeout=None,
                     verify=False)

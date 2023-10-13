@@ -25,7 +25,8 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
 
     curs.execute(
         f"""SELECT i.id, i.marc_source, i.siglum,
-                        i.created_at AS created, i.updated_at AS updated,
+                   i.created_at AS created, i.updated_at AS updated,
+                    GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries,
                     (SELECT COUNT(DISTINCT allids)
                         FROM (
                             SELECT DISTINCT ss.id AS allids
@@ -78,13 +79,17 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                         WHERE i.id = ssi.institution_id AND sss.wf_stage = 1)
                         AS source_relationships
                     FROM {dbname}.institutions AS i
+                    LEFT JOIN {dbname}.institutions_to_publications ipt on ipt.institution_id = i.id
+                    LEFT JOIN {dbname}.publications pub ON ipt.publication_id = pub.id
                     WHERE i.siglum IS NOT NULL OR
                         ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(ii.institution_b_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
                          (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
-                        ) {id_where_clause};"""
+                        ) {id_where_clause}
+                    GROUP BY i.id
+                    ORDER BY i.id ASC;"""
     )
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):

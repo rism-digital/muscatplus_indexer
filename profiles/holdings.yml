@@ -134,6 +134,9 @@ provenance_sm:
   subfield: "z"
   multiple: true
 
+iiif_manifest_uris_sm:
+  processor: "_get_iiif_manifest_uris"
+
 composite_parent_id:
   field: "973"
   subfield: "u"

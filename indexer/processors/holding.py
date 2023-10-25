@@ -64,3 +64,11 @@ def _has_external_resources(record: pymarc.Record) -> bool:
 
 def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
     return get_titles(record, "240")
+
+
+def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
+    if "856" not in record:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields("856")
+    return [f["u"] for f in fields if "x" in f and "IIIF" in f["x"]]

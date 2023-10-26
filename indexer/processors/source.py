@@ -349,6 +349,13 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     ]
 
 
+def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
+    if "856" not in record:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields("856")
+    return [f["u"] for f in fields if "x" in f and "IIIF" in f["x"]]
+
 # Material Group Handling
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed
 # contain the expected fields of the expected types, and serve as a point of reference to know

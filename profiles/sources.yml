@@ -476,5 +476,8 @@ external_resources_json:
   processor: "_get_external_resources_data"
   json: true
 
+iiif_manifest_uris_sm:
+  processor: "_get_iiif_manifest_uris"
+
 # 930 is works, but this is in flux so we won't index them (yet)
 # 980 is an internal note, so it is not indexed.

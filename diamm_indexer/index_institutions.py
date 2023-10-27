@@ -16,15 +16,15 @@ def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
-                        (SELECT name FROM diamm_data_geographicarea ddg WHERE ddg.id = ddo.location_id AND ddg.type = 1) AS city_name
-                        FROM diamm_data_organization ddo
-                        LEFT JOIN diamm_data_geographicarea ddg on ddo.location_id = ddg.id
-                        LEFT JOIN diamm_data_organizationidentifier ddoi ON ddoi.organization_id = ddo.id
-                        WHERE ddoi.organization_id IS NULL OR 1 NOT IN (
-                            SELECT ddoi2.identifier_type FROM diamm_data_organizationidentifier ddoi2 WHERE ddoi2.organization_id = ddo.id
-                        )
-                        GROUP BY ddo.id
-                        ORDER BY ddo.id;""")
+            (SELECT name FROM diamm_data_geographicarea ddg WHERE ddg.id = ddo.location_id AND ddg.type = 1) AS city_name
+        FROM diamm_data_organization ddo
+                 LEFT JOIN diamm_data_geographicarea ddg on ddo.location_id = ddg.id
+                 LEFT JOIN diamm_data_organizationidentifier ddoi ON ddoi.organization_id = ddo.id
+        WHERE ddoi.organization_id IS NULL OR 1 NOT IN (
+            SELECT ddoi2.identifier_type FROM diamm_data_organizationidentifier ddoi2 WHERE ddoi2.organization_id = ddo.id
+        )
+        GROUP BY ddo.id
+        ORDER BY ddo.id;""")
 
         while rows := curs.fetchmany(size=500):
             yield rows

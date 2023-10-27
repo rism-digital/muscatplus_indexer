@@ -14,7 +14,7 @@ def update_rism_institution_document(record, cfg: dict) -> Optional[dict]:
         return None
 
     if not exists(document_id, cfg):
-        log.error("Institution %s does not exist in RISM", document_id)
+        log.error("Institution %s does not exist in RISM (DIAMM ID: Organization %s", document_id, record["id"])
         return None
 
     return {

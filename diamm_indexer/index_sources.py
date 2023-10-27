@@ -20,6 +20,10 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                 dds.format AS book_format,
                 dds.created AS created, dds.updated AS updated, dda.id AS archive_id, dda.name AS archive_name, dda.siglum AS siglum,
                 ddg.name AS city_name, ddsa.identifier AS rism_id, ddai.identifier AS archive_rism_identifier,
+                (SELECT string_agg(DISTINCT CONCAT(ddoo.name, '||', ddoo.id), '\n') AS organizations
+                    FROM diamm_data_sourceprovenance ddop
+                    LEFT JOIN diamm_data_organization AS ddoo ON ddop.object_id = ddoo.id
+                    WHERE ddop.content_type_id = 52 AND ddop.source_id = dds.id) AS related_organizations,
                 (EXISTS(SELECT FROM diamm_data_page ddp WHERE ddp.source_id = dds.id)) AS has_images,
                     (SELECT string_agg(DISTINCT concat_ws('|', COALESCE(ddp.last_name, ''), COALESCE(ddp.first_name, ''),
                                                           COALESCE(ddp.earliest_year, -1), COALESCE(ddp.earliest_year_approximate, FALSE),

@@ -8,7 +8,6 @@ log = logging.getLogger("muscat_indexer")
 
 
 def record_indexer(records: list, converter: Callable, cfg: dict) -> bool:
-    log.info("Indexing DIAMM-only records")
     idx_records = []
 
     for record in records:

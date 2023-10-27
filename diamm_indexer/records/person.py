@@ -14,7 +14,7 @@ def update_rism_person_document(record, cfg: dict) -> Optional[dict]:
         return None
 
     if not exists(document_id, cfg):
-        log.error("Document %s does not actually exist in RISM!", document_id)
+        log.error("Document %s does not actually exist in RISM! (DIAMM Record: Person %s)", document_id, record["id"])
         return None
 
     d = {

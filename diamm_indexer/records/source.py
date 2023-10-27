@@ -102,6 +102,9 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "country_codes_sm": [
             country_code
         ],
+        "related_institutions_ids": _get_related_organization_ids(record["related_organizations"]),
+        "related_institutions_sm": _get_related_organization_names(record["related_organizations"]),
+        "related_institutions_json": orjson.dumps(_get_related_organization_json(record["related_organizations"])).decode("utf-8"),
         "country_names_sm": COUNTRY_CODE_MAPPING.get(country_code, []),
         "minimal_mss_holding_json": orjson.dumps(_get_minimal_manuscript_holding_data_diamm(record)).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -133,11 +136,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 def _get_composer_names(composer_components: list) -> list:
     ret: list = []
     for c in composer_components:
-        try:
-            (lastn, firstn, earliest, earliest_approx, latest, latest_approx, composer_id) = c
-        except ValueError as e:
-            print(c)
-            raise
+        (lastn, firstn, earliest, earliest_approx, latest, latest_approx, composer_id) = c
 
         lastn_s = f"{lastn}" if lastn else ''
         firstn_s = f", {firstn}" if firstn else ''
@@ -191,3 +190,36 @@ def _get_external_institution_resource(record) -> list[dict]:
     }
 
     return [d]
+
+
+def _get_related_organization_names(orgs: Optional[str]) -> Optional[list]:
+    if not orgs:
+        return None
+
+    orgs_raw: list[str] = orgs.split("\n")
+    return [o.split('||')[0] for o in orgs_raw]
+
+
+def _get_related_organization_ids(orgs: Optional[str]) -> Optional[list]:
+    if not orgs:
+        return None
+
+    orgs_raw: list[str] = orgs.split("\n")
+    return [f"diamm_organization_{o.split('||')[1]}" for o in orgs_raw]
+
+
+def _get_related_organization_json(orgs: Optional[str]) -> list[dict]:
+    if not orgs:
+        return []
+
+    orgs_raw: list[str] = orgs.split("\n")
+
+    orgs_json: list = []
+    for org in orgs_raw:
+        d = {
+            "id": f""
+        }
+
+        orgs_json.append(d)
+
+    return orgs_json

@@ -545,6 +545,7 @@ class ContentTypes:
     NOTATED_MUSIC = "Notated music"
     LIBRETTO = "Libretto"
     TREATISE = "Treatise"
+    MIXED = "Mixed"
     OTHER = "Other"
 
 
@@ -573,6 +574,9 @@ def get_content_types(record: pymarc.Record) -> list[str]:
 
     if all_types & {ContentTypes.NOTATED_MUSIC}:
         ret.append("musical")
+
+    if all_types & {ContentTypes.MIXED}:
+        ret.append("mixed")
 
     if all_types & {ContentTypes.OTHER}:
         ret.append("other")

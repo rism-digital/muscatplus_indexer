@@ -50,19 +50,23 @@ def index_indexer(cfg: dict, start: float, end: float) -> bool:
 
 def only_diamm(cfg: dict) -> bool:
     res: bool = True
-    res &= swap_cores(cfg['solr']['server'],
-                      cfg['solr']['live_core'],
-                      cfg['solr']['indexing_core'])
+    if cfg["swap_cores"]:
+        res &= swap_cores(cfg['solr']['server'],
+                          cfg['solr']['live_core'],
+                          cfg['solr']['indexing_core'])
 
-    res &= clean_diamm(cfg)
+    if not cfg["dry"]:
+        res &= clean_diamm(cfg)
+
     res &= index_diamm(cfg)
 
     res &= reload_core(cfg['solr']['server'],
                        cfg['solr']['indexing_core'])
 
-    res &= swap_cores(cfg['solr']['server'],
-                      cfg['solr']['indexing_core'],
-                      cfg['solr']['live_core'])
+    if cfg["swap_cores"]:
+        res &= swap_cores(cfg['solr']['server'],
+                          cfg['solr']['indexing_core'],
+                          cfg['solr']['live_core'])
 
     return res
 
@@ -98,7 +102,10 @@ def main(args: argparse.Namespace) -> bool:
         release = version[1:]
 
     # Add a parameter indicating whether this is a dry run to the config.
-    idx_config.update({"dry": args.dry})
+    idx_config.update({
+        "dry": args.dry,
+        "swap_cores": args.swap_cores
+    })
 
     debug_mode: bool = idx_config["common"]["debug"]
     if debug_mode is False:
@@ -198,7 +205,7 @@ if __name__ == "__main__":
     idx_pid = str(os.getpid())
     pid_file: Path = Path("/tmp", "muscatplus_indexer.pid")
     if pid_file.exists():
-        log.error("Process is already running. Exiting")
+        log.critical("Process is already running. Exiting")
         sys.exit(1)
 
     pid_file.write_text(idx_pid)
@@ -220,7 +227,11 @@ if __name__ == "__main__":
 
     input_args: argparse.Namespace = parser.parse_args()
 
-    success: bool = main(input_args)
+    try:
+        success: bool = main(input_args)
+    except Exception as e:
+        log.critical("Main method raised an exception and could not continue: %s", e)
+        success = False
 
     # Remove the PID file
     pid_file.unlink()

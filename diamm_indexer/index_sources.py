@@ -87,7 +87,16 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
 
         records_to_index.extend(docs)
 
-    return submit_to_solr(records_to_index, cfg)
+    check: bool
+    if cfg["dry"]:
+        check = True
+    else:
+        check = submit_to_solr(records_to_index, cfg)
+
+    if not check:
+        log.error("There was an error submitting DIAMM Sources to Solr")
+
+    return check
 
 
 def update_source_records_with_diamm_info(sources: list, cfg: dict) -> bool:

@@ -656,7 +656,7 @@ def get_bibliographic_references_json(record: pymarc.Record, field: str, referen
         try:
             refs[rid] = format_reference(rest)
         except ValueError as e:
-            log.error("Could not index references for record %s. Malformed entry.", record["001"])
+            log.error("Could not index references for record %s.", record["001"])
             return None
 
     outp: list = []

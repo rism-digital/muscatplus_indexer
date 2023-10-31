@@ -60,5 +60,13 @@ def update_person_records_with_diamm_info(people: list, cfg: dict) -> bool:
         if not doc:
             continue
         records.append(doc)
+    check: bool
+    if cfg["dry"]:
+        check = True
+    else:
+        check = submit_to_solr(records, cfg)
 
-    return submit_to_solr(records, cfg)
+    if not check:
+        log.error("There was an error submitting people to Solr")
+
+    return check

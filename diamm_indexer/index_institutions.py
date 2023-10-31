@@ -62,7 +62,16 @@ def update_institution_records_with_diamm_organizations(orgs: list, cfg: dict) -
             continue
         records.append(doc)
 
-    return submit_to_solr(records, cfg)
+    check: bool
+    if cfg["dry"]:
+        check = True
+    else:
+        check = submit_to_solr(records, cfg)
+
+    if not check:
+        log.error("There was an error updating institution records with DIAMM orgs")
+
+    return check
 
 
 def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
@@ -95,7 +104,16 @@ def update_institution_records_with_diamm_archives(archives: list, cfg: dict) ->
             continue
         records.append(doc)
 
-    return submit_to_solr(records, cfg)
+    check: bool
+    if cfg["dry"]:
+        check = True
+    else:
+        check = submit_to_solr(records, cfg)
+
+    if not check:
+        log.error("There was an error updating institution records in Solr")
+
+    return check
 
 
 def index_institutions(cfg: dict) -> bool:

@@ -151,7 +151,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
 
     publication_entries: list = (
-        list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
+        list({n.strip() for n in d.split("|~|") if n and n.strip()}) if (d := record.get("publication_entries")) else []
     )
     bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
         marc_record, "691", publication_entries

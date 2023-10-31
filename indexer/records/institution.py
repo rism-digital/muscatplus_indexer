@@ -83,7 +83,7 @@ def create_institution_index_document(
     )
 
     publication_entries: list = (
-        list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
+        list({n.strip() for n in d.split("|~|") if n and n.strip()}) if (d := record.get("publication_entries")) else []
     )
     bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
         marc_record, "670", publication_entries

@@ -24,7 +24,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     work_id: str = f"work_{rism_id}"
 
     publication_entries: list = (
-        list({n.strip() for n in d.split("\n") if n and n.strip()})
+        list({n.strip() for n in d.split("|~|") if n and n.strip()})
         if (d := record.get("publication_entries"))
         else []
     )

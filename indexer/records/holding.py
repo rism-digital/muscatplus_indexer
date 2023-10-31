@@ -98,7 +98,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
 
     if p := record.get("publication_entries"):
         publication_entries: list = (
-            list({n.strip() for n in p.split("\n") if n and n.strip()})
+            list({n.strip() for n in p.split("|~|") if n and n.strip()})
             if p else []
         )
         bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(

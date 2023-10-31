@@ -26,7 +26,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     curs.execute(
         f"""SELECT i.id, i.marc_source, i.siglum,
                    i.created_at AS created, i.updated_at AS updated,
-                    GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries,
+                    GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries,
                     (SELECT COUNT(DISTINCT allids)
                         FROM (
                             SELECT DISTINCT ss.id AS allids

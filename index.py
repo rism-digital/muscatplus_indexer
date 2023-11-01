@@ -50,16 +50,11 @@ def index_indexer(cfg: dict, start: float, end: float) -> bool:
 
 def only_diamm(cfg: dict) -> bool:
     res: bool = True
-    if cfg["swap_cores"]:
-        res &= swap_cores(cfg['solr']['server'],
-                          cfg['solr']['live_core'],
-                          cfg['solr']['indexing_core'])
 
     if not cfg["dry"]:
         res &= clean_diamm(cfg)
 
     res &= index_diamm(cfg)
-
     res &= reload_core(cfg['solr']['server'],
                        cfg['solr']['indexing_core'])
 

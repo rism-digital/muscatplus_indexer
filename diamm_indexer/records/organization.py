@@ -1,6 +1,8 @@
 import logging
 from typing import Optional
 
+import orjson
+
 from diamm_indexer.helpers.identifiers import transform_rism_id
 from indexer.helpers.identifiers import ProjectIdentifiers
 from indexer.helpers.solr import exists
@@ -17,9 +19,20 @@ def update_rism_institution_document(record, cfg: dict) -> Optional[dict]:
         log.error("Institution %s does not exist in RISM (DIAMM ID: Organization %s", document_id, record["id"])
         return None
 
+    diamm_id = record['id']
+    entry: dict = {
+        "id": f"{diamm_id}",
+        "type": "institution",
+        "project": "diamm",
+        "label": f"{record.get('name')}"
+    }
+
+    entry_s: str = orjson.dumps(entry).decode("utf-8")
+
     return {
         "id": document_id,
         "has_external_record_b": {"set": True},
+        "external_records_jsonm": {"add-distinct": entry_s}
     }
 
 

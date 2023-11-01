@@ -33,7 +33,7 @@ def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
 def _get_linked_diamm_organizations(cfg: dict) -> Generator[dict, None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
-        curs.execute("""SELECT DISTINCT ddo.id AS id, ddoi.identifier AS rism_id
+        curs.execute("""SELECT DISTINCT ddo.id AS id, ddoi.identifier AS rism_id, ddo.name AS name
                         FROM diamm_data_organization ddo
                         LEFT JOIN diamm_data_organizationidentifier ddoi on ddo.id = ddoi.organization_id
                         WHERE ddoi.organization_id IS NOT NULL AND ddoi.identifier_type = 1
@@ -55,6 +55,7 @@ def index_organizations(cfg: dict) -> bool:
 
 def update_institution_records_with_diamm_organizations(orgs: list, cfg: dict) -> bool:
     log.info("Updating RISM organization records with DIAMM info")
+
     records = []
     for record in orgs:
         doc = update_rism_institution_document(record, cfg)
@@ -77,7 +78,7 @@ def update_institution_records_with_diamm_organizations(orgs: list, cfg: dict) -
 def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
-        curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id
+        curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id, dda.name AS name
                         FROM diamm_data_archive dda
                         LEFT JOIN diamm_data_archiveidentifier ddai on dda.id = ddai.archive_id
                         WHERE ddai.archive_id IS NOT NULL AND ddai.identifier_type = 1

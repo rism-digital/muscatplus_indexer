@@ -23,6 +23,7 @@ def update_rism_institution_document(record, cfg: dict) -> Optional[dict]:
     entry: dict = {
         "id": f"{diamm_id}",
         "type": "institution",
+        "project_type": f'{record.get("project_type")}',
         "project": "diamm",
         "label": f"{record.get('name')}"
     }

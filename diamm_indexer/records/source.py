@@ -24,6 +24,7 @@ def update_rism_source_document(record, cfg: dict) -> Optional[dict]:
         "id": f"{diamm_id}",
         "type": "source",
         "project": "diamm",
+        "project_type": "sources",
         "label": f'{record.get("siglum", "")} {record.get("shelfmark", "")}'
     }
 

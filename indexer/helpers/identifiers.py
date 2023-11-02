@@ -26,7 +26,12 @@ class RecordTypes(IntEnum):
 
 
 def get_record_type(record_type_id: int, is_single_item: bool) -> str:
-    if record_type_id in (RecordTypes.SOURCE, RecordTypes.EDITION) and is_single_item is True:
+    if record_type_id in (
+            RecordTypes.SOURCE,
+            RecordTypes.EDITION,
+            RecordTypes.THEORETICA_EDITION,
+            RecordTypes.LIBRETTO_EDITION
+    ) and is_single_item is True:
         return "single_item"
     elif record_type_id in (
             RecordTypes.COLLECTION,

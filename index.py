@@ -58,7 +58,7 @@ def only_diamm(cfg: dict) -> bool:
     res &= reload_core(cfg['solr']['server'],
                        cfg['solr']['indexing_core'])
 
-    if cfg["swap_cores"]:
+    if cfg["swap_cores"] and not cfg["dry"]:
         res &= swap_cores(cfg['solr']['server'],
                           cfg['solr']['indexing_core'],
                           cfg['solr']['live_core'])

@@ -16,15 +16,32 @@ def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
-            (SELECT name FROM diamm_data_geographicarea ddg WHERE ddg.id = ddo.location_id AND ddg.type = 1) AS city_name
-        FROM diamm_data_organization ddo
-                 LEFT JOIN diamm_data_geographicarea ddg on ddo.location_id = ddg.id
-                 LEFT JOIN diamm_data_organizationidentifier ddoi ON ddoi.organization_id = ddo.id
-        WHERE ddoi.organization_id IS NULL OR 1 NOT IN (
-            SELECT ddoi2.identifier_type FROM diamm_data_organizationidentifier ddoi2 WHERE ddoi2.organization_id = ddo.id
-        )
-        GROUP BY ddo.id
-        ORDER BY ddo.id;""")
+                        (SELECT string_agg(DISTINCT
+                                CONCAT(ddg1.name, '||',
+                                       ddg2.name, '||',
+                                       ddg2.id), '\n') AS location
+                            FROM diamm_data_geographicarea ddg1
+                            LEFT JOIN diamm_data_geographicarea ddg2 ON ddg1.parent_id = ddg2.id
+                            WHERE ddg1.id = ddo.location_id AND ddg1.type = 1) AS location,
+                        (SELECT string_agg(DISTINCT
+                                           CONCAT(ddoa.siglum, '||',
+                                                  ddos.shelfmark, '||',
+                                                  ddos.name, '||',
+                                                  ddsr.relationship_type_id, '||',
+                                                  ddsr.uncertain, '||',
+                                                  ddos.id), '\n') AS sources
+                             FROM diamm_data_sourcerelationship ddsr
+                                      LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
+                                      LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                             WHERE ddsr.content_type_id = 52 AND ddsr.object_id = ddo.id) AS related_sources
+                        FROM diamm_data_organization ddo
+                                 LEFT JOIN diamm_data_geographicarea ddg on ddo.location_id = ddg.id
+                                 LEFT JOIN diamm_data_organizationidentifier ddoi ON ddoi.organization_id = ddo.id
+                        WHERE ddoi.organization_id IS NULL OR 1 NOT IN (
+                            SELECT ddoi2.identifier_type FROM diamm_data_organizationidentifier ddoi2 WHERE ddoi2.organization_id = ddo.id
+                        )
+                        GROUP BY ddo.id
+                        ORDER BY ddo.id;""")
 
         while rows := curs.fetchmany(size=500):
             yield rows

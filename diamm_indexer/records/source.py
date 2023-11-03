@@ -59,6 +59,16 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     holding_institution_id: str = transform_rism_id(record['archive_rism_identifier'])
     country_code: str = country_code_from_siglum(record["siglum"])
 
+    date_ranges: Optional[list]
+    if not record["start_date"] and not record["end_date"]:
+        date_ranges = None
+    elif record["start_date"] and not record["end_date"]:
+        date_ranges = [record["start_date"], record["start_date"]]
+    elif record["end_date"] and not record["start_date"]:
+        date_ranges = [record["end_date"], record["end_date"]]
+    else:
+        date_ranges = [record["start_date"], record["end_date"]]
+
     source_record: dict = {
         "id": f"diamm_source_{record['id']}",
         "type": "source",
@@ -80,7 +90,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "shelfmark_s": record['shelfmark'],
         "date_statements_sm": [record["date_statement"]],
         "common_name_s": record['name'],
-        "date_ranges_im": [record['start_date'], record['end_date']],
+        "date_ranges_im": date_ranges,
         "book_formats_sm": [record['book_format']],
         "physical_dimensions_s": record["measurements"],
         "people_names_sm": composer_names,
@@ -103,9 +113,9 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "country_codes_sm": [
             country_code
         ],
-        "related_institutions_ids": _get_related_organization_ids(record["related_organizations"]),
-        "related_institutions_sm": _get_related_organization_names(record["related_organizations"]),
-        "related_institutions_json": orjson.dumps(_get_related_organization_json(record["related_organizations"])).decode("utf-8"),
+        "related_institutions_ids": _get_related_institutions_ids(record["related_organizations"]),
+        "related_institutions_sm": _get_related_institutions_names(record["related_organizations"]),
+        "related_institutions_json": orjson.dumps(_get_related_institutions_json(record["related_organizations"])).decode("utf-8"),
         "country_names_sm": COUNTRY_CODE_MAPPING.get(country_code, []),
         "minimal_mss_holding_json": orjson.dumps(_get_minimal_manuscript_holding_data_diamm(record)).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -193,7 +203,7 @@ def _get_external_institution_resource(record) -> list[dict]:
     return [d]
 
 
-def _get_related_organization_names(orgs: Optional[str]) -> Optional[list]:
+def _get_related_institutions_names(orgs: Optional[str]) -> Optional[list]:
     if not orgs:
         return None
 
@@ -201,7 +211,7 @@ def _get_related_organization_names(orgs: Optional[str]) -> Optional[list]:
     return [o.split('||')[0] for o in orgs_raw]
 
 
-def _get_related_organization_ids(orgs: Optional[str]) -> Optional[list]:
+def _get_related_institutions_ids(orgs: Optional[str]) -> Optional[list]:
     if not orgs:
         return None
 
@@ -209,7 +219,15 @@ def _get_related_organization_ids(orgs: Optional[str]) -> Optional[list]:
     return [f"diamm_organization_{o.split('||')[1]}" for o in orgs_raw]
 
 
-def _get_related_organization_json(orgs: Optional[str]) -> list[dict]:
+def _get_related_institutions_names(orgs: Optional[str]) -> Optional[list]:
+    if not orgs:
+        return None
+
+    orgs_raw: list[str] = orgs.split("\n")
+    return [f"{o.split('||')[0]}" for o in orgs_raw]
+
+
+def _get_related_institutions_json(orgs: Optional[str]) -> list[dict]:
     if not orgs:
         return []
 
@@ -217,8 +235,13 @@ def _get_related_organization_json(orgs: Optional[str]) -> list[dict]:
 
     orgs_json: list = []
     for org in orgs_raw:
+        org_name, org_id = org.split("||")
+
         d = {
-            "id": f""
+            "id": f"diamm_organization_{org_id}",
+            "type": "institution",
+            "project_type": "organizations",
+            "name": f"{org_name}",
         }
 
         orgs_json.append(d)

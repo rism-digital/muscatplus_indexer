@@ -131,6 +131,7 @@ COUNTRY_CODE_MAPPING = {
     "CN": ["China"],
     "CO": ["Colombia"],
     "CR": ["Costa Rica"],
+    "CY": ["Cyprus"],
     "CZ": ["Czechoslovakia", "Czech Republic"],
     "D": ["Germany", "Deutschland", "Allemagne", "Germania", "Alemania", "Alemanha", "Niemcy"],
     "DK": ["Denmark"],

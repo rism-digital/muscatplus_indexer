@@ -4,6 +4,7 @@ from typing import Optional
 import orjson
 
 from diamm_indexer.helpers.identifiers import transform_rism_id, RELATOR_MAP, COUNTRY_SIGLUM_MAP
+from diamm_indexer.helpers.utilities import get_related_sources_json
 from indexer.helpers.identifiers import ProjectIdentifiers, COUNTRY_CODE_MAPPING
 from indexer.helpers.solr import exists
 
@@ -52,7 +53,10 @@ def create_organization_index_document(record, cfg: dict) -> dict:
         location_map["country_codes_sm"] = [siglum_pfx] if siglum_pfx else None
         location_map["country_names_sm"] = country_names if country_names else None
 
-    related_sources: list = _get_related_sources_json(record['related_sources'])
+    related_sources: list = get_related_sources_json(record['related_sources'])
+    copied_sources: list = get_related_sources_json(record['copied_sources'])
+    all_related_sources = related_sources + copied_sources
+    num_related_sources = len(all_related_sources)
 
     d = {
         "id": institution_id,
@@ -63,7 +67,8 @@ def create_organization_index_document(record, cfg: dict) -> dict:
         "record_uri_sni": f"https://www.diamm.ac.uk/organizations/{record['id']}",
         "name_s": record['name'],
         "has_siglum_b": False,
-        "related_sources_json": orjson.dumps(related_sources).decode('utf-8') if related_sources else None,
+        "total_sources_i": num_related_sources,
+        "related_sources_json": orjson.dumps(all_related_sources).decode('utf-8') if all_related_sources else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -81,31 +86,4 @@ def _get_related_sources_ids(sources: Optional[str]) -> Optional[list]:
     return [f"diamm_source_{o.split('||')[-1]}" for o in sources_raw]
 
 
-def _get_related_sources_json(sources: Optional[str]) -> list[dict]:
-    if not sources:
-        return []
 
-    sources_raw: list[str] = sources.split("\n")
-
-    sources_json: list = []
-    for source in sources_raw:
-        siglum, shelfmark, name, relnum, certain, source_id = source.split("||")
-        title = name if name else "[No title]"
-        relator_code = RELATOR_MAP.get(relnum, "unk")
-
-        d = {
-            "id": f"diamm_source_{source_id}",
-            "type": "source",
-            "project": ProjectIdentifiers.DIAMM,
-            "project_type": "sources",
-            "source_id": f"diamm_source_{source_id}",
-            "title": [{"title": title,
-                       "source_type": "Manuscript copy",
-                       "holding_shelfmark": shelfmark,
-                       "holding_siglum": siglum}],
-            "relationship": relator_code
-        }
-
-        sources_json.append(d)
-
-    return sources_json

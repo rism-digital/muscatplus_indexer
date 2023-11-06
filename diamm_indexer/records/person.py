@@ -1,7 +1,10 @@
 import logging
 from typing import Optional
 
+import orjson
+
 from diamm_indexer.helpers.identifiers import transform_rism_id
+from diamm_indexer.helpers.utilities import get_related_sources_json
 from indexer.helpers.identifiers import ProjectIdentifiers
 from indexer.helpers.solr import exists
 
@@ -26,6 +29,11 @@ def update_rism_person_document(record, cfg: dict) -> Optional[dict]:
 
 
 def create_person_index_document(record, cfg: dict) -> dict:
+    related_sources: list = get_related_sources_json(record['related_sources'])
+    copied_sources: list = get_related_sources_json(record['copied_sources'])
+    all_related_sources = related_sources + copied_sources
+    num_related_sources = len(all_related_sources)
+
     d = {
         "id": f"diamm_person_{record['id']}",
         "type": "person",
@@ -36,7 +44,10 @@ def create_person_index_document(record, cfg: dict) -> dict:
         "first_name_s": record.get("first_name"),
         "earliest_year_i": record.get("earliest_year"),
         "latest_year_i": record.get("latest_year"),
-        "date_statement_s": _get_date_statement(record)
+        "date_statement_s": _get_date_statement(record),
+        "related_sources_json": orjson.dumps(all_related_sources).decode('utf-8') if all_related_sources else None,
+        "total_sources_i": num_related_sources,
+
     }
 
     return d

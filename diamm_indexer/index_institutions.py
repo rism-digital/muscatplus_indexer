@@ -28,17 +28,19 @@ def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
                                                   ddos.shelfmark, '||',
                                                   ddos.name, '||',
                                                   ddsr.relationship_type_id, '||',
+                                                  ddsrt.name , '||',
                                                   ddsr.uncertain, '||',
                                                   ddos.id), '\n') AS sources
                              FROM diamm_data_sourcerelationship ddsr
                                       LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
                                       LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                                      LEFT JOIN diamm_data_sourcerelationshiptype AS ddsrt ON ddsr.relationship_type_id = ddsrt.id
                              WHERE ddsr.content_type_id = 52 AND ddsr.object_id = ddo.id) AS related_sources,
                         (SELECT string_agg(DISTINCT
                                    CONCAT(ddoa.siglum, '||',
                                           ddos.shelfmark, '||',
                                           ddos.name, '||',
-                                          '6', '||',
+                                          '6', '||', '||',
                                           ddsc.uncertain, '||',
                                           ddos.id), '\n') AS sources
                              FROM diamm_data_sourcecopyist ddsc

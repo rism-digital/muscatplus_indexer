@@ -22,17 +22,19 @@ def _get_people(cfg: dict) -> Generator[dict, None, None]:
                                           ddos.shelfmark, '||',
                                           ddos.name, '||',
                                           ddsr.relationship_type_id, '||',
+                                          ddsrt.name , '||',
                                           ddsr.uncertain, '||',
                                           ddos.id), '\n') AS sources
                  FROM diamm_data_sourcerelationship ddsr
                           LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
                           LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                          LEFT JOIN diamm_data_sourcerelationshiptype AS ddsrt ON ddsr.relationship_type_id = ddsrt.id
                  WHERE ddsr.content_type_id = 37 AND ddsr.object_id = ddp.id) AS related_sources,
                 (SELECT string_agg(DISTINCT
                                    CONCAT(ddoa.siglum, '||',
                                           ddos.shelfmark, '||',
                                           ddos.name, '||',
-                                          '6', '||',
+                                          '6', '||', '||',
                                           ddsc.uncertain, '||',
                                           ddos.id), '\n') AS sources
                  FROM diamm_data_sourcecopyist ddsc
@@ -54,7 +56,11 @@ ORDER BY ddp.id;""")
 def _get_linked_diamm_people(cfg: dict) -> Generator[dict, None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
-        curs.execute("""SELECT DISTINCT ddp.id AS id, ddpi.identifier AS rism_id
+        curs.execute("""SELECT DISTINCT ddp.id AS id, ddpi.identifier AS rism_id,ddp.last_name AS last_name,
+                            ddp.first_name AS first_name, ddp.earliest_year AS earliest_year,
+                            ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,
+                            ddp.latest_year_approximate AS latest_approx,
+                            'people' AS project_type
                         FROM diamm_data_person ddp
                         LEFT JOIN diamm_data_personidentifier ddpi on ddp.id = ddpi.person_id
                         WHERE ddpi.person_id IS NOT NULL AND ddpi.identifier_type = 1

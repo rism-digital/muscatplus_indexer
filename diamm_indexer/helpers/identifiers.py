@@ -32,7 +32,7 @@ RELATOR_MAP: dict = {
     "1": "dte",
     "2": "dto",
     "3": "edt",
-    "4": "fmo",  # "owner" in DIAMM assumed to be former owner
+    "4": "asn",  # Owner -> associated name
     "5": "pbl",
     "6": "scr",  # "scriptorium" -> "scribe"
     "7": "bnd",

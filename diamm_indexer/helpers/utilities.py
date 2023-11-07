@@ -12,7 +12,7 @@ def get_related_sources_json(sources: Optional[str]) -> list[dict]:
 
     sources_json: list = []
     for source in sources_raw:
-        siglum, shelfmark, name, relnum, uncertain, source_id = source.split("||")
+        siglum, shelfmark, name, relnum, relname, uncertain, source_id = source.split("||")
         title = name if name else "[No title]"
         relator_code = RELATOR_MAP.get(relnum, "unk")
 
@@ -27,7 +27,8 @@ def get_related_sources_json(sources: Optional[str]) -> list[dict]:
                        "holding_shelfmark": shelfmark,
                        "holding_siglum": siglum}],
             "relationship": relator_code,
-            "qualifier": "Doubtful" if uncertain == "t" else "Ascertained"
+            "qualifier": "Doubtful" if uncertain == "t" else "Ascertained",
+            "note": relname
         }
 
         sources_json.append(d)

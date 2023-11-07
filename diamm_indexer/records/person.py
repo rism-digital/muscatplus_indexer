@@ -17,12 +17,32 @@ def update_rism_person_document(record, cfg: dict) -> Optional[dict]:
         return None
 
     if not exists(document_id, cfg):
-        log.error("Document %s does not actually exist in RISM! (DIAMM Record: Person %s)", document_id, record["id"])
+        log.error("Person %s does not actually exist in RISM! (DIAMM Record: Person %s)", document_id, record["id"])
         return None
+
+    name: str = _get_name(record)
+    date_statement: str = _get_date_statement(record)
+
+    if date_statement:
+        full_name = f"{name} ({date_statement})"
+    else:
+        full_name = f"{name}"
+
+    diamm_id = record['id']
+    entry: dict = {
+        "id": f"{diamm_id}",
+        "type": "person",
+        "project_type": f'{record.get("project_type")}',
+        "project": "diamm",
+        "label": f"{full_name}"
+    }
+
+    entry_s: str = orjson.dumps(entry).decode("utf-8")
 
     d = {
         "id": document_id,
-        "has_external_record_b": {"set": True}
+        "has_external_record_b": {"set": True},
+        "external_records_jsonm": {"add-distinct": entry_s}
     }
 
     return d

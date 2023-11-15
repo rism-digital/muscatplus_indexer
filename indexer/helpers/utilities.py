@@ -338,6 +338,7 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     this_type: str
     name: Optional[str]
     type: str
+    place: Optional[str]
     department: Optional[str]
     institution_id: Optional[str]
     relationship: Optional[str]
@@ -359,6 +360,7 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
         "this_id": this_id,
         "this_type": this_type,
         "name": field.get("a"),
+        "place": field.get("c"),
         "department": field.get("d"),
         "institution_id": f"institution_{field['0']}",
         "relationship": relationship_code,
@@ -543,6 +545,7 @@ class ContentTypes:
     NOTATED_MUSIC = "Notated music"
     LIBRETTO = "Libretto"
     TREATISE = "Treatise"
+    MIXED = "Mixed"
     OTHER = "Other"
 
 
@@ -571,6 +574,9 @@ def get_content_types(record: pymarc.Record) -> list[str]:
 
     if all_types & {ContentTypes.NOTATED_MUSIC}:
         ret.append("musical")
+
+    if all_types & {ContentTypes.MIXED}:
+        ret.append("mixed")
 
     if all_types & {ContentTypes.OTHER}:
         ret.append("other")
@@ -646,7 +652,12 @@ def get_bibliographic_references_json(record: pymarc.Record, field: str, referen
     for r in references:
         # |:| is a unique field delimiter
         rid, *rest = r.split("|:|")
-        refs[rid] = format_reference(rest)
+
+        try:
+            refs[rid] = format_reference(rest)
+        except ValueError as e:
+            log.error("Could not index references for record %s.", record["001"])
+            return None
 
     outp: list = []
 

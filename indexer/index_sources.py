@@ -32,6 +32,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT GROUP_CONCAT(DISTINCT parent_srt.record_type SEPARATOR ',') FROM {dbname}.sources AS parent_srt WHERE parent_srt.source_id = parent.id) AS parent_child_record_types,
         (SELECT GROUP_CONCAT(DISTINCT srm.composer SEPARATOR '\n') FROM {dbname}.sources AS srm WHERE srm.source_id IS NOT NULL AND srm.source_id = child.id) AS child_composer_list,
+        (SELECT GROUP_CONCAT(DISTINCT srm2.marc_source SEPARATOR '\n') FROM {dbname}.sources AS srm2 WHERE srm2.source_id IS NOT NULL AND srm2.source_id = child.id) AS child_marc_records,
         (SELECT GROUP_CONCAT(DISTINCT ins.place SEPARATOR '|') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE ssi.marc_tag = '852' AND child.id = ssi.source_id) AS institution_places,
         (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', ins.id, ins.corporate_name, IFNULL(ssi.relator_code, ''), IFNULL(ins.siglum, '')) SEPARATOR '\n') FROM {dbname}.sources_to_institutions ssi LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id WHERE ssi.marc_tag != '852' AND child.id = ssi.source_id) AS additional_institution_info,
         (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', stos.relator_code, sours.marc_source) SEPARATOR '|~|') FROM {dbname}.sources_to_sources AS stos LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id WHERE marc_tag = '787' AND source_a_id = child.id) AS related_sources,
@@ -42,7 +43,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,
         GROUP_CONCAT(DISTINCT hp.lib_siglum SEPARATOR '\n') AS parent_holdings_org,
         GROUP_CONCAT(DISTINCT CONCAT_WS('', p.full_name, NULLIF( CONCAT(' (', p.life_dates, ')'), '')) SEPARATOR '\n') AS people_names,
-        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries,
+        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries,
         GROUP_CONCAT(DISTINCT p.alternate_names SEPARATOR '\n') AS alt_people_names,
         GROUP_CONCAT(DISTINCT st.alternate_terms SEPARATOR '\n') AS alt_standard_terms,
         GROUP_CONCAT(DISTINCT p.id SEPARATOR '\n') AS people_ids

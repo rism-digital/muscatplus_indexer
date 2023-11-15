@@ -32,6 +32,23 @@ def _empty_solr_core(cfg: dict, core: str) -> bool:
     return False
 
 
+def empty_diamm_records(cfg: dict) -> bool:
+    solr_address = cfg['solr']['server']
+    idx_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{idx_core}"
+
+    res = httpx.post(f"{solr_idx_server}/update?commit=true",
+                     content=orjson.dumps({"delete": {"query": f"project_s:diamm"}}),
+                     headers={"Content-Type": "application/json"},
+                     timeout=None,
+                     verify=False)
+
+    if 200 <= res.status_code < 400:
+        log.debug("Deletion was successful")
+        return True
+    return False
+
+
 def submit_to_diamm_solr(records: list, cfg: dict) -> bool:
     solr_idx_core = cfg['solr']['diamm_indexing_core']
     return _submit_to_solr(records, cfg, solr_idx_core)
@@ -82,8 +99,6 @@ def commit_changes(cfg: dict) -> bool:
 def _commit_changes(cfg: dict, core: str) -> bool:
     solr_address = cfg['solr']['server']
     solr_idx_server: str = f"{solr_address}/{core}"
-
-    log.info("Committing changes")
     res = httpx.get(f"{solr_idx_server}/update?commit=true",
                     timeout=None,
                     verify=False)
@@ -136,4 +151,22 @@ def reload_core(server_address: str, core_name: str) -> bool:
         return True
 
     log.error("Core reload for %s was not successful. Status: %s", core_name, admconn.text)
+    return False
+
+
+def exists(document_id: str, cfg: dict) -> bool:
+    solr_address = cfg['solr']['server']
+    solr_core = cfg['solr']['indexing_core']
+    solr_idx_server: str = f"{solr_address}/{solr_core}"
+
+    res = httpx.get(f"{solr_idx_server}/get?id={document_id}&fl=id",
+                    timeout=None,
+                    verify=False)
+    if 200 <= res.status_code < 400:
+        json_body = res.json()
+        if "doc" in json_body and json_body["doc"] is not None:
+            return True
+        return False
+
+    log.error("Could not commit to Solr. %s: %s", res.status_code, res.text)
     return False

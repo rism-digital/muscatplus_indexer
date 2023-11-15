@@ -35,6 +35,9 @@ provenance_sm:
   subfield: "z"
   multiple: true
 
+iiif_manifest_uris_sm:
+  processor: "_get_iiif_manifest_uris"
+
 composite_parent_id:
   field: "973"
   subfield: "u"
@@ -43,8 +46,8 @@ composite_parent_id:
 country_code_s:
   processor: "_get_country_code"
 
-external_resources_json:
-  processor: "_get_external_resources_data"
-  json: true
-has_external_resources_b:
-  processor: "_has_external_resources"
+#external_resources_json:
+#  processor: "_get_external_resources_data"
+#  json: true
+#has_external_resources_b:
+#  processor: "_has_external_resources"

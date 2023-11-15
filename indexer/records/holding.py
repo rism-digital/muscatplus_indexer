@@ -58,6 +58,8 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]
 
+    source_is_single_item: bool = "774" not in source_marc_record or "773" not in source_marc_record
+
     # For consistency it's better to store the creator name with the dates attached!
     creator_name: Optional[str] = get_creator_name(source_marc_record)
     record_type_id: int = record["record_type"]
@@ -69,6 +71,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
         main_title,
         creator_name,
         record_type_id,
+        source_is_single_item,
         mss_profile=False,
     )
 
@@ -95,7 +98,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
 
     if p := record.get("publication_entries"):
         publication_entries: list = (
-            list({n.strip() for n in p.split("\n") if n and n.strip()})
+            list({n.strip() for n in p.split("|~|") if n and n.strip()})
             if p else []
         )
         bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
@@ -125,17 +128,21 @@ def holding_index_document(
     main_title: str,
     creator_name: Optional[str],
     record_type_id: int,
+    source_single_item: bool,
     mss_profile: bool,
 ) -> HoldingIndexDocument:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.
 
-    :param marc_record: A pymarc record instance
+    :param marc_record: A pymarc holding record instance
     :param holding_id: The holding record ID. In the case of MSS this is composed of the institution and source ids.
     :param source_id: The id of the parent record; if no parent record, this is the same as the record_id.
     :param main_title: The main title of the source record. Used primarily for link text, etc.
     :param creator_name: The name of the composer / author of the source. This is stored primarily for display.
+    :param record_type_id: The value of the record type identifier from the Muscat DB
+    :param source_single_item: An indicator of whether the source record is a "single item" -- no parents, no children.
+    :param mss_profile: Whether to use the Manuscripts profile ('holdingsmss.yml') for creating an exemplar record.
     :return: A holding index document.
     """
     if "-" in holding_id:
@@ -148,7 +155,7 @@ def holding_index_document(
         "type": "holding",
         "source_id": source_id,
         "holding_id": holding_id_alone,
-        "record_type_s": get_record_type(record_type_id),
+        "record_type_s": get_record_type(record_type_id, source_single_item),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(marc_record),
         "main_title_s": main_title,

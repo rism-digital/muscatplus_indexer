@@ -2,6 +2,12 @@ from enum import unique, IntEnum
 from typing import Optional
 
 
+class ProjectIdentifiers:
+    DIAMM = "diamm"
+    CANTUS = "cantus"
+    RISM = "rism"
+
+
 @unique
 class RecordTypes(IntEnum):
     UNSPECIFIED = 0
@@ -19,8 +25,15 @@ class RecordTypes(IntEnum):
     WORK = 99  # Special case, so we can index record types within Incipits
 
 
-def get_record_type(record_type_id: int) -> str:
+def get_record_type(record_type_id: int, is_single_item: bool) -> str:
     if record_type_id in (
+            RecordTypes.SOURCE,
+            RecordTypes.EDITION,
+            RecordTypes.THEORETICA_EDITION,
+            RecordTypes.LIBRETTO_EDITION
+    ) and is_single_item is True:
+        return "single_item"
+    elif record_type_id in (
             RecordTypes.COLLECTION,
             RecordTypes.EDITION,
             RecordTypes.LIBRETTO_EDITION,
@@ -118,6 +131,7 @@ COUNTRY_CODE_MAPPING = {
     "CN": ["China"],
     "CO": ["Colombia"],
     "CR": ["Costa Rica"],
+    "CY": ["Cyprus"],
     "CZ": ["Czechoslovakia", "Czech Republic"],
     "D": ["Germany", "Deutschland", "Allemagne", "Germania", "Alemania", "Alemanha", "Niemcy"],
     "DK": ["Denmark"],

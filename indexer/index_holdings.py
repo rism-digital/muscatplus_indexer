@@ -26,7 +26,7 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
                         sources.record_type as record_type, sources.marc_source AS source_record_marc,
                         (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc,
                         (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc,
-                        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries
+                        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries
                     FROM {dbname}.holdings AS holdings
                     LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
                     LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id

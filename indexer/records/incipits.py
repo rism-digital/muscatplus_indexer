@@ -102,13 +102,16 @@ def _get_pae_features(pae: str) -> dict:
 def __incipit(
     field: pymarc.Field,
     record: pymarc.Record,
-    parent_record_id: str,
     record_type_id: int,
     parent_record_title: str,
     num: int,
     country_codes: list[str],
 ) -> IncipitIndexDocument:
     record_id: str = normalize_id(record["001"].value())
+    record_ident: str = f"source_{record_id}"
+
+    # If a record has neither a 774 (parent -> child) nor a 773 (child -> parent) then it's a single item.
+    is_single_item: bool = "774" not in record or "773" not in record
 
     work_num = field.get("a", "x")
     mvt_num = field.get("b", "x")
@@ -122,11 +125,11 @@ def __incipit(
     )
 
     if work_number == "x.x.x":
-        log.warning("Bad incipit number for %s", parent_record_id)
+        log.warning("Bad incipit number for %s", record_ident)
 
     clef: Optional[str] = field.get("g")
 
-    log.debug("Creating incipits %s %s", parent_record_id, work_number)
+    log.debug("Creating incipits %s %s", record_ident, work_number)
 
     is_mensural: bool = False
     if clef and "+" in clef:
@@ -181,11 +184,11 @@ def __incipit(
     standard_title_json = get_titles(record, "240")
 
     d: dict = {
-        "id": f"{parent_record_id}_incipit_{num}",
+        "id": f"{record_ident}_incipit_{num}",
         "type": "incipit",
-        "source_id": parent_record_id,
+        "source_id": record_ident,
         "rism_id": record_id,  # index the raw source id to support incipit lookups by source
-        "record_type_s": get_record_type(record_type_id),
+        "record_type_s": get_record_type(record_type_id, is_single_item),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(record),
         "main_title_s": parent_record_title,  # using 'main_title_s' allows us to later serialize this as a source record.
@@ -270,7 +273,6 @@ def __incipit(
 
 def get_incipits(
     record: pymarc.Record,
-    parent_record_id: str,
     parent_record_title: str,
     record_type_id: int,
     country_codes: list[str],
@@ -284,7 +286,6 @@ def get_incipits(
         __incipit(
             f,
             record,
-            parent_record_id,
             record_type_id,
             parent_record_title,
             num,

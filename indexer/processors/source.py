@@ -253,7 +253,7 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
         record, source_id, "source", fields=("700",), ungrouped=True
     )
 
-    return people
+    return people or None
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
@@ -264,7 +264,7 @@ def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
         record, source_id, "source", fields=("710",)
     )
 
-    return institutions
+    return institutions or None
 
 
 def _get_additional_titles_data(record: pymarc.Record) -> Optional[list]:
@@ -348,6 +348,13 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
         if f and ("8" not in f or f["8"] != "01")
     ]
 
+
+def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
+    if "856" not in record:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields("856")
+    return [f["u"] for f in fields if "x" in f and "IIIF" in f["x"]]
 
 # Material Group Handling
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed

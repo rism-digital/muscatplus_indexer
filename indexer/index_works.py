@@ -22,7 +22,7 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
         GROUP_CONCAT(DISTINCT s.id SEPARATOR '\n') as source_ids,
         GROUP_CONCAT(DISTINCT s.marc_source SEPARATOR '\n') as source_marc,
         GROUP_CONCAT(DISTINCT pub.marc_source SEPARATOR '\n') as publication_marc,
-        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publication_entries
+        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries
         FROM {dbname}.works AS work
         LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
         LEFT JOIN {dbname}.sources s ON sw.source_id = s.id

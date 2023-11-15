@@ -45,11 +45,11 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     record_type_id: int = record["record_type"]
     parent_id: Optional[int] = record.get("source_id")
-    child_count: int = record.get("child_count")
+    child_count: int = record.get("child_count", 0)
     # A source is always either its own member, or belonging to group of sources
-    # all with the same "parent" source. This is stored in the database in the 'source_id'
+    # all with the same "parent" source. This is stored in the Muscat database in the 'source_id'
     # field as either a NULL value, or the ID of the parent source.
-    # If it is NULL then use the source id, indicating that it belongs to a group of 1, itself.
+    # If it is a NULL value then use the source id, indicating that it belongs to a group of 1, itself.
     # If it points to another source, use that.
     # NB: this means that a parent source will have its own ID here, while
     # all the 'children' will have a different ID. This is why the field is not called
@@ -60,14 +60,21 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     num_holdings: int = record.get("holdings_count", 0)
     main_title: str = record["std_title"]
 
+    # If a source has no parent, and no children, then it is a single-item source.
+    is_single_item: bool = parent_id is None and child_count == 0
+
     log.debug("Indexing %s", source_id)
+    child_marc_records: list[pymarc.Record] = create_marc_list(record.get("child_marc_records"))
+    child_composers: set[str] = set()
+    for child_record in child_marc_records:
+        c: Optional[str] = get_creator_name(child_record)
+        if not c:
+            continue
+        child_composers.add(c)
 
     creator_name: Optional[str] = get_creator_name(marc_record)
     institution_places: list[str] = (
         [s for s in record["institution_places"].split("|") if s] if record.get("institution_places") else []
-    )
-    source_member_composers: list[str] = (
-        [s.strip() for s in record["child_composer_list"].split("\n") if s] if record.get("child_composer_list") else []
     )
 
     holdings_marc: list[pymarc.Record] = create_marc_list(record.get("holdings_marc"))
@@ -92,6 +99,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         _get_manuscript_holdings(
             marc_record,
             source_id,
+            is_single_item,
             main_title,
             creator_name,
             record_type_id,
@@ -116,7 +124,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
             "main_title": record.get("parent_title"),
             "shelfmark": record.get("parent_shelfmark"),
             "siglum": record.get("parent_siglum"),
-            "record_type": get_record_type(parent_record_type_id),
+            # If a child has a parent, then by definition we do not have a single item.
+            "record_type": get_record_type(parent_record_type_id, False),
             "source_type": get_source_type(parent_record_type_id),
             "content_types_sm": get_content_types(parent_marc_record),
             "material_source_types": parent_material_source_types,
@@ -142,7 +151,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
 
     publication_entries: list = (
-        list({n.strip() for n in d.split("\n") if n and n.strip()}) if (d := record.get("publication_entries")) else []
+        list({n.strip() for n in d.split("|~|") if n and n.strip()}) if (d := record.get("publication_entries")) else []
     )
     bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
         marc_record, "691", publication_entries
@@ -191,12 +200,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
-        "record_type_s": get_record_type(record_type_id),
+        "has_external_record_b": False,  # if the record is also in another external site (DIAMM, Cantus, etc.) then that indexer will set this to True.
+        "record_type_s": get_record_type(record_type_id, is_single_item),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(marc_record),
         # The 'source membership' fields refer to the relationship between this source and a parent record, if
         # such a relationship exists.
-        "source_member_composers_sm": source_member_composers,
+        "source_member_composers_sm": list(child_composers),
         "source_membership_id": f"source_{membership_id}",
         # the title of the parent record; can be NULL.
         "source_membership_title_s": record.get("parent_title"),
@@ -232,6 +242,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "related_sources_json": related_sources_json,
         "works_catalogue_json": works_catalogue_json,
         "related_institution_sigla_sm": related_institution_sigla,
+        # purposefully left empty so we can fill this up later.
+        "external_records_jsonm": [],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -244,7 +256,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
 
-    incipits: list = get_incipits(marc_record, source_id, main_title, record_type_id, country_codes) or []
+    incipits: list = get_incipits(marc_record, main_title, record_type_id, country_codes) or []
 
     res: list = [source_core]
     res.extend(incipits)
@@ -260,6 +272,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 def _get_manuscript_holdings(
     record: pymarc.Record,
     source_id: str,
+    source_is_single_item: bool,
     main_title: str,
     creator_name: Optional[str],
     record_type_id: int,
@@ -286,6 +299,7 @@ def _get_manuscript_holdings(
         main_title,
         creator_name,
         record_type_id,
+        source_is_single_item,
         mss_profile=True,
     )
 

@@ -7,7 +7,11 @@ import yaml
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id
+from indexer.helpers.utilities import (
+    normalize_id,
+    get_bibliographic_references_json,
+    get_bibliographic_reference_titles
+)
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -78,6 +82,17 @@ def create_institution_index_document(
         if record.get("source_relationships") else []
     )
 
+    publication_entries: list = (
+        list({n.strip() for n in d.split("|~|") if n and n.strip()}) if (d := record.get("publication_entries")) else []
+    )
+    bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
+        marc_record, "670", publication_entries
+    )
+    bibliographic_references_json = (
+        orjson.dumps(bibliographic_references).decode("utf-8") if bibliographic_references else None
+    )
+    bibliographic_reference_titles: Optional[list[str]] = get_bibliographic_reference_titles(publication_entries)
+
     institution_core: dict = {
         "id": institution_id,
         "type": "institution",
@@ -93,6 +108,9 @@ def create_institution_index_document(
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
         "total_sources_i": total_count if rism_id != "40009305" else 0,
+        "num_sources_s": _get_num_sources_facet(total_count),
+        "bibliographic_references_json": bibliographic_references_json,
+        "bibliographic_references_sm": bibliographic_reference_titles,
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
         "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -195,3 +213,18 @@ def _get_contains_json(
         all_entries.append(contained_by)
 
     return all_entries
+
+
+def _get_num_sources_facet(num: int) -> Optional[str]:
+    if num == 0:
+        return None
+    elif num == 1:
+        return "1"
+    elif 2 <= num <= 10:
+        return "2 to 10"
+    elif 11 <= num <= 100:
+        return "11 to 100"
+    elif num > 100:
+        return "more than 100"
+    else:
+        return None

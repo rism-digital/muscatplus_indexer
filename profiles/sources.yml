@@ -195,6 +195,14 @@ format_extent_sm:
   field: "300"
   subfield: "a"
   multiple: true
+physical_details_sm:
+  field: "300"
+  subfield: "b"
+  multiple: true
+physical_dimensions_sm:
+  field: "300"
+  subfield: "c"
+  multiple: true
 
 # 340 is also indexed in material groups, but we index it on the source so
 # we can filter on techniques and formats, if we want.
@@ -467,6 +475,9 @@ minimal_mss_holding_json:
 external_resources_json:
   processor: "_get_external_resources_data"
   json: true
+
+iiif_manifest_uris_sm:
+  processor: "_get_iiif_manifest_uris"
 
 # 930 is works, but this is in flux so we won't index them (yet)
 # 980 is an internal note, so it is not indexed.

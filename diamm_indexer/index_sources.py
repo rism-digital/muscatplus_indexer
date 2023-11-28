@@ -24,8 +24,12 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                     FROM diamm_data_sourceprovenance ddop
                     LEFT JOIN diamm_data_organization AS ddoo ON ddop.object_id = ddoo.id
                     WHERE ddop.content_type_id = 52 AND ddop.source_id = dds.id) AS related_organizations,
-                (EXISTS(SELECT FROM diamm_data_page ddp WHERE ddp.source_id = dds.id)) AS has_images,
-                    (SELECT string_agg(DISTINCT concat_ws('|', COALESCE(ddp.last_name, ''), COALESCE(ddp.first_name, ''),
+                (EXISTS(
+                    SELECT ddi2.id FROM diamm_data_page ddp2
+                    LEFT JOIN public.diamm_data_image ddi2 on ddp2.id = ddi2.page_id
+                    WHERE ddp2.source_id = dds.id AND ddi2.id IS NOT NULL)
+                ) AS has_images,
+                (SELECT string_agg(DISTINCT concat_ws('|', COALESCE(ddp.last_name, ''), COALESCE(ddp.first_name, ''),
                                                           COALESCE(ddp.earliest_year, -1), COALESCE(ddp.earliest_year_approximate, FALSE),
                                                           COALESCE(ddp.latest_year, -1), COALESCE(ddp.latest_year_approximate, FALSE), ddp.id), '$')
                      FROM diamm_data_item ddi
@@ -34,9 +38,10 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                               LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
                      WHERE ddi.source_id = dds.id AND ddp.id IS NOT NULL
                     ) AS composer_names,
-                            (SELECT string_agg(ddsn.note, '|:|') FROM diamm_data_sourcenote ddsn
-                             WHERE ddsn.source_id = dds.id AND ddsn.type = 1
-                            ) AS general_notes
+                (SELECT string_agg(ddsn.note, '|:|') 
+                    FROM diamm_data_sourcenote ddsn
+                    WHERE ddsn.source_id = dds.id AND ddsn.type = 1
+                ) AS general_notes
             FROM diamm_data_source dds
                  LEFT JOIN diamm_data_archive dda on dds.archive_id = dda.id
                  LEFT JOIN diamm_data_archiveidentifier ddai ON dda.id = ddai.archive_id AND ddai.identifier_type = 1

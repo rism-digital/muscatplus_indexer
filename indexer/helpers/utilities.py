@@ -248,10 +248,12 @@ def related_person(field: pymarc.Field, this_id: str, this_type: str, relationsh
         lets us give a unique number to each enumerated relationship.
     :return: A Solr record for the person relationship
     """
+    if 'a' not in field:
+        log.error("A name was not found for person %s on %s", field.get('0'), this_id)
 
     d: PersonRelationshipIndexDocument = {
         "id": f"{relationship_number}",
-        "name": field.get('a'),
+        "name": field.get('a', '[Unknown name]'),
         "type": "person",
         # sources use $4 for relationship info; others use $i. Will ultimately return None if neither are found.
         "relationship": field.get('4') if '4' in field else field.get('i'),
@@ -354,12 +356,15 @@ def related_institution(field: pymarc.Field, this_id: str, this_type: str, relat
     else:
         relationship_code = 'xx'
 
+    if 'a' not in field:
+        log.error("A name was not found for institution %s on %s", field.get('0'), this_id)
+
     d: InstitutionRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "type": "institution",
         "this_id": this_id,
         "this_type": this_type,
-        "name": field.get("a"),
+        "name": field.get("a", "[Unknown name]"),
         "place": field.get("c"),
         "department": field.get("d"),
         "institution_id": f"institution_{field['0']}",

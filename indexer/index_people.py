@@ -45,7 +45,8 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                      (SELECT COUNT(pp2.person_b_id) FROM {dbname}.people_to_people AS pp2 WHERE p.id = pp2.person_b_id) > 0 OR
                      (SELECT COUNT(sp.person_id) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
                      (SELECT COUNT(hp.person_id) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
-                     (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0)
+                     (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0 OR
+                     (SELECT COUNT(pubp.person_id) FROM {dbname}.people_to_publications AS pubp WHERE p.id = pubp.person_id) > 0)
                      {id_where_clause};"""
 
     curs.execute(sql_statement)

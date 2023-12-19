@@ -519,7 +519,7 @@ def tokenize_variants(variants: list[str]) -> list[str]:
     Bach, JS
     Beck, J
 
-    The result will be: [Bach, Johann, Sebastian, Beck]
+    The result will be: [Bach, Johann, Sebastian, Beck, J, JS]
 
     :param variants: A string representing a newline-separated list of variant terms
     :return: A list of unique name tokens.

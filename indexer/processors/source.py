@@ -342,11 +342,13 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     """
     if "856" not in record:
         return None
-    return [
-        external_resource_data(f)
-        for f in record.get_fields("856")
+
+    resources: list = [
+        external_resource_data(f) for f in record.get_fields("856")
         if f and ("8" not in f or f["8"] != "01")
     ]
+
+    return resources if resources else None
 
 
 def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:

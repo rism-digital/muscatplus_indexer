@@ -405,10 +405,7 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
             continue
 
         digitization_links: list = [
-            f
-            for f in record.get_fields("856")
-            if "x" in f
-            and f["x"]
+            f for f in record.get_fields("856") if "x" in f and f["x"]
             in (
                 "Digitalization",
                 "Digitized sources",

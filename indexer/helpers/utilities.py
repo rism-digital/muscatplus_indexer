@@ -519,9 +519,7 @@ def tokenize_variants(variants: list[str]) -> list[str]:
     Bach, JS
     Beck, J
 
-    The result will be: [Bach, Johann, Sebastian, Beck]
-
-    NB: Tokens 2 characters or shorter will not be included to reduce the noise.
+    The result will be: [Bach, Johann, Sebastian, Beck, J, JS]
 
     :param variants: A string representing a newline-separated list of variant terms
     :return: A list of unique name tokens.
@@ -529,7 +527,7 @@ def tokenize_variants(variants: list[str]) -> list[str]:
     unique_tokens: set = set()
 
     for variant in variants:
-        name_parts: list = [n.strip() for n in re.split(r",| ", variant) if n and len(n) > 2]
+        name_parts: list = [n.strip() for n in re.split(r"[, ]", variant) if n and n != "..."]
         unique_tokens.update(name_parts)
 
     return list(unique_tokens)

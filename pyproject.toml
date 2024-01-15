@@ -17,7 +17,6 @@ sentry-sdk = "^1.10.1"
 orjson = "^3.8.3"
 pymarc = "^5.0.0"
 psycopg = {extras = ["pool"], version = "^3.1.10"}
-small-asc = {git = "https://github.com/rism-digital/small-asc.git", rev = "main"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.0"

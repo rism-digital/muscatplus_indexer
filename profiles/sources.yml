@@ -85,7 +85,7 @@ incipit_text_sm:
 
 local_number_sm:
   field: "035"
-  subfield: "b"
+  subfield: "a"
   multiple: true
 
 # most fields in 040 are internal.

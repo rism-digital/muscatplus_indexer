@@ -12,13 +12,13 @@ def _parse_field(line: str) -> pymarc.Field:
     control: bool = tag_value.isdigit() and int(tag_value) < 10
     if control:
         return pymarc.Field(tag=tag_value, data=line[6:])
-    else:
-        ind_value: str = line[6:8]
-        indicators: list = list(ind_value)
-        sub_value: str = line[9:]
-        subf_list: list = sub_value.split("$") if sub_value else []
-        subfields: list[pymarc.Subfield] = [_parse_subf(itm) for itm in subf_list if itm != '']
-        return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
+
+    ind_value: str = line[6:8]
+    indicators: list = list(ind_value)
+    sub_value: str = line[9:]
+    subf_list: list = sub_value.split("$") if sub_value else []
+    subfields: list[pymarc.Subfield] = [_parse_subf(itm) for itm in subf_list if itm != '']
+    return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 
 def _parse_subf(subf_value: str) -> pymarc.Subfield:

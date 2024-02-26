@@ -9,12 +9,12 @@ python = "^3.9"
 dbutils = "^3.0"
 mysqlclient = "^2.2.0"
 pyyaml = "^6.0.0"
-uvloop = "^0.17.0"
+uvloop = "^0.19.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
-httpx = "^0.25.0"
+httpx = "^0.26.0"
 verovio = { version = "^4.0.0", allow-prereleases = true }
 sentry-sdk = "^1.10.1"
-orjson = "^3.8.3"
+orjson = "3.9.10"
 pymarc = "^5.0.0"
 psycopg = {extras = ["pool"], version = "^3.1.10"}
 

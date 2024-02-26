@@ -133,6 +133,7 @@ provenance_sm:
   field: "852"
   subfield: "z"
   multiple: true
+  sorted: false
 
 iiif_manifest_uris_sm:
   processor: "_get_iiif_manifest_uris"

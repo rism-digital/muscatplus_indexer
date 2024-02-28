@@ -50,6 +50,9 @@ city_address_sm:
   field: "371"
   subfield: "b"
   multiple: true
+county_province_sm:
+  field: "371"
+  subfield: "c"
 country_address_sm:
   field: "371"
   subfield: "d"
@@ -97,6 +100,7 @@ institution_history_sm:
   subfield: "a"
   multiple: true
   breaks: true
+  sorted: false
 
 general_notes_sm:
   field: "680"

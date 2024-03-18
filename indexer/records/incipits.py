@@ -240,29 +240,21 @@ def __incipit(
             "intervals_bi": " ".join(intervals) if intervals else None,
             "intervals_diat_bi": " ".join(intervals_diat) if intervals_diat else None,
             "intervals_im": [int(i) for i in intervals] if intervals else None,
-            "intervals_diat_im": [int(i) for i in intervals_diat]
-            if intervals_diat
-            else None,
+            "intervals_diat_im": [int(i) for i in intervals_diat] if intervals_diat else None,
             "intervals_len_i": len(intervals) if intervals else None,
             "intervals_diat_len_i": len(intervals_diat) if intervals_diat else None,
-            "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8")
-            if interval_ids
-            else None,
+            "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8") if interval_ids else None,
             "pitches_bi": " ".join(pitches) if pitches else None,
             "pitches_diat_bi": " ".join(pitches_diat) if pitches_diat else None,
             "pitches_sm": pitches if pitches else None,
             "pitches_diat_sm": pitches_diat if pitches_diat else None,
             "pitches_len_i": len(pitches) if pitches else None,
             "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
-            "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8")
-            if pitch_ids
-            else None,
+            "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8") if pitch_ids else None,
             "contour_gross_sm": contour_gross if contour_gross else None,
             "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
             "contour_refined_sm": contour_refined if contour_refined else None,
-            "contour_refined_bi": " ".join(contour_refined)
-            if contour_refined
-            else None,
+            "contour_refined_bi": " ".join(contour_refined) if contour_refined else None,
         }
 
         # update the record with the verovio features

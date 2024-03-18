@@ -51,6 +51,14 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     else:
         composer_names = []
 
+    composer_ids: list
+    if 'composer_ids' in record and record['composer_ids']:
+        composer_data = [f.strip() for f in record['composer_ids'].split("$") if f]
+        composer_components = [x.split('|') for x in composer_data if x]
+        composer_ids = [transform_rism_id(cid) for cmp in composer_components for cid in cmp]
+    else:
+        composer_ids = []
+
     display_label = f"{record['siglum']} {record['shelfmark']}"
     if nm := record.get("name"):
         display_label = f"{display_label} ({nm})"
@@ -95,6 +103,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "physical_dimensions_s": record["measurements"],
         "people_names_sm": composer_names,
         "source_member_composers_sm": composer_names,
+        "related_people_ids": composer_ids,
         "siglum_s": record['siglum'],
         "additional_title_s": record["name"],
         "general_notes_sm": general_description,

@@ -38,6 +38,14 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                               LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
                      WHERE ddi.source_id = dds.id AND ddp.id IS NOT NULL
                     ) AS composer_names,
+                (SELECT string_agg(DISTINCT concat_ws('|', ddpi.identifier), '$')
+                    FROM diamm_data_item ddi
+                             LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
+                             LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
+                             LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
+                             LEFT JOIN diamm_data_personidentifier ddpi ON ddp.id = ddpi.person_id
+                    WHERE ddi.source_id = dds.id AND ddpi.identifier_type = 1 AND ddp.id IS NOT NULL
+                    ) AS composer_ids,
                 (SELECT string_agg(ddsn.note, '|:|') 
                     FROM diamm_data_sourcenote ddsn
                     WHERE ddsn.source_id = dds.id AND ddsn.type = 1

@@ -98,11 +98,6 @@ language_text_sm:
   subfield: "a"
   multiple: true
 
-language_libretto_sm:
-  field: "041"
-  subfield: "e"
-  multiple: true
-
 language_original_sm:
   field: "041"
   subfield: "h"

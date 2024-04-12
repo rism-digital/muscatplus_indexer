@@ -66,6 +66,26 @@ def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
     return get_titles(record, "240")
 
 
+def _get_holding_titles_data(record: pymarc.Record) -> Optional[dict]:
+    if "852" not in record:
+        return None
+
+    holding: pymarc.Field = record["852"]
+    holding_id = f"institution_{n}" if (n := holding.get("x")) else None
+
+    d = {
+        "holding_siglum": holding.get("a"),
+        "holding_shelfmark": holding.get("c"),
+        "holding_institution": holding.get("e"),
+        "holding_institution_id": holding_id
+    }
+
+    return {k: v for k, v in d.items() if v}
+
+# def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
+#     return get_titles(record, "240")
+
+
 def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
     if "856" not in record:
         return None

@@ -5,6 +5,10 @@ standard_titles_json:
   processor: "_get_standard_titles_data"
   json: true
 
+holding_titles_json:
+  processor: "_get_holding_titles_data"
+  json: true
+
 siglum_s:
   field: "852"
   subfield: "a"

@@ -650,7 +650,6 @@ def get_bibliographic_references_json(record: pymarc.Record, field: str, referen
     if field not in record:
         return None
 
-    fields: list[pymarc.Field] = record.get_fields(field)
     refs: dict = {}
     for r in references:
         # |:| is a unique field delimiter
@@ -659,19 +658,24 @@ def get_bibliographic_references_json(record: pymarc.Record, field: str, referen
         try:
             refs[rid] = format_reference(rest)
         except ValueError as e:
-            log.error("Could not index references for record %s.", record["001"])
+            log.error("Could not index references for record %s.", record["001"].value())
             return None
 
     outp: list = []
+    fields: list[pymarc.Field] = record.get_fields(field)
 
-    for field in fields:
-        fid: str = field["0"]
+    for ff in fields:
+        fid: Optional[str] = ff.get("0")
+        if not fid:
+            log.error("No field 0 for entry in record %s. Skipping.", record["001"].value())
+            continue
+
         literature_id: str = f"literature_{fid}"
         r = {
             "id": literature_id,
             "formatted": refs[fid],
         }
-        if p := field.get("n"):
+        if p := ff.get("n"):
             r["pages"] = p
 
         outp.append(r)

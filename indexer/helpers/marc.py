@@ -11,7 +11,7 @@ def _parse_field(line: str) -> pymarc.Field:
     # subfields, but have the data encoded in them directly.
     control: bool = tag_value.isdigit() and int(tag_value) < 10
     if control:
-        return pymarc.Field(tag=tag_value, data=line[6:])
+        return pymarc.Field(tag=tag_value, data=line[6:].rstrip("\r\n"))
 
     ind_value: str = line[6:8]
     indicators: list = list(ind_value)

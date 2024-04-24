@@ -62,13 +62,13 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_b_id
-                        WHERE rela.institution_a_id = i.id)
-                        AS related_institutions,
+                        WHERE rela.institution_a_id = i.id AND rela.marc_tag = '580')
+                        AS now_in_institutions,
                      (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_a_id
-                        WHERE rela.institution_b_id = i.id)
-                        AS referring_institutions,
+                        WHERE rela.institution_b_id = i.id AND rela.marc_tag = '580')
+                        AS contains_institutions,
                     (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') 
                         FROM {dbname}.digital_object_links AS do 
                         WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id) 

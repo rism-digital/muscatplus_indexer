@@ -50,26 +50,26 @@ def create_institution_index_document(
 
     now_in: Optional[list[dict]] = None
     now_in_sigla: Optional[list] = None
-    related_institutions = record.get("related_institutions")
-    if related_institutions:
-        all_related_institutions: list = related_institutions.split("\n")
-        related_institution_lookup: dict = _process_related_institutions(all_related_institutions)
+    now_in_institutions: Optional[str] = record.get("now_in_institutions")
+    if now_in_institutions:
+        all_now_in_institutions: list = now_in_institutions.split("\n")
+        now_in_institution_lookup: dict = _process_related_institutions(all_now_in_institutions)
 
         now_in = _get_now_in_json(
-            marc_record, related_institution_lookup, institution_id
+            marc_record, now_in_institution_lookup, institution_id
         )
-        now_in_sigla = [s['siglum'] for k, s in related_institution_lookup.items() if s and 'siglum' in s]
+        now_in_sigla = [s['siglum'] for k, s in now_in_institution_lookup.items() if s and 'siglum' in s]
 
     contains: Optional[list[dict]] = None
     contains_sigla: Optional[list] = None
-    referring_institutions: str = record.get("referring_institutions")
-    if referring_institutions:
-        all_referring_institutions: list = referring_institutions.split("\n")
-        referring_institution_lookup: dict = _process_related_institutions(all_referring_institutions)
+    contains_institutions: Optional[str] = record.get("contains_institutions")
+    if contains_institutions:
+        all_contains_institutions: list = contains_institutions.split("\n")
+        contains_institution_lookup: dict = _process_related_institutions(all_contains_institutions)
         contains = _get_contains_json(
-            referring_institution_lookup, institution_id
+            contains_institution_lookup, institution_id
         )
-        contains_sigla = [s['siglum'] for k, s in referring_institution_lookup.items() if s and 'siglum' in s]
+        contains_sigla = [s['siglum'] for k, s in contains_institution_lookup.items() if s and 'siglum' in s]
 
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (

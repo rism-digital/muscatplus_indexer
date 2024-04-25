@@ -113,9 +113,11 @@ related_people_json:  # 700
   processor: "_get_related_people_data"
   json: true
 
-related_institutions_json: # 710
-  processor: "_get_related_institutions_data"
-  json: true
+# Moved to the main record processor since we could get more info (e.g., place)
+# from the related institution record than we could get from a single field.
+#related_institutions_json: # 710
+#  processor: "_get_related_institutions_data"
+#  json: true
 
 external_resources_json: # 856
   processor: "_get_external_resources_data"

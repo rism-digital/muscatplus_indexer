@@ -3,15 +3,16 @@ name = "muscatplus_indexer"
 version = "v1.0.4"
 description = ""
 authors = ["Andrew Hankinson <andrew.hankinson@rism.digital>"]
+package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 dbutils = "^3.0"
-mysqlclient = "^2.2.0"
+mysqlclient = "^2.2.4"
 pyyaml = "^6.0.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
 httpx = "^0.27.0"
-verovio = { version = "^4.0.0", allow-prereleases = true }
+verovio = { version = "^4.1.0", allow-prereleases = true }
 sentry-sdk = "^1.10.1"
 orjson = "^3.9.15"
 pymarc = "^5.0.0"

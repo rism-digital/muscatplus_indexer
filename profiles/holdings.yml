@@ -6,8 +6,8 @@ local_numbers_sm:
   subfield: "a"
   multiple: true
 
-standard_titles_json:
-  processor: "_get_standard_titles_data"
+holding_titles_json:
+  processor: "_get_holding_titles_data"
   json: true
 
 format_extent_sm:

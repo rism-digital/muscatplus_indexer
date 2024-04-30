@@ -128,3 +128,27 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
         return None
 
     return [external_resource_data(f) for f in record.get_fields("856")]
+
+
+def _address(address_field: pymarc.Field) -> Optional[dict]:
+    d = {
+        "street": address_field.get_subfields("a"),  # list
+        "city": address_field.get_subfields("b"),  # list
+        "county": address_field.get_subfields("c"),
+        "country": address_field.get_subfields("d"),
+        "postcode": address_field.get_subfields("e"),
+        "email": address_field.get_subfields("m"),
+        "website": address_field.get_subfields("u"),
+        "note": address_field.get_subfields("z")
+    }
+
+    return {k: v for k, v in d.items() if v}
+
+
+def _get_addresses_data(record: pymarc.Record) -> Optional[list]:
+    if "371" not in record:
+        return None
+
+    addresses: list[pymarc.Field] = record.get_fields("371")
+
+    return [_address(ent) for ent in addresses]

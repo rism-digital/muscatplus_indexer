@@ -13,8 +13,7 @@ def _parse_field(line: str) -> pymarc.Field:
     if control:
         return pymarc.Field(tag=tag_value, data=line[6:].rstrip("\r\n"))
 
-    ind_value: str = line[6:8]
-    indicators: list = list(ind_value)
+    indicators: pymarc.Indicators = pymarc.Indicators(line[6], line[7])
     sub_value: str = line[9:]
     subf_list: list = sub_value.split("$") if sub_value else []
     subfields: list[pymarc.Subfield] = [_parse_subf(itm) for itm in subf_list if itm != '']

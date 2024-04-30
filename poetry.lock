@@ -516,10 +516,14 @@ version = "5.1.2"
 description = "Read, write and modify MARC bibliographic data"
 optional = false
 python-versions = ">=3.7"
-files = [
-    {file = "pymarc-5.1.2-py3-none-any.whl", hash = "sha256:719340150adb600e0a3603e8504bc5b3d2f3e134dd73891e4d927b6f6731bb7d"},
-    {file = "pymarc-5.1.2.tar.gz", hash = "sha256:81ce6bfe9b47170f03d8a99209e4211778ade015a67b1eeb6b30862d4e24ae58"},
-]
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://gitlab.com/ahankinson/pymarc"
+reference = "new-indicators-type"
+resolved_reference = "0918d7c90f5a95ba68577dedddfc95e1778a59f3"
 
 [[package]]
 name = "pyparsing"
@@ -789,4 +793,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "ad09e1af6f52cf59616865a11360964b863a1af3e74cd261e6492bc7bbb0f7ef"
+content-hash = "549225dd97257432a44c011d81ab177ebab5fc16101edc37599420bcedf45847"

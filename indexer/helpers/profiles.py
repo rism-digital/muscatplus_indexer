@@ -42,14 +42,13 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             processor_fn: Callable = getattr(processors, fn_name)
             field_result: Any = processor_fn(marc)
 
-            if required is True and field_result is None:
-                log.critical("%s requires a value, but one was not found for %s. Skipping this field.",
-                             solr_field, doc_id)
-                continue
-
+            # don't bother to add this to the result, since it would
+            # get stripped out anyway.
             if field_result is None:
-                # don't bother to add this to the result, since it would
-                # get stripped out anyway.
+                if required is True:
+                    log.critical("%s requires a value, but one was not found for %s. Skipping this field.",
+                                 solr_field, doc_id)
+
                 continue
 
             if to_json:

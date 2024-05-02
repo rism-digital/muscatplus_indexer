@@ -73,6 +73,9 @@ public_note_address_sm:
   field: "371"
   subfield: "z"
   multiple: true
+addresses_json:
+  processor: "_get_addresses_data"
+  json: true
 
 alternate_names_sm:
   field: "410"

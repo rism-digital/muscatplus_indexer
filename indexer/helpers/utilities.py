@@ -479,6 +479,20 @@ def __title(field: pymarc.Field,
     return {k: v for k, v in d.items() if v}
 
 
+def get_where(record: pymarc.Record, field: str, conditions: dict) -> list[pymarc.Field]:
+    fields: list[pymarc.Field] = record.get_fields(field)
+    if not fields:
+        return []
+
+    out = []
+    for subf, val in conditions.items():
+        for field in fields:
+            if subf in field and field[subf] == val:
+                out.append(field)
+
+    return out
+
+
 def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
     """
     Standardize the title field structure. This is used for both the 240 and 730 fields
@@ -500,8 +514,16 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
         if "852" in record:
             h = record.get("852")
 
+        y: Optional[pymarc.Field]
         if "593" in record:
-            y = record.get("593")
+            # If the record has a 593 and that is for material group 01, then
+            # prefer that for generating the titles. If it does not,
+            # then simply take the first 593.
+            candidates = get_where(record, "593", {"8": "01"})
+            if candidates:
+                y = candidates[0]
+            else:
+                y = record.get("593")
 
     return [__title(t, c, h, y) for t in titles if t]
 

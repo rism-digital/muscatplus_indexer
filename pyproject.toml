@@ -16,7 +16,7 @@ verovio = { version = "^4.1.0", allow-prereleases = true }
 sentry-sdk = "^1.10.1"
 orjson = "^3.9.15"
 #pymarc = "^5.0.0"
-pymarc = {git = "https://gitlab.com/ahankinson/pymarc", rev = "new-indicators-type"}
+pymarc = {git = "https://gitlab.com/ahankinson/pymarc", rev = "fix-tag-length"}
 psycopg = {extras = ["pool"], version = "^3.1.10"}
 
 [tool.poetry.dev-dependencies]

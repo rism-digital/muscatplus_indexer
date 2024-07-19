@@ -193,6 +193,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
             if siglum:
                 related_institution_sigla.append(siglum)
 
+    has_digitization: bool = _get_has_digitization(all_marc_records)
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: dict = {
@@ -230,7 +232,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "is_contents_record_b": get_is_contents_record(record_type_id, parent_id),
         "is_collection_record_b": get_is_collection_record(record_type_id, child_count),
         "is_composite_volume_b": record_type_id == 11,
-        "has_digitization_b": _get_has_digitization(all_marc_records),
+        "has_digitization_b": has_digitization,
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "digitization_notes_sm": _get_digitization_notes(all_marc_records),
         "has_digital_objects_b": has_digital_objects,
@@ -256,7 +258,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
 
-    incipits: list = get_incipits(marc_record, main_title, record_type_id, country_codes) or []
+    incipits: list = get_incipits(marc_record, main_title, record_type_id, country_codes, has_digitization) or []
 
     res: list = [source_core]
     res.extend(incipits)
@@ -400,39 +402,40 @@ def _get_has_digitization(all_records: list[pymarc.Record]) -> bool:
     :param all_records: A list of records (source + holding) to check
     :return: A bool indicating whether any one record has the correct value in 856$x
     """
+    digitized_labels = (
+        "Digitalization",
+        "Digitized sources",
+        "Digitized",
+        "IIIF",
+        "IIIF manifest (digitized source)",
+        "IIIF manifest (other)",
+    )
+
     for record in all_records:
         if "856" not in record:
             continue
 
-        digitization_links: list = [
-            f for f in record.get_fields("856") if "x" in f and f["x"]
-            in (
-                "Digitalization",
-                "Digitized sources",
-                "Digitized",
-                "IIIF",
-                "IIIF manifest (digitized source)",
-                "IIIF manifest (other)",
-            )
-        ]
-        if len(digitization_links) > 0:
-            return True
+        for f in record.get_fields("856"):
+            if "x" not in f:
+                continue
+            if f["x"] in digitized_labels:
+                return True
 
     return False
 
 
 def _get_has_iiif_manifest(all_records: list[pymarc.Record]) -> bool:
+    iiif_labels = ("IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")
+
     for record in all_records:
         if "856" not in record:
             continue
 
-        iiif_manifests: list = [
-            f
-            for f in record.get_fields("856")
-            if "x" in f and f["x"] in ("IIIF", "IIIF manifest (digitized source)", "IIIF manifest (other)")
-        ]
-        if len(iiif_manifests) > 0:
-            return True
+        for f in record.get_fields("856"):
+            if "x" not in f:
+                continue
+            if f["x"] in iiif_labels:
+                return True
 
     return False
 
@@ -484,7 +487,9 @@ def _get_related_sources(
         notes about the relationship are stored.
     :return: A list of related sources in JSON format.
     """
-    # =787  0#$nT p: Solo and Chorus ... From Cantata of "Daniel" ... Copied from the Sabbath Bell by / S[amuel] F[rederick] Van Vleck. organist / Nov. 22 1878.$w1001125501$4rdau:P60311
+    # =787  0#$nT p: Solo and Chorus ... From Cantata of
+    # "Daniel" ... Copied from the Sabbath Bell by / S[amuel] F[rederick] Van Vleck.
+    # organist / Nov. 22 1878.$w1001125501$4rdau:P60311
     notes: dict = {}
 
     for relfield in relationship_fields:

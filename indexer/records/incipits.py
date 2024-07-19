@@ -106,6 +106,7 @@ def __incipit(
     parent_record_title: str,
     num: int,
     country_codes: list[str],
+    has_digitization: bool
 ) -> IncipitIndexDocument:
     record_id: str = normalize_id(record["001"].value())
     record_ident: str = f"source_{record_id}"
@@ -181,6 +182,8 @@ def __incipit(
     else:
         key_sig = "n"
 
+    norm_key_sig: str = key_sig.replace("[", "").replace("]", "")
+
     standard_title_json = get_titles(record, "240")
 
     d: dict = {
@@ -204,6 +207,7 @@ def __incipit(
         "work_num_s": work_number,
         "key_mode_s": field.get("r"),
         "key_s": key_sig,
+        "norm_key_s": norm_key_sig,
         "timesig_s": time_sig.strip() if time_sig and len(time_sig) > 0 else None,
         "clef_s": field.get("g"),
         "voice_instrument_s": field.get("m"),
@@ -211,9 +215,8 @@ def __incipit(
         "general_notes_sm": field.get_subfields("q"),
         "scoring_sm": field.get_subfields("z"),
         "country_codes_sm": country_codes,
-        "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8")
-        if standard_title_json
-        else None,
+        "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8") if standard_title_json else None,
+        "has_digitization_b": has_digitization,
     }
 
     pae_code: Optional[str] = _incipit_to_pae(d) if d["music_incipit_s"] else None
@@ -268,6 +271,7 @@ def get_incipits(
     parent_record_title: str,
     record_type_id: int,
     country_codes: list[str],
+    has_digitization: bool
 ) -> Optional[list]:
     if "031" not in record:
         return None
@@ -282,6 +286,7 @@ def get_incipits(
             parent_record_title,
             num,
             country_codes,
+            has_digitization
         )
         for num, f in enumerate(incipits, 1)
     ]

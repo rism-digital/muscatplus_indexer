@@ -10,6 +10,8 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
 
+from cantus_indexer.index import clean_cantus, index_cantus
+from cmo_indexer.index import index_cmo, clean_cmo
 from diamm_indexer.index import index_diamm, clean_diamm
 from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
@@ -55,6 +57,41 @@ def only_diamm(cfg: dict) -> bool:
         res &= clean_diamm(cfg)
 
     res &= index_diamm(cfg)
+    res &= reload_core(cfg['solr']['server'],
+                       cfg['solr']['indexing_core'])
+
+    if cfg["swap_cores"] and not cfg["dry"]:
+        res &= swap_cores(cfg['solr']['server'],
+                          cfg['solr']['indexing_core'],
+                          cfg['solr']['live_core'])
+
+    return res
+
+
+def only_cantus(cfg: dict) -> bool:
+    res: bool = True
+
+    if not cfg["dry"]:
+        res &= clean_cantus(cfg)
+
+    res &= index_cantus(cfg)
+    res &= reload_core(cfg['solr']['server'],
+                       cfg['solr']['indexing_core'])
+
+    # if cfg["swap_cores"] and not cfg["dry"]:
+    #     res &= swap_cores(cfg['solr']['server'],
+    #                       cfg['solr']['indexing_core'],
+    #                       cfg['solr']['live_core'])
+
+    return res
+
+
+def only_cmo(cfg: dict) -> bool:
+    res: bool = True
+    if not cfg["dry"]:
+        res &= clean_cmo(cfg)
+
+    res &= index_cmo(cfg)
     res &= reload_core(cfg['solr']['server'],
                        cfg['solr']['indexing_core'])
 
@@ -120,6 +157,16 @@ def main(args: argparse.Namespace) -> bool:
         # force a core reload to ensure it's up-to-date
         return res
 
+    if args.only_cantus:
+        log.info("Only running the Cantus indexer.")
+        res &= only_cantus(idx_config)
+        return res
+
+    if args.only_cmo:
+        log.info("Only running the CMO indexer.")
+        res &= only_cmo(idx_config)
+        return res
+
     inc: list
     if not args.include:
         inc = ["sources",
@@ -166,6 +213,12 @@ def main(args: argparse.Namespace) -> bool:
 
     if not args.skip_diamm:
         res &= index_diamm(idx_config)
+
+    if not args.skip_cantus:
+        res &= index_cantus(idx_config)
+
+    if not args.skip_cmo:
+        res &= index_cmo(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()
@@ -219,6 +272,12 @@ if __name__ == "__main__":
 
     parser.add_argument("--skip-diamm", dest="skip_diamm", action="store_true", help="Skip DIAMM indexing.")
     parser.add_argument("--only-diamm", dest="only_diamm", action="store_true", help="Only index DIAMM into the indexing core. Does not swap afterwards.")
+
+    parser.add_argument("--skip-cantus", dest="skip_cantus", action="store_true", help="Skip Cantus indexing.")
+    parser.add_argument("--only-cantus", dest="only_cantus", action="store_true", help="Only index Cantus into the indexing core. Does not swap afterwards.")
+
+    parser.add_argument("--skip-cmo", dest="skip_cmo", action="store_true", help="Skip CMO indexing.")
+    parser.add_argument("--only-cmo", dest="only_cmo", action="store_true", help="Only index CMO into the indexing core. Does not swap afterwards.")
 
     input_args: argparse.Namespace = parser.parse_args()
 

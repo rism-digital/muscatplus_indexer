@@ -147,7 +147,7 @@ six = "^1.16.0"
 type = "git"
 url = "https://github.com/rism-digital/python-edtf.git"
 reference = "performance-enhancements"
-resolved_reference = "c12d759732d393ac66faa462b8d61b057c675d17"
+resolved_reference = "06ab934befb7a665301587134794ddbc50b60964"
 
 [[package]]
 name = "executing"
@@ -483,13 +483,13 @@ files = [
 
 [[package]]
 name = "pure-eval"
-version = "0.2.2"
+version = "0.2.3"
 description = "Safely evaluate AST nodes without side effects"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pure_eval-0.2.2-py3-none-any.whl", hash = "sha256:01eaab343580944bc56080ebe0a674b39ec44a945e6d09ba7db3cb8cec289350"},
-    {file = "pure_eval-0.2.2.tar.gz", hash = "sha256:2b45320af6dfaa1750f543d714b6d1c520a1688dec6fd24d339063ce0aaa9ac3"},
+    {file = "pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0"},
+    {file = "pure_eval-0.2.3.tar.gz", hash = "sha256:5f4e983f40564c576c7c8635ae88db5956bb2229d7e9237d03b3c0b0190eaf42"},
 ]
 
 [package.extras]
@@ -511,18 +511,14 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pymarc"
-version = "5.1.2"
+version = "5.2.0"
 description = "Read, write and modify MARC bibliographic data"
 optional = false
 python-versions = ">=3.7"
-files = []
-develop = false
-
-[package.source]
-type = "git"
-url = "https://gitlab.com/ahankinson/pymarc"
-reference = "fix-tag-length"
-resolved_reference = "210dc157c65f342e58f7b6cd365077eea1d78a74"
+files = [
+    {file = "pymarc-5.2.0-py3-none-any.whl", hash = "sha256:b5e3ba8c1505c00cd68ce3b519f25a14fb266113daf3ccdd5b30805fbcf49f8d"},
+    {file = "pymarc-5.2.0.tar.gz", hash = "sha256:991c1e5fe560da3336bb41d0ebcf9ecc54cd3b85ffb1d70a6ce45fa2a82d2389"},
+]
 
 [[package]]
 name = "pyparsing"
@@ -603,13 +599,13 @@ files = [
 
 [[package]]
 name = "sentry-sdk"
-version = "2.7.1"
+version = "2.11.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sentry_sdk-2.7.1-py2.py3-none-any.whl", hash = "sha256:ef1b3d54eb715825657cd4bb3cb42bb4dc85087bac14c56b0fd8c21abd968c9a"},
-    {file = "sentry_sdk-2.7.1.tar.gz", hash = "sha256:25006c7e68b75aaa5e6b9c6a420ece22e8d7daec4b7a906ffd3a8607b67c037b"},
+    {file = "sentry_sdk-2.11.0-py2.py3-none-any.whl", hash = "sha256:d964710e2dbe015d9dc4ff0ad16225d68c3b36936b742a6fe0504565b760a3b7"},
+    {file = "sentry_sdk-2.11.0.tar.gz", hash = "sha256:4ca16e9f5c7c6bc2fb2d5c956219f4926b148e511fffdbbde711dc94f1e0468f"},
 ]
 
 [package.dependencies]
@@ -795,4 +791,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "71dea8832f62ff28e7bd6cab40a9f8991fb267056aa9e3a752085d4c9abd61cd"
+content-hash = "635654cddebf0886673802bf4864521cd373ebe124298db6780750c27d8d9818"

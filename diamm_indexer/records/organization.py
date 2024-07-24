@@ -3,42 +3,14 @@ from typing import Optional
 
 import orjson
 
-from diamm_indexer.helpers.identifiers import transform_rism_id, RELATOR_MAP, COUNTRY_SIGLUM_MAP
+from diamm_indexer.helpers.identifiers import COUNTRY_SIGLUM_MAP
 from diamm_indexer.helpers.utilities import get_related_sources_json
 from indexer.helpers.identifiers import ProjectIdentifiers, COUNTRY_CODE_MAPPING
-from indexer.helpers.solr import exists
 
 log = logging.getLogger("muscat_indexer")
 
 
-def update_rism_institution_document(record, cfg: dict) -> Optional[dict]:
-    document_id: Optional[str] = transform_rism_id(record.get("rism_id"))
-    if not document_id:
-        return None
-
-    if not exists(document_id, cfg):
-        log.error("Institution %s does not exist in RISM (DIAMM ID: Organization %s", document_id, record["id"])
-        return None
-
-    diamm_id = record['id']
-    entry: dict = {
-        "id": f"{diamm_id}",
-        "type": "institution",
-        "project_type": f'{record.get("project_type")}',
-        "project": "diamm",
-        "label": f"{record.get('name')}"
-    }
-
-    entry_s: str = orjson.dumps(entry).decode("utf-8")
-
-    return {
-        "id": document_id,
-        "has_external_record_b": {"set": True},
-        "external_records_jsonm": {"add-distinct": entry_s}
-    }
-
-
-def create_organization_index_document(record, cfg: dict) -> dict:
+def create_organization_index_document(record, cfg: dict) -> list[dict]:
     log.debug("Indexing organization %s", record['name'])
     institution_id: str = f"diamm_organization_{record['id']}"
     raw_locations: Optional[str] = record.get("location")
@@ -75,7 +47,7 @@ def create_organization_index_document(record, cfg: dict) -> dict:
 
     d.update(location_map)
 
-    return d
+    return [d]
 
 
 def _get_related_sources_ids(sources: Optional[str]) -> Optional[list]:

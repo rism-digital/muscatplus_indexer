@@ -3,41 +3,12 @@ from typing import Optional
 
 import orjson
 
-from diamm_indexer.helpers.identifiers import transform_rism_id
-from indexer.helpers.identifiers import ProjectIdentifiers, country_code_from_siglum, COUNTRY_CODE_MAPPING
-from indexer.helpers.solr import exists
+from indexer.helpers.identifiers import (ProjectIdentifiers,
+                                         country_code_from_siglum,
+                                         COUNTRY_CODE_MAPPING,
+                                         transform_rism_id)
 
 log = logging.getLogger("muscat_indexer")
-
-
-def update_rism_source_document(record, cfg: dict) -> Optional[dict]:
-    document_id: Optional[str] = transform_rism_id(record.get("rism_id"))
-    if not document_id:
-        return None
-
-    if not exists(document_id, cfg):
-        log.error("Source %s does not actually exist in RISM!", document_id)
-        return None
-
-    diamm_id = record['id']
-    entry: dict = {
-        "id": f"{diamm_id}",
-        "type": "source",
-        "project": "diamm",
-        "project_type": "sources",
-        "label": f'{record.get("siglum", "")} {record.get("shelfmark", "")}'
-    }
-
-    if n := record.get("name"):
-        entry['name'] = n
-
-    entry_s: str = orjson.dumps(entry).decode("utf-8")
-
-    return {
-        "id": document_id,
-        "has_external_record_b": {"set": True},
-        "external_records_jsonm": {"add-distinct": entry_s}
-    }
 
 
 def create_source_index_documents(record, cfg: dict) -> list[dict]:
@@ -226,14 +197,6 @@ def _get_related_institutions_ids(orgs: Optional[str]) -> Optional[list]:
 
     orgs_raw: list[str] = orgs.split("\n")
     return [f"diamm_organization_{o.split('||')[1]}" for o in orgs_raw]
-
-
-def _get_related_institutions_names(orgs: Optional[str]) -> Optional[list]:
-    if not orgs:
-        return None
-
-    orgs_raw: list[str] = orgs.split("\n")
-    return [f"{o.split('||')[0]}" for o in orgs_raw]
 
 
 def _get_related_institutions_json(orgs: Optional[str]) -> list[dict]:

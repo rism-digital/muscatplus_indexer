@@ -7,9 +7,12 @@ from collections import OrderedDict
 from functools import wraps
 from typing import Iterable, Optional, TypedDict, Pattern, Callable, Iterator
 
+import orjson
 import pymarc
 
 from indexer.exceptions import RequiredFieldException, MalformedIdentifierException
+from indexer.helpers.identifiers import transform_rism_id
+from indexer.helpers.solr import exists
 
 log = logging.getLogger("muscat_indexer")
 
@@ -728,3 +731,38 @@ def format_reference(ref: list) -> str:
         res += f"({short.strip()})."
 
     return res
+
+
+def update_rism_document(record,
+                         project: str,
+                         record_type: str,
+                         label: str,
+                         cfg: dict,
+                         additional_fields: Optional[dict] = None) -> Optional[dict]:
+    document_id: Optional[str] = transform_rism_id(record.get("rism_id"))
+    if not document_id:
+        return None
+
+    if not exists(document_id, cfg):
+        log.error("%s %s does not exist in RISM (%s ID: %s)", record_type, document_id, project, record["id"])
+        return None
+
+    project_id = record['id']
+    entry: dict = {
+        "id": f"{project_id}",
+        "type": f"{record_type}",
+        "project_type": f'{record.get("project_type")}',
+        "project": f"{project}",
+        "label": f"{label}"
+    }
+
+    if additional_fields:
+        entry.update(additional_fields)
+
+    entry_s: str = orjson.dumps(entry).decode("utf-8")
+
+    return {
+        "id": document_id,
+        "has_external_record_b": {"set": True},
+        "external_records_jsonm": {"add-distinct": entry_s}
+    }

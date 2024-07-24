@@ -1,14 +1,12 @@
 import logging
+from typing import Callable
 
 import httpx
 import orjson
 
+from indexer.exceptions import RequiredFieldException
+
 log = logging.getLogger("muscat_indexer")
-
-
-def empty_diamm_solr_core(cfg: dict) -> bool:
-    idx_core = cfg["solr"]["diamm_indexing_core"]
-    return _empty_solr_core(cfg, idx_core)
 
 
 def empty_solr_core(cfg: dict) -> bool:
@@ -32,13 +30,13 @@ def _empty_solr_core(cfg: dict, core: str) -> bool:
     return False
 
 
-def empty_diamm_records(cfg: dict) -> bool:
+def empty_project_records(project_identifier: str, cfg: dict) -> bool:
     solr_address = cfg['solr']['server']
     idx_core = cfg['solr']['indexing_core']
     solr_idx_server: str = f"{solr_address}/{idx_core}"
 
     res = httpx.post(f"{solr_idx_server}/update?commit=true",
-                     content=orjson.dumps({"delete": {"query": f"project_s:diamm"}}),
+                     content=orjson.dumps({"delete": {"query": f"project_s:{project_identifier}"}}),
                      headers={"Content-Type": "application/json"},
                      timeout=None,
                      verify=False)
@@ -47,11 +45,6 @@ def empty_diamm_records(cfg: dict) -> bool:
         log.debug("Deletion was successful")
         return True
     return False
-
-
-def submit_to_diamm_solr(records: list, cfg: dict) -> bool:
-    solr_idx_core = cfg['solr']['diamm_indexing_core']
-    return _submit_to_solr(records, cfg, solr_idx_core)
 
 
 def submit_to_solr(records: list, cfg: dict) -> bool:
@@ -84,11 +77,6 @@ def _submit_to_solr(records: list, cfg: dict, core: str) -> bool:
     log.error("Could not index to Solr. %s: %s", res.status_code, res.text)
 
     return False
-
-
-def diamm_commit_changes(cfg: dict) -> bool:
-    solr_idx_core = cfg['solr']['diamm_indexing_core']
-    return _commit_changes(cfg, solr_idx_core)
 
 
 def commit_changes(cfg: dict) -> bool:
@@ -168,5 +156,29 @@ def exists(document_id: str, cfg: dict) -> bool:
             return True
         return False
 
-    log.error("Could not commit to Solr. %s: %s", res.status_code, res.text)
+    log.error("Error checking Solr. %s: %s", res.status_code, res.text)
     return False
+
+
+def record_indexer(records: list, converter: Callable, cfg: dict) -> bool:
+    idx_records = []
+
+    for record in records:
+        try:
+            docs: list = converter(record, cfg)
+        except RequiredFieldException:
+            log.error("Could not index %s %s", record['type'], record['id'])
+            continue
+
+        idx_records.extend(docs)
+
+    check: bool
+    if cfg["dry"]:
+        check = True
+    else:
+        check = submit_to_solr(idx_records, cfg)
+
+    if not check:
+        log.error("There was an error indexing records.")
+
+    return check

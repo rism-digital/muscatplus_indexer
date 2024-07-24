@@ -46,6 +46,14 @@ MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}-(?P<se
 EARLY_CENTURY_END_YEAR: int = 10
 LATE_CENTURY_START_YEAR: int = 90
 
+NO_DATES = {"[s.a.]", "[s. a.]", "s.a.", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]",
+            "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]",
+            "o.J", "o.J.", "[s.n.]", "(s. d.)", "[s.l.]", "[s.a]", "xxxx-xxxx",
+            "uuuu-uuuu", "?", "??", "[s..d]", "s/f", "[s.d. ]", "[s,d,]", "[s.t.]",
+            "[o. J.]", "s.d", "[s.d.}", "o.d.", "s.t.", "[o.J.]", "[o. J.]", "(n.d.)",
+            "[without]", "[s .a.]", "[s/d/]", "[s.d.[", "[s.c.]", "s/ d", "[?]",
+            "[s,d.]", "[sd]", "(s.d)", "unk", "unknown"}
+
 
 def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: str) -> Optional[tuple[int, int]]:
     """
@@ -122,9 +130,13 @@ def _parse_century_date_with_adjective(century_start: int, adjective: str) -> Op
 @functools.lru_cache(maxsize=2048)
 def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[int]]:  # noqa: MC0001
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
-    if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "[s.d.]", "[s. d.]", "s. d.", "s.d.", "[n.d.]",
-                                                "[o.J]", "o.J", "[s.n.]", "(s. d.)", "[s.l.]", "[s.a]"):
+    if not date_statement or date_statement in NO_DATES:
         return None, None
+
+    # Skip Año and any roman numerals:
+    if date_statement.startswith(("A", "M", "X")):
+        return None, None
+
     if "\u200f" in date_statement:
         log.warning("A right-to-left unicode character was detected in %s", date_statement)
 
@@ -325,14 +337,12 @@ def process_date_statements(date_statements: list[str], record_id: str) -> Optio
     latest_dates: list[int] = []
 
     for statement in date_statements:
-        if not statement or statement in {"[s.a.]", "[s. a.]", "s.a.", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]",
-                                          "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]",
-                                          "o.J", "o.J.", "[s.n.]", "(s. d.)", "[s.l.]", "[s.a]", "xxxx-xxxx",
-                                          "uuuu-uuuu", "?", "??", "[s..d]", "s/f", "[s.d. ]", "[s,d,]", "[s.t.]",
-                                          "[o. J.]", "s.d", "[s.d.}", "o.d.", "s.t.", "[o.J.]", "[o. J.]", "(n.d.)",
-                                          "[without]", "[s .a.]", "[s/d/]", "[s.d.[", "[s.c.]", "s/ d", "[?]",
-                                          "[s,d.]"}:
+        if not statement or statement in NO_DATES:
             continue
+
+        # Skip Año and any roman numerals:
+        if statement.startswith(("A", "M", "X")):
+            return None
 
         try:
             earliest, latest = parse_date_statement(statement)

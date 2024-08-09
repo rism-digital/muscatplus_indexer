@@ -82,8 +82,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "institution_id": f"cantus_institution_{record['institution_id']}",
         "city_s": record['institution_city'],
         "external_institution_id": f"cantus_institution_{record['institution_id']}",
-        # "external_resources_json": orjson.dumps(_get_external_institution_resource(record)).decode("utf-8")
-
+        "external_resources_json": orjson.dumps(_get_external_institution_resource(record)).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -127,3 +126,11 @@ def _process_dates(century: str) -> Optional[tuple[int, int]]:
         return parse_date_statement(cn)
 
     return None
+
+
+def _get_external_institution_resource(record) -> list[dict]:
+    return [{
+        "url": f"https://cantusdatabase.org/institution/{record['institution_id']}",
+        "link_type": "other",
+        "note": f"View {record['institution_name']} record in Cantus"
+    }]

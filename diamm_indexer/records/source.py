@@ -174,13 +174,11 @@ def _get_full_diamm_holding_identifiers(record) -> list[str]:
 
 
 def _get_external_institution_resource(record) -> list[dict]:
-    d = {
+    return [{
         "url": f"https://www.diamm.ac.uk/archives/{record['archive_id']}",
         "link_type": "other",
         "note": f"View {record['archive_name']} record in DIAMM"
-    }
-
-    return [d]
+    }]
 
 
 def _get_related_institutions_names(orgs: Optional[str]) -> Optional[list]:

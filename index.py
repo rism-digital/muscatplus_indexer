@@ -7,11 +7,11 @@ import timeit
 from pathlib import Path
 
 import sentry_sdk
-from sentry_sdk.integrations.logging import LoggingIntegration
 import yaml
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from cantus_indexer.index import clean_cantus, index_cantus
-from cmo_indexer.index import index_cmo, clean_cmo
+# from cmo_indexer.index import index_cmo, clean_cmo
 from diamm_indexer.index import index_diamm, clean_diamm
 from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.solr import swap_cores, empty_solr_core, reload_core, submit_to_solr
@@ -86,22 +86,22 @@ def only_cantus(cfg: dict) -> bool:
     return res
 
 
-def only_cmo(cfg: dict) -> bool:
-    res: bool = True
-    if not cfg["dry"]:
-        res &= clean_cmo(cfg)
-
-    res &= index_cmo(cfg)
-    res &= reload_core(cfg['solr']['server'],
-                       cfg['solr']['indexing_core'])
-
-    if cfg["swap_cores"] and not cfg["dry"]:
-        res &= swap_cores(cfg['solr']['server'],
-                          cfg['solr']['indexing_core'],
-                          cfg['solr']['live_core'])
-
-    return res
-
+# def only_cmo(cfg: dict) -> bool:
+#     res: bool = True
+#     if not cfg["dry"]:
+#         res &= clean_cmo(cfg)
+#
+#     res &= index_cmo(cfg)
+#     res &= reload_core(cfg['solr']['server'],
+#                        cfg['solr']['indexing_core'])
+#
+#     if cfg["swap_cores"] and not cfg["dry"]:
+#         res &= swap_cores(cfg['solr']['server'],
+#                           cfg['solr']['indexing_core'],
+#                           cfg['solr']['live_core'])
+#
+#     return res
+#
 
 @elapsedtime
 def main(args: argparse.Namespace) -> bool:
@@ -123,8 +123,8 @@ def main(args: argparse.Namespace) -> bool:
 
     # Set up sentry logging
     sentry_logging = LoggingIntegration(
-        level=logging.ERROR,        # Capture info and above as breadcrumbs
-        event_level=logging.ERROR   # Send errors as events
+        level=logging.ERROR,  # Capture info and above as breadcrumbs
+        event_level=logging.ERROR  # Send errors as events
     )
 
     version: str = idx_config["common"]["version"]
@@ -162,10 +162,10 @@ def main(args: argparse.Namespace) -> bool:
         res &= only_cantus(idx_config)
         return res
 
-    if args.only_cmo:
-        log.info("Only running the CMO indexer.")
-        res &= only_cmo(idx_config)
-        return res
+    # if args.only_cmo:
+    #     log.info("Only running the CMO indexer.")
+    #     res &= only_cmo(idx_config)
+    #     return res
 
     inc: list
     if not args.include:
@@ -217,8 +217,8 @@ def main(args: argparse.Namespace) -> bool:
     if not args.skip_cantus:
         res &= index_cantus(idx_config)
 
-    if not args.skip_cmo:
-        res &= index_cmo(idx_config)
+    # if not args.skip_cmo:
+    #     res &= index_cmo(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()
@@ -261,9 +261,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-e", "--empty", dest="empty", action="store_true", help="Empty the core prior to indexing")
-    parser.add_argument("-s", "--no-swap", dest="swap_cores", action="store_false", help="Do not swap cores (default is to swap)")
-    parser.add_argument("-c", "--config", dest="config", help="Path to an index config file; default is ./index_config.yml.")
-    parser.add_argument("-d", "--dry-run", dest="dry", action="store_true", help="Perform a dry run; performs all manipulation but does not send the results to Solr.")
+    parser.add_argument("-s", "--no-swap", dest="swap_cores", action="store_false",
+                        help="Do not swap cores (default is to swap)")
+    parser.add_argument("-c", "--config", dest="config",
+                        help="Path to an index config file; default is ./index_config.yml.")
+    parser.add_argument("-d", "--dry-run", dest="dry", action="store_true",
+                        help="Perform a dry run; performs all manipulation but does not send the results to Solr.")
 
     parser.add_argument("--include", action="extend", nargs="*")
     parser.add_argument("--exclude", action="extend", nargs="*", default=[])
@@ -271,13 +274,16 @@ if __name__ == "__main__":
     parser.add_argument("--id", dest="only_id", help="Only index a single ID")
 
     parser.add_argument("--skip-diamm", dest="skip_diamm", action="store_true", help="Skip DIAMM indexing.")
-    parser.add_argument("--only-diamm", dest="only_diamm", action="store_true", help="Only index DIAMM into the indexing core. Does not swap afterwards.")
+    parser.add_argument("--only-diamm", dest="only_diamm", action="store_true",
+                        help="Only index DIAMM into the indexing core. Does not swap afterwards.")
 
     parser.add_argument("--skip-cantus", dest="skip_cantus", action="store_true", help="Skip Cantus indexing.")
-    parser.add_argument("--only-cantus", dest="only_cantus", action="store_true", help="Only index Cantus into the indexing core. Does not swap afterwards.")
+    parser.add_argument("--only-cantus", dest="only_cantus", action="store_true",
+                        help="Only index Cantus into the indexing core. Does not swap afterwards.")
 
-    parser.add_argument("--skip-cmo", dest="skip_cmo", action="store_true", help="Skip CMO indexing.")
-    parser.add_argument("--only-cmo", dest="only_cmo", action="store_true", help="Only index CMO into the indexing core. Does not swap afterwards.")
+    # parser.add_argument("--skip-cmo", dest="skip_cmo", action="store_true", help="Skip CMO indexing.")
+    # parser.add_argument("--only-cmo", dest="only_cmo", action="store_true",
+    #                     help="Only index CMO into the indexing core. Does not swap afterwards.")
 
     input_args: argparse.Namespace = parser.parse_args()
 

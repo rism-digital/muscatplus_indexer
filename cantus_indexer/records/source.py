@@ -5,8 +5,12 @@ from typing import Optional, Pattern
 import orjson
 
 from indexer.helpers.datelib import parse_date_statement
-from indexer.helpers.identifiers import ProjectIdentifiers, country_code_from_siglum, COUNTRY_CODE_MAPPING, \
+from indexer.helpers.identifiers import (
+    ProjectIdentifiers,
+    country_code_from_siglum,
+    COUNTRY_CODE_MAPPING,
     transform_rism_id
+)
 
 log = logging.getLogger("muscat_indexer")
 

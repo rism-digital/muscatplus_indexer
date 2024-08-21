@@ -36,8 +36,8 @@ def index_places(cfg: dict) -> bool:
                 (SELECT COUNT(sp.source_id) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) > 0 OR
                 (SELECT COUNT(pp.person_id) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) > 0 OR
                 (SELECT COUNT(ip.institution_id) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) > 0 OR
-                (SELECT COUNT(hp.holding_id) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0 
-                {id_where_clause};"""
+                (SELECT COUNT(hp.holding_id) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0
+                {id_where_clause};"""  # noqa: S608
     )
 
     all_places: list[dict] = curs._cursor.fetchall()
@@ -47,10 +47,7 @@ def index_places(cfg: dict) -> bool:
         doc: PlaceIndexDocument = create_place_index_document(place, cfg)
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records_to_index, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records_to_index, cfg)
 
     if not check:
         log.error("There was an error submitting places to Solr")

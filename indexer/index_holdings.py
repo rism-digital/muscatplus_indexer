@@ -5,7 +5,7 @@ from typing import Generator
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.holding import create_holding_index_document, HoldingIndexDocument
+from indexer.records.holding import HoldingIndexDocument, create_holding_index_document
 
 log = logging.getLogger("muscat_indexer")
 
@@ -32,7 +32,7 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
                     LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id
                     LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
                     WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause}
-                    GROUP BY holdings.id;"""
+                    GROUP BY holdings.id;"""  # noqa: S608
     )
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
@@ -57,10 +57,7 @@ def index_holdings_groups(holdings: list, cfg: dict) -> bool:
         doc: HoldingIndexDocument = create_holding_index_document(record, cfg)
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(list(records_to_index), cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting holdings to Solr")

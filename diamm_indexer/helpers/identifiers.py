@@ -30,7 +30,7 @@ RELATOR_MAP: dict = {
     "35": "dte",
     "37": "aut",
     "45": "oth",
-    "46": "pbl"
+    "46": "pbl",
 }
 
 

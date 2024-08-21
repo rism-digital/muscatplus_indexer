@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
 from indexer.helpers.utilities import clean_multivalued
 

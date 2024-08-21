@@ -4,17 +4,17 @@ from typing import Optional
 import pymarc
 
 from indexer.helpers.identifiers import (
-    country_code_from_siglum,
     COUNTRY_CODE_MAPPING,
     ISO3166_TO_SIGLUM_MAPPING,
+    country_code_from_siglum,
 )
 from indexer.helpers.utilities import (
-    to_solr_single,
-    normalize_id,
-    get_related_people,
-    get_related_institutions,
-    get_related_places,
     external_resource_data,
+    get_related_institutions,
+    get_related_people,
+    get_related_places,
+    normalize_id,
+    to_solr_single,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -139,7 +139,7 @@ def _address(address_field: pymarc.Field) -> Optional[dict]:
         "postcode": address_field.get_subfields("e"),
         "email": address_field.get_subfields("m"),
         "website": address_field.get_subfields("u"),
-        "note": address_field.get_subfields("z")
+        "note": address_field.get_subfields("z"),
     }
 
     return {k: v for k, v in d.items() if v}

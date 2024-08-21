@@ -9,7 +9,7 @@ from indexer.helpers.identifiers import (
     ProjectIdentifiers,
     country_code_from_siglum,
     COUNTRY_CODE_MAPPING,
-    transform_rism_id
+    transform_rism_id,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -25,9 +25,11 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     else:
         country_code = "XX"
 
-    inst_identifiers: list[str] = rii.split("\n") if (rii := record.get("institution_rism_ids")) else []
+    inst_identifiers: list[str] = (
+        rii.split("\n") if (rii := record.get("institution_rism_ids")) else []
+    )
     source_date: str = record.get("source_century", "")
-    source_summary: Optional[str] = record.get('source_summary')
+    source_summary: Optional[str] = record.get("source_summary")
     general_note: Optional[str] = record.get("html_source_description")
 
     source_record: dict = {
@@ -46,26 +48,30 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "is_collection_record_b": True,
         "is_composite_volume_b": False,
         "display_label_s": display_label,
-        "shelfmark_s": record['shelfmark'],
+        "shelfmark_s": record["shelfmark"],
         "date_statements_sm": [source_date] if source_date else None,
         "date_ranges_im": _process_dates(source_date),
-        "siglum_s": record['institution_siglum'],
+        "siglum_s": record["institution_siglum"],
         "general_notes_sm": general_note if general_note else None,
         "source_general_notes_smni": general_note if general_note else None,
         "description_summary_sm": source_summary if source_summary else None,
-        "standard_titles_json": orjson.dumps(_get_standard_titles_json(record)).decode("utf-8"),
+        "standard_titles_json": orjson.dumps(_get_standard_titles_json(record)).decode(
+            "utf-8"
+        ),
         "holding_institutions_sm": [
             record["institution_name"],
         ],
-        "holding_institutions_ids": [transform_rism_id(rid) for rid in inst_identifiers],
+        "holding_institutions_ids": [
+            transform_rism_id(rid) for rid in inst_identifiers
+        ],
         "holding_institutions_places_sm": [
             record["institution_city"],
         ],
-        "country_codes_sm": [
-            country_code
-        ],
+        "country_codes_sm": [country_code],
         "country_names_sm": COUNTRY_CODE_MAPPING.get(country_code, []),
-        "minimal_mss_holding_json": orjson.dumps(_get_minimal_manuscript_holding_data_cantus(record)).decode("utf-8"),
+        "minimal_mss_holding_json": orjson.dumps(
+            _get_minimal_manuscript_holding_data_cantus(record)
+        ).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -84,9 +90,11 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "shelfmark_s": record["shelfmark"],
         "institution_name_s": record["institution_name"],
         "institution_id": f"cantus_institution_{record['institution_id']}",
-        "city_s": record['institution_city'],
+        "city_s": record["institution_city"],
         "external_institution_id": f"cantus_institution_{record['institution_id']}",
-        "external_resources_json": orjson.dumps(_get_external_institution_resource(record)).decode("utf-8"),
+        "external_resources_json": orjson.dumps(
+            _get_external_institution_resource(record)
+        ).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -95,22 +103,28 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 
 
 def _get_standard_titles_json(record) -> list[dict]:
-    return [{
-        "holding_siglum": record["institution_siglum"],
-        "holding_shelfmark": record["shelfmark"],
-        "source_type": "Manuscript"
-    }]
+    return [
+        {
+            "holding_siglum": record["institution_siglum"],
+            "holding_shelfmark": record["shelfmark"],
+            "source_type": "Manuscript",
+        }
+    ]
 
 
 def _get_minimal_manuscript_holding_data_cantus(record) -> list:
-    return [{
-        "siglum": record["institution_siglum"],
-        "holding_institution_name": record["institution_name"],
-        "holding_institution_id": f"cantus_institution_{record['institution_id']}",
-    }]
+    return [
+        {
+            "siglum": record["institution_siglum"],
+            "holding_institution_name": record["institution_name"],
+            "holding_institution_id": f"cantus_institution_{record['institution_id']}",
+        }
+    ]
 
 
-DATE_RE: Pattern = re.compile(r"(?P<century>\d{2}th century)(?: \(((?P<date_range>\d{3,4}-\d{3,4})|\d{1}.*)\))?")
+DATE_RE: Pattern = re.compile(
+    r"(?P<century>\d{2}th century)(?: \(((?P<date_range>\d{3,4}-\d{3,4})|\d{1}.*)\))?"
+)
 
 
 def _process_dates(century: str) -> Optional[tuple[int, int]]:
@@ -122,19 +136,21 @@ def _process_dates(century: str) -> Optional[tuple[int, int]]:
         return None
 
     cents = century_components.groupdict()
-    if dr := cents.get('date_range'):
+    if dr := cents.get("date_range"):
         earliest, latest = dr.split("-")
         return int(earliest), int(latest)
 
-    if cn := cents.get('century'):
+    if cn := cents.get("century"):
         return parse_date_statement(cn)
 
     return None
 
 
 def _get_external_institution_resource(record) -> list[dict]:
-    return [{
-        "url": f"https://cantusdatabase.org/institution/{record['institution_id']}",
-        "link_type": "other",
-        "note": f"View {record['institution_name']} record in Cantus"
-    }]
+    return [
+        {
+            "url": f"https://cantusdatabase.org/institution/{record['institution_id']}",
+            "link_type": "other",
+            "note": f"View {record['institution_name']} record in Cantus",
+        }
+    ]

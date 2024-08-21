@@ -30,7 +30,7 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
         LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
 --         WHERE work.wf_stage = 1
         GROUP BY work.id
-        ORDER BY work.id asc;"""
+        ORDER BY work.id asc;"""  # noqa: S608
 
     curs.execute(sql_query)
 
@@ -65,10 +65,7 @@ def index_work_groups(works: list, cfg: dict) -> bool:
 
     records_list: list = list(records_to_index)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records_list, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records_list, cfg)
 
     if not check:
         log.error("There was an error submitting works to Solr")

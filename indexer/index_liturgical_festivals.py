@@ -40,10 +40,7 @@ def index_liturgical_festivals(cfg: dict) -> bool:
         )
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records_to_index, cfg)
+    check = True if cfg["dry"] else submit_to_solr(records_to_index, cfg)
 
     if not check:
         log.error("There was an error submitting festivals to Solr")

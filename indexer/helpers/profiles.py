@@ -1,42 +1,48 @@
 import logging
 import types
-from typing import Callable, Any, Optional
+from typing import Any, Callable, Optional
 
-import pymarc
 import orjson
+import pymarc
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.utilities import (
-    to_solr_single_required,
+    note_links,
     to_solr_multi,
     to_solr_multi_required,
     to_solr_single,
-    note_links
+    to_solr_single_required,
 )
 
 log = logging.getLogger("muscat_indexer")
 
 
-def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType) -> dict:
+def process_marc_profile(
+    cfg: dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType
+) -> dict:
     solr_document: dict = {}
 
     for solr_field, field_config in cfg.items():
         multiple: bool = field_config.get("multiple", False)
         required: bool = field_config.get("required", False)
 
-        if 'value' in field_config:
+        if "value" in field_config:
             # If we have a static value, simply set the field to the static value
             # and move on.
-            solr_document[solr_field] = field_config['value']
-        elif 'processor' in field_config:
+            solr_document[solr_field] = field_config["value"]
+        elif "processor" in field_config:
             # a processor function is configured for this field.
             to_json: bool = field_config.get("json", False)
-            fn_name: str = field_config['processor']
+            fn_name: str = field_config["processor"]
             fn_exists: bool = hasattr(processors, fn_name)
 
             if not fn_exists:
-                log.warning("Could not process Solr field %s for record %s; %s is a function that does not exist.",
-                            solr_field, doc_id, fn_name)
+                log.warning(
+                    "Could not process Solr field %s for record %s; %s is a function that does not exist.",
+                    solr_field,
+                    doc_id,
+                    fn_name,
+                )
                 continue
 
             processor_fn: Callable = getattr(processors, fn_name)
@@ -46,8 +52,11 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             # get stripped out anyway.
             if field_result is None:
                 if required is True:
-                    log.critical("%s requires a value, but one was not found for %s. Skipping this field.",
-                                 solr_field, doc_id)
+                    log.critical(
+                        "%s requires a value, but one was not found for %s. Skipping this field.",
+                        solr_field,
+                        doc_id,
+                    )
 
                 continue
 
@@ -63,8 +72,8 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             sortout: bool = field_config.get("sorted", True)
 
             # these will explode if the configuration is not correct.
-            marc_field = field_config['field']
-            marc_subfield = field_config['subfield']
+            marc_field = field_config["field"]
+            marc_subfield = field_config["subfield"]
 
             processor_fn: Callable
             if required and multiple:
@@ -79,10 +88,15 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
 
             # This will raise an error if the processors encounter unexpected data.
             try:
-                field_result = processor_fn(marc, marc_field, marc_subfield, grouping, sortout)
+                field_result = processor_fn(
+                    marc, marc_field, marc_subfield, grouping, sortout
+                )
             except RequiredFieldException:
-                log.critical("%s requires a value, but one was not found for %s. Skipping this field.",
-                             solr_field, doc_id)
+                log.critical(
+                    "%s requires a value, but one was not found for %s. Skipping this field.",
+                    solr_field,
+                    doc_id,
+                )
                 continue
 
             if field_result is None:
@@ -111,17 +125,23 @@ def process_marc_profile(cfg: dict, doc_id: str, marc: pymarc.Record, processors
             elif multiple is False and links:
                 field_result = note_links(field_result)
 
-            if 'value_prefix' in field_config:
+            if "value_prefix" in field_config:
                 if isinstance(field_result, list):
-                    prefixed_res_list = [f"{field_config['value_prefix']}{v}" for v in field_result]
+                    prefixed_res_list = [
+                        f"{field_config['value_prefix']}{v}" for v in field_result
+                    ]
                     solr_document[solr_field] = prefixed_res_list
                 elif isinstance(field_result, str):
                     prefixed_value = f"{field_config['value_prefix']}{field_result}"
                     solr_document[solr_field] = prefixed_value
                 else:
                     value_type = type(field_result)
-                    log.warning("A value prefix was configured for %s on %s, but %s cannot be prefixed!",
-                                solr_field, doc_id, value_type)
+                    log.warning(
+                        "A value prefix was configured for %s on %s, but %s cannot be prefixed!",
+                        solr_field,
+                        doc_id,
+                        value_type,
+                    )
                     continue
             else:
                 solr_document[solr_field] = field_result

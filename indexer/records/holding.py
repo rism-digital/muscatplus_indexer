@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
 import orjson
 import pymarc
@@ -9,16 +9,17 @@ from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    get_creator_name,
-    to_solr_single,
+    get_bibliographic_references_json,
     get_content_types,
-    get_parent_order_for_members, get_bibliographic_references_json,
+    get_creator_name,
+    get_parent_order_for_members,
+    to_solr_single,
 )
 from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
-holding_profile: dict = yaml.full_load(open("profiles/holdings.yml", "r"))
-mss_holding_profile: dict = yaml.full_load(open("profiles/holdingsmss.yml", "r"))
+holding_profile: dict = yaml.full_load(open("profiles/holdings.yml"))  # noqa: SIM115
+mss_holding_profile: dict = yaml.full_load(open("profiles/holdingsmss.yml"))  # noqa: SIM115
 
 
 class HoldingIndexDocument(TypedDict):
@@ -26,7 +27,8 @@ class HoldingIndexDocument(TypedDict):
     type: str
     source_id: str
     main_title_s: str
-    holding_id_sni: str  # Convenience for URL construction; should not be used for lookups.
+    # Convenience for URL construction; should not be used for lookups.
+    holding_id_sni: str
     siglum_s: Optional[str]
     department_s: Optional[str]
     city_s: Optional[str]
@@ -58,7 +60,9 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]
 
-    source_is_single_item: bool = "774" not in source_marc_record or "773" not in source_marc_record
+    source_is_single_item: bool = (
+        "774" not in source_marc_record or "773" not in source_marc_record
+    )
 
     # For consistency it's better to store the creator name with the dates attached!
     creator_name: Optional[str] = get_creator_name(source_marc_record)
@@ -81,32 +85,39 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
         composite_marc: Optional[pymarc.Record] = (
             create_marc(composite_record) if composite_record else None
         )
-        idx_document.update(
-            {
-                "source_membership_order_i": get_parent_order_for_members(
-                    composite_marc, holding_id
-                )
-                if composite_marc
-                else None
-            }
-        ),
+        (
+            idx_document.update(
+                {
+                    "source_membership_order_i": get_parent_order_for_members(
+                        composite_marc, holding_id
+                    )
+                    if composite_marc
+                    else None
+                }
+            ),
+        )
 
     if c := record.get("institution_record_marc"):
         institution_marc_record: pymarc.Record = create_marc(c)
-        additional_institution_fields: Optional[dict] = _index_additional_institution_fields(institution_marc_record)
+        additional_institution_fields: Optional[dict] = (
+            _index_additional_institution_fields(institution_marc_record)
+        )
         idx_document.update(additional_institution_fields)
 
     if p := record.get("publication_entries"):
         publication_entries: list = (
-            list({n.strip() for n in p.split("|~|") if n and n.strip()})
-            if p else []
+            list({n.strip() for n in p.split("|~|") if n and n.strip()}) if p else []
         )
-        bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
-            marc_record, "691", publication_entries
+        bibliographic_references: Optional[list[dict]] = (
+            get_bibliographic_references_json(marc_record, "691", publication_entries)
         )
-        idx_document.update({
-            "bibliographic_references_json": orjson.dumps(bibliographic_references).decode("utf-8")
-        })
+        idx_document.update(
+            {
+                "bibliographic_references_json": orjson.dumps(
+                    bibliographic_references
+                ).decode("utf-8")
+            }
+        )
 
     return idx_document
 

@@ -192,8 +192,7 @@ def _get_dramatic_roles_data(record: pymarc.Record) -> Optional[list[dict]]:
     fields: list[pymarc.Field] = record.get_fields("595")
     ret: list = []
     for field in fields:
-        d = {"standard_spelling": field.get("a"),
-             "source_spelling": field.get("u")}
+        d = {"standard_spelling": field.get("a"), "source_spelling": field.get("u")}
         ret.append({k: v for k, v in d.items() if v})
 
     return ret
@@ -206,8 +205,7 @@ def _get_rism_series_data(record: pymarc.Record) -> Optional[list[dict]]:
 
     ret: list = []
     for field in fields:
-        d = {"reference": field.get("a"),
-             "series_id": field.get("b")}
+        d = {"reference": field.get("a"), "series_id": field.get("b")}
         ret.append({k: v for k, v in d.items() if v})
 
     return ret
@@ -225,8 +223,7 @@ def _get_location_performance_data(record: pymarc.Record) -> Optional[list]:
 
 
 def __liturgical_festival(field: pymarc.Field) -> dict:
-    d = {"id": f"festival_{field['0']}",
-         "name": f"{field.get('a', '')}"}
+    d = {"id": f"festival_{field['0']}", "name": f"{field.get('a', '')}"}
     return {k: v for k, v in d.items() if v}
 
 
@@ -347,7 +344,8 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
         return None
 
     resources: list = [
-        external_resource_data(f) for f in record.get_fields("856")
+        external_resource_data(f)
+        for f in record.get_fields("856")
         if f and ("8" not in f or f["8"] != "01")
     ]
 
@@ -360,6 +358,7 @@ def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
 
     fields: list[pymarc.Field] = record.get_fields("856")
     return [f["u"] for f in fields if "x" in f and "IIIF" in f["x"]]
+
 
 # Material Group Handling
 # Forward-declare some typed dictionaries. These both help to ensure the documents getting indexed

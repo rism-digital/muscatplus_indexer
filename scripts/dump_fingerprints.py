@@ -14,7 +14,5 @@ with open("incipits.csv", "w", newline="") as csvfile:
     writer.writeheader()
 
     for incipit in result:
-        d = {"id": incipit['id'],
-             "fingerprint": incipit['normalized_fingerprint_lp']}
+        d = {"id": incipit["id"], "fingerprint": incipit["normalized_fingerprint_lp"]}
         writer.writerow(d)
-

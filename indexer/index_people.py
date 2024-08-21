@@ -24,18 +24,18 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                     (SELECT COUNT(DISTINCT source_id) FROM (
                          SELECT sp.source_id
                              FROM {dbname}.sources_to_people sp
-                             LEFT JOIN {dbname}.sources AS ss ON sp.source_id = ss.id 
+                             LEFT JOIN {dbname}.sources AS ss ON sp.source_id = ss.id
                              WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
                          UNION
                          SELECT ho.source_id
                              FROM {dbname}.holdings ho
-                             LEFT JOIN {dbname}.holdings_to_people hp ON hp.holding_id = ho.id 
+                             LEFT JOIN {dbname}.holdings_to_people hp ON hp.holding_id = ho.id
                              WHERE hp.person_id = p.id
                      ) AS derived) AS source_count,
-                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cre') SEPARATOR ',') 
-                        FROM {dbname}.sources_to_people AS ssp 
+                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cre') SEPARATOR ',')
+                        FROM {dbname}.sources_to_people AS ssp
                         LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
-                        WHERE p.id = ssp.person_id AND sss.wf_stage = 1) 
+                        WHERE p.id = ssp.person_id AND sss.wf_stage = 1)
                         AS source_relationships,
                      (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id) AS digital_objects
                      FROM {dbname}.people AS p
@@ -47,7 +47,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                      (SELECT COUNT(hp.person_id) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
                      (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0 OR
                      (SELECT COUNT(pubp.person_id) FROM {dbname}.people_to_publications AS pubp WHERE p.id = pubp.person_id) > 0)
-                     {id_where_clause};"""
+                     {id_where_clause};"""  # noqa: S608
 
     curs.execute(sql_statement)
 
@@ -73,10 +73,7 @@ def index_people_groups(people: list, cfg: dict) -> bool:
         doc = create_person_index_document(record, cfg)
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(list(records_to_index), cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting people to Solr")

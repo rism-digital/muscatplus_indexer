@@ -5,7 +5,7 @@ from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
 from diamm_indexer.records.organization import create_organization_index_document
-from indexer.helpers.solr import submit_to_solr, record_indexer
+from indexer.helpers.solr import record_indexer, submit_to_solr
 from indexer.helpers.utilities import parallelise, update_rism_document
 
 log = logging.getLogger("muscat_indexer")
@@ -109,17 +109,13 @@ def update_institution_records_with_diamm_info(archives: list, cfg: dict) -> boo
     records = []
 
     for record in archives:
-        label: str = record.get('name')
+        label: str = record.get("name")
         doc = update_rism_document(record, "diamm", "institution", label, cfg)
         if not doc:
             continue
         records.append(doc)
 
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)
 
     if not check:
         log.error("There was an error updating institution records in Solr")
@@ -133,4 +129,3 @@ def index_institutions(cfg: dict) -> bool:
     res |= update_archives(cfg)
 
     return res
-

@@ -4,9 +4,12 @@ from typing import Generator
 from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
-from diamm_indexer.records.person import create_person_index_document, get_date_statement, \
-    get_name
-from indexer.helpers.solr import submit_to_solr, record_indexer
+from diamm_indexer.records.person import (
+    create_person_index_document,
+    get_date_statement,
+    get_name,
+)
+from indexer.helpers.solr import record_indexer, submit_to_solr
 from indexer.helpers.utilities import parallelise, update_rism_document
 
 log = logging.getLogger("muscat_indexer")
@@ -89,21 +92,14 @@ def update_person_records_with_diamm_info(people: list, cfg: dict) -> bool:
         name: str = get_name(record)
         date_statement: str = get_date_statement(record)
 
-        if date_statement:
-            full_name = f"{name} ({date_statement})"
-        else:
-            full_name = f"{name}"
+        full_name: str = f"{name} ({date_statement})" if date_statement else f"{name}"
 
         doc = update_rism_document(record, "diamm", "person", full_name, cfg)
         if not doc:
             continue
         records.append(doc)
 
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)
 
     if not check:
         log.error("There was an error submitting people to Solr")

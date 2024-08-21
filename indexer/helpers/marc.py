@@ -16,7 +16,9 @@ def _parse_field(line: str) -> pymarc.Field:
     indicators: pymarc.Indicators = pymarc.Indicators(line[6], line[7])
     sub_value: str = line[9:]
     subf_list: list = sub_value.split("$") if sub_value else []
-    subfields: list[pymarc.Subfield] = [_parse_subf(itm) for itm in subf_list if itm != '']
+    subfields: list[pymarc.Subfield] = [
+        _parse_subf(itm) for itm in subf_list if itm != ""
+    ]
     return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 
@@ -38,7 +40,9 @@ def create_marc(record: str) -> pymarc.Record:
     :return: an instance of a pymarc.Record
     """
     lines: list = record.split("\n")
-    fields: list[pymarc.Field] = [_parse_field(line) for line in lines if line and line != '']
+    fields: list[pymarc.Field] = [
+        _parse_field(line) for line in lines if line and line != ""
+    ]
     p_record: pymarc.Record = pymarc.Record()
     p_record.add_field(*fields)
 
@@ -52,4 +56,8 @@ def create_marc_list(marc_records: Optional[str]) -> list[pymarc.Record]:
     :param marc_records: A string of newline-separated MARC records
     :return: A list of pymarc.Record objects
     """
-    return [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec] if marc_records else []
+    return (
+        [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec]
+        if marc_records
+        else []
+    )

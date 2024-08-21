@@ -5,7 +5,7 @@ from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
 from diamm_indexer.records.source import create_source_index_documents
-from indexer.helpers.solr import submit_to_solr, record_indexer
+from indexer.helpers.solr import record_indexer, submit_to_solr
 from indexer.helpers.utilities import parallelise, update_rism_document
 
 log = logging.getLogger("muscat_indexer")
@@ -45,7 +45,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
                              LEFT JOIN diamm_data_personidentifier ddpi ON ddp.id = ddpi.person_id
                     WHERE ddi.source_id = dds.id AND ddpi.identifier_type = 1 AND ddp.id IS NOT NULL
                     ) AS composer_ids,
-                (SELECT string_agg(ddsn.note, '|:|') 
+                (SELECT string_agg(ddsn.note, '|:|')
                     FROM diamm_data_sourcenote ddsn
                     WHERE ddsn.source_id = dds.id AND ddsn.type = 1
                 ) AS general_notes
@@ -57,7 +57,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
             WHERE ddsa.source_id IS NULL OR ddsa.identifier_type != 1
             ORDER BY dds.id;""")
 
-        while rows := curs.fetchmany(size=cfg['postgres']['resultsize']):
+        while rows := curs.fetchmany(size=cfg["postgres"]["resultsize"]):
             yield rows
 
 
@@ -72,7 +72,7 @@ def _get_diamm_concordance(cfg: dict) -> Generator[dict, None, None]:
                         WHERE ddsa.source_id IS NOT NULL OR ddsa.identifier_type = 1
                         ORDER BY dds.id""")
 
-        while rows := curs.fetchmany(size=cfg['postgres']['resultsize']):
+        while rows := curs.fetchmany(size=cfg["postgres"]["resultsize"]):
             yield rows
 
 
@@ -95,24 +95,17 @@ def update_source_records_with_diamm_info(sources: list, cfg: dict) -> bool:
         label = f'{record.get("siglum", "")} {record.get("shelfmark", "")}'
         additional_fields = {}
         if n := record.get("name"):
-            additional_fields['name'] = n
+            additional_fields["name"] = n
 
-        doc = update_rism_document(record,
-                                   "diamm",
-                                   "source",
-                                   label,
-                                   cfg,
-                                   additional_fields)
+        doc = update_rism_document(
+            record, "diamm", "source", label, cfg, additional_fields
+        )
         if not doc:
             continue
 
         records.append(doc)
 
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)
 
     if not check:
         log.error("There was an error submitting sources to Solr")

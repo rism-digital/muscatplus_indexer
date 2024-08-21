@@ -2,7 +2,7 @@ from typing import Optional
 
 import pymarc
 
-from indexer.helpers.utilities import normalize_id, get_related_people
+from indexer.helpers.utilities import get_related_people, normalize_id
 
 
 def _get_creator_name(record: pymarc.Record) -> Optional[str]:

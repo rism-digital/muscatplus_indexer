@@ -7,13 +7,12 @@ import yaml
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    normalize_id,
     get_bibliographic_references_json,
-    get_creator_name,
+    normalize_id,
 )
 from indexer.processors import work as work_processor
 
-work_profile: dict = yaml.full_load(open("profiles/works.yml", "r"))
+work_profile: dict = yaml.full_load(open("profiles/works.yml"))  # noqa: SIM115
 
 
 def create_work_index_documents(record: dict, cfg: dict) -> list:

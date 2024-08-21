@@ -59,10 +59,7 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
 
         records_to_index.extend(docs)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(list(records_to_index), cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting Cantus Sources to Solr")

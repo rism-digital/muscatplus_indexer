@@ -27,18 +27,22 @@ class RecordTypes(IntEnum):
 
 
 def get_record_type(record_type_id: int, is_single_item: bool) -> str:
-    if record_type_id in (
+    if (
+        record_type_id
+        in (
             RecordTypes.SOURCE,
             RecordTypes.EDITION,
             RecordTypes.THEORETICA_EDITION,
-            RecordTypes.LIBRETTO_EDITION
-    ) and is_single_item is True:
+            RecordTypes.LIBRETTO_EDITION,
+        )
+        and is_single_item is True
+    ):
         return "single_item"
     elif record_type_id in (
-            RecordTypes.COLLECTION,
-            RecordTypes.EDITION,
-            RecordTypes.LIBRETTO_EDITION,
-            RecordTypes.THEORETICA_EDITION
+        RecordTypes.COLLECTION,
+        RecordTypes.EDITION,
+        RecordTypes.LIBRETTO_EDITION,
+        RecordTypes.THEORETICA_EDITION,
     ):
         return "collection"
     elif record_type_id == RecordTypes.COMPOSITE_VOLUME:
@@ -51,19 +55,19 @@ def get_record_type(record_type_id: int, is_single_item: bool) -> str:
 
 def get_source_type(record_type_id: int) -> str:
     if record_type_id in (
-            RecordTypes.EDITION,
-            RecordTypes.EDITION_CONTENT,
-            RecordTypes.LIBRETTO_EDITION,
-            RecordTypes.THEORETICA_EDITION,
-            RecordTypes.LIBRETTO_EDITION_CONTENT,
-            RecordTypes.THEORETICA_EDITION_CONTENT
+        RecordTypes.EDITION,
+        RecordTypes.EDITION_CONTENT,
+        RecordTypes.LIBRETTO_EDITION,
+        RecordTypes.THEORETICA_EDITION,
+        RecordTypes.LIBRETTO_EDITION_CONTENT,
+        RecordTypes.THEORETICA_EDITION_CONTENT,
     ):
         return "printed"
     elif record_type_id in (
-            RecordTypes.COLLECTION,
-            RecordTypes.SOURCE,
-            RecordTypes.LIBRETTO_SOURCE,
-            RecordTypes.THEORETICA_SOURCE
+        RecordTypes.COLLECTION,
+        RecordTypes.SOURCE,
+        RecordTypes.LIBRETTO_SOURCE,
+        RecordTypes.THEORETICA_SOURCE,
     ):
         return "manuscript"
     elif record_type_id == RecordTypes.COMPOSITE_VOLUME:
@@ -76,29 +80,37 @@ def get_source_type(record_type_id: int) -> str:
 
 def get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
     if record_type_id in (
-            RecordTypes.EDITION_CONTENT,
-            RecordTypes.LIBRETTO_EDITION_CONTENT,
-            RecordTypes.THEORETICA_EDITION_CONTENT
+        RecordTypes.EDITION_CONTENT,
+        RecordTypes.LIBRETTO_EDITION_CONTENT,
+        RecordTypes.THEORETICA_EDITION_CONTENT,
     ):
         return True
-    elif record_type_id in (
+    elif (
+        record_type_id
+        in (
             RecordTypes.SOURCE,
             RecordTypes.LIBRETTO_SOURCE,
-            RecordTypes.THEORETICA_SOURCE
-    ) and parent_id is not None:
+            RecordTypes.THEORETICA_SOURCE,
+        )
+        and parent_id is not None
+    ):
         return True
     else:
         return False
 
 
 def get_is_collection_record(record_type_id: int, children_count: int) -> bool:
-    if record_type_id in (
+    if (
+        record_type_id
+        in (
             RecordTypes.COLLECTION,
             RecordTypes.LIBRETTO_SOURCE,
             RecordTypes.LIBRETTO_EDITION,
             RecordTypes.THEORETICA_SOURCE,
-            RecordTypes.THEORETICA_EDITION
-    ) and children_count > 0:
+            RecordTypes.THEORETICA_EDITION,
+        )
+        and children_count > 0
+    ):
         return True
     return False
 
@@ -112,7 +124,11 @@ def country_code_from_siglum(siglum: str) -> str:
 
 
 COUNTRY_CODE_MAPPING = {
-    "A": ["Austria", "L'Autriche", "Österreich", ],
+    "A": [
+        "Austria",
+        "L'Autriche",
+        "Österreich",
+    ],
     "AFG": ["Afghanistan", "Afeganistão", "Afganistán"],
     "AND": ["Andorra"],
     "ARM": ["Armenia", "Arménie"],
@@ -134,7 +150,15 @@ COUNTRY_CODE_MAPPING = {
     "CR": ["Costa Rica"],
     "CY": ["Cyprus"],
     "CZ": ["Czechoslovakia", "Czech Republic"],
-    "D": ["Germany", "Deutschland", "Allemagne", "Germania", "Alemania", "Alemanha", "Niemcy"],
+    "D": [
+        "Germany",
+        "Deutschland",
+        "Allemagne",
+        "Germania",
+        "Alemania",
+        "Alemanha",
+        "Niemcy",
+    ],
     "DK": ["Denmark"],
     "DY": ["Benin"],
     "DZ": ["Algeria"],
@@ -144,7 +168,16 @@ COUNTRY_CODE_MAPPING = {
     "EV": ["Estonia"],
     "F": ["France"],
     "FIN": ["Finland"],
-    "GB": ["United Kingdom", "Great Britain", "Royaume-Uni", "Vereinigtes Königreich", "Regno Unito", "Reino Unido", "Zjednoczone Królestwo", "UK"],
+    "GB": [
+        "United Kingdom",
+        "Great Britain",
+        "Royaume-Uni",
+        "Vereinigtes Königreich",
+        "Regno Unito",
+        "Reino Unido",
+        "Zjednoczone Królestwo",
+        "UK",
+    ],
     "GCA": ["Guatemala"],
     "GE": ["Georgia"],
     "GR": ["Greece"],
@@ -201,14 +234,24 @@ COUNTRY_CODE_MAPPING = {
     "TR": ["Turkey"],
     "TT": ["Trinidad and Tobago"],
     "UA": ["Ukraine"],
-    "US": ["America", "United States", "États Unis", "Stany Zjednoczone AP", "Vereinigte Staaten", "Amerika", "Estados Unidos", "Stati Uniti", "USA"],
+    "US": [
+        "America",
+        "United States",
+        "États Unis",
+        "Stany Zjednoczone AP",
+        "Vereinigte Staaten",
+        "Amerika",
+        "Estados Unidos",
+        "Stati Uniti",
+        "USA",
+    ],
     "USB": ["Uzbekistan"],
     "UY": ["Uruguay"],
     "V": ["Vatican", "Vatikan", "Vaticano", "Watykan", "Holy See"],
     "VE": ["Venezuela"],
     "VN": ["Vietname"],
     "XX": [],
-    "ZA": ["South Africa"]
+    "ZA": ["South Africa"],
 }
 
 

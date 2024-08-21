@@ -42,22 +42,20 @@ def _get_linked_cantus_institutions(cfg: dict) -> Generator[dict, None, None]:
             yield rows
 
 
-def update_institution_records_with_cantus_institutions(institutions: list, cfg: dict) -> bool:
+def update_institution_records_with_cantus_institutions(
+    institutions: list, cfg: dict
+) -> bool:
     log.info("Updating RISM institution records with Cantus info")
     records = []
 
     for record in institutions:
-        label: str = record.get('name')
+        label: str = record.get("name")
         doc = update_rism_document(record, "cantus", "institution", label, cfg)
         if not doc:
             continue
         records.append(doc)
 
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)
 
     if not check:
         log.error("There was an error updating institution records in Solr")
@@ -85,5 +83,3 @@ def index_institutions(cfg: dict) -> bool:
     res |= update_linked_rism_institutions(cfg)
 
     return res
-
-

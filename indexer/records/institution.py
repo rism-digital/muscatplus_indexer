@@ -1,21 +1,21 @@
 import logging
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
-import pymarc
 import orjson
+import pymarc
 import yaml
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    normalize_id,
-    get_bibliographic_references_json,
     get_bibliographic_reference_titles,
+    get_bibliographic_references_json,
+    normalize_id,
 )
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
-institution_profile: dict = yaml.full_load(open("profiles/institutions.yml", "r"))
+institution_profile: dict = yaml.full_load(open("profiles/institutions.yml"))
 
 
 class InstitutionIndexDocument(TypedDict):
@@ -194,7 +194,7 @@ def _get_related_json(
         institution_id = entry.get("0")
         if not institution_id:
             log.warning(
-                f"Got a field with no identifier, tag %s, record %s", tag_num, this_id
+                "Got a field with no identifier, tag %s, record %s", tag_num, this_id
             )
             continue
 

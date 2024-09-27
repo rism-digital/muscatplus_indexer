@@ -6,34 +6,36 @@ import pymarc
 import yaml
 
 from indexer.helpers.identifiers import (
+    country_code_from_siglum,
+    get_is_collection_record,
+    get_is_contents_record,
     get_record_type,
     get_source_type,
-    get_is_contents_record,
-    get_is_collection_record,
-    country_code_from_siglum,
 )
 from indexer.helpers.marc import create_marc, create_marc_list
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
+    get_bibliographic_reference_titles,
+    get_bibliographic_references_json,
+    get_content_types,
+    get_creator_name,
+    get_parent_order_for_members,
+    get_titles,
     normalize_id,
+    to_solr_multi,
     to_solr_single,
     tokenize_variants,
-    get_creator_name,
-    to_solr_multi,
-    get_titles,
-    get_content_types,
-    get_parent_order_for_members,
-    get_bibliographic_references_json,
-    get_bibliographic_reference_titles,
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
 from indexer.records.incipits import get_incipits
 
 log = logging.getLogger("muscat_indexer")
-index_config: dict = yaml.full_load(open("index_config.yml", "r"))
+with open("index_config.yml") as idx_cf:
+    index_config: dict = yaml.full_load(idx_cf)
 
-source_profile: dict = yaml.full_load(open("profiles/sources.yml", "r"))
+with open("profiles/sources.yml") as source_pf:
+    source_profile: dict = yaml.full_load(source_pf)
 
 
 def create_source_index_documents(record: dict, cfg: dict) -> list:
@@ -247,7 +249,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
                 log.error("Could not parse institution entry %s", inst)
                 continue
 
-            inst_id, inst_name, relator_code, siglum = inst_components
+            _, _, _, siglum = inst_components
 
             if siglum:
                 related_institution_sigla.append(siglum)
@@ -261,7 +263,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "type": "source",
         "rism_id": rism_id,
         "source_id": source_id,
-        "has_external_record_b": False,  # if the record is also in another external site (DIAMM, Cantus, etc.) then that indexer will set this to True.
+        "has_external_record_b": False,
+        # if the record is also in another external site (DIAMM, Cantus, etc.) then that indexer will set this to True.
         "record_type_s": get_record_type(record_type_id, is_single_item),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": get_content_types(marc_record),

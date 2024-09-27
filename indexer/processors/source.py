@@ -8,18 +8,18 @@ import pymarc
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.utilities import (
-    to_solr_single,
-    normalize_id,
-    to_solr_multi,
     external_resource_data,
-    get_related_people,
+    get_catalogue_numbers,
     get_related_institutions,
+    get_related_people,
     get_related_places,
     get_titles,
-    related_person,
-    related_institution,
-    get_catalogue_numbers,
+    normalize_id,
     note_links,
+    related_institution,
+    related_person,
+    to_solr_multi,
+    to_solr_single,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -135,10 +135,7 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
     fields: Optional[list] = record.get_fields("240")
     valid_statements: tuple = ("Arr", "arr", "Arrangement")
     # if any 240 field has it, we mark the whole record as an arrangement.
-    for field in fields:
-        if "o" in field and field["o"] in valid_statements:
-            return True
-    return False
+    return any("o" in field and field["o"] in valid_statements for field in fields)
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
@@ -286,7 +283,7 @@ def _get_source_membership(record: pymarc.Record) -> Optional[list]:
         member_type: Optional[str] = tag.get("4")
         # Create an ID like "holding_12345" or "source_4567" (default)
         ret.append(
-            f"{'source' if not member_type else member_type}_{normalize_id(member_id)}"
+            f"{member_type if member_type else 'source'}_{normalize_id(member_id)}"
         )
 
     return ret

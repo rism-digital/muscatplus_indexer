@@ -1,5 +1,5 @@
 import re
-from enum import unique, IntEnum
+from enum import IntEnum, unique
 from typing import Optional
 
 
@@ -79,28 +79,25 @@ def get_source_type(record_type_id: int) -> str:
 
 
 def get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
-    if record_type_id in (
-        RecordTypes.EDITION_CONTENT,
-        RecordTypes.LIBRETTO_EDITION_CONTENT,
-        RecordTypes.THEORETICA_EDITION_CONTENT,
-    ):
-        return True
-    elif (
+    return bool(
         record_type_id
+        in (
+            RecordTypes.EDITION_CONTENT,
+            RecordTypes.LIBRETTO_EDITION_CONTENT,
+            RecordTypes.THEORETICA_EDITION_CONTENT,
+        )
+        or record_type_id
         in (
             RecordTypes.SOURCE,
             RecordTypes.LIBRETTO_SOURCE,
             RecordTypes.THEORETICA_SOURCE,
         )
         and parent_id is not None
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def get_is_collection_record(record_type_id: int, children_count: int) -> bool:
-    if (
+    return bool(
         record_type_id
         in (
             RecordTypes.COLLECTION,
@@ -110,9 +107,7 @@ def get_is_collection_record(record_type_id: int, children_count: int) -> bool:
             RecordTypes.THEORETICA_EDITION,
         )
         and children_count > 0
-    ):
-        return True
-    return False
+    )
 
 
 def country_code_from_siglum(siglum: str) -> str:

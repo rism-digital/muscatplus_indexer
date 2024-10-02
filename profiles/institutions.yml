@@ -21,8 +21,13 @@ city_s:
   subfield: "c"
 
 siglum_s:
-  field: "110"
-  subfield: "g"
+  field: "094"
+  subfield: "a"
+former_sigla_sm:
+  field: "094"
+  subfield: "z"
+  multiple: true
+
 country_codes_sm:  # Extract the country code from the siglum.
   processor: "_get_country_codes"
 country_names_sm:

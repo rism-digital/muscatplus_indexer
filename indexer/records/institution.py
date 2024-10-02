@@ -135,7 +135,7 @@ def create_institution_index_document(
         "roles_sm": roles,
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
-        "has_siglum_b": True if record.get("siglum") else False,
+        "has_siglum_b": bool(record.get("siglum")),
         "contains_sigla_sm": contains_sigla,
         "now_in_sigla_sm": now_in_sigla,
         "related_institution_sigla_sm": related_sigla,
@@ -213,7 +213,7 @@ def _get_related_json(
         elif "i" in entry:
             relationship_code = entry["i"]
         else:
-            relationship_code = "xx"
+            relationship_code = "xi"
 
         institution_info: dict = related_institutions.get(institution_id)
         now_in: dict = {

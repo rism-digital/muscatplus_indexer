@@ -40,10 +40,10 @@ def _get_country_codes(record: pymarc.Record) -> Optional[list[str]]:
 
 
 def _get_country_code(record: pymarc.Record) -> Optional[str]:
-    if "110" not in record or "043" not in record:
+    if "094" not in record or "043" not in record:
         return None
 
-    siglum: Optional[str] = to_solr_single(record, "110", "g")
+    siglum: Optional[str] = to_solr_single(record, "094", "a")
 
     # If we have a siglum, prefer this.
     if siglum:

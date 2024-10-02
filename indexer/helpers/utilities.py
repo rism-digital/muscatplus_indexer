@@ -389,7 +389,7 @@ def __related_place(
         "this_id": this_id,
         "this_type": this_type,
         "name": field.get("a"),
-        "relationship": field.get("i", "xx"),
+        "relationship": field.get("i", "xp"),
         "place_id": f"place_{field['0']}",
     }
 
@@ -437,7 +437,7 @@ def related_institution(
     elif "i" in field:
         relationship_code = field["i"]
     else:
-        relationship_code = "xx"
+        relationship_code = "xi"
 
     if "a" not in field:
         log.error(
@@ -837,10 +837,10 @@ def format_reference(ref: list) -> str:
     res: str = ""
 
     if author:
-        res += f"{author.strip()}{' ' if author.endswith('.') else '. ' }"
+        res += f"{author.strip()}{' ' if author.endswith('.') else '. '}"
 
     if description:
-        res += f"{description.strip()}{' ' if description.endswith('.') else '. ' }"
+        res += f"{description.strip()}{' ' if description.endswith('.') else '. '}"
 
     if journal:
         res += f"{journal.strip()}, "

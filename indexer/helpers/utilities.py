@@ -17,7 +17,7 @@ from indexer.helpers.solr import exists
 log = logging.getLogger("muscat_indexer")
 
 
-def elapsedtime(func):
+def elapsedtime(func) -> Callable:
     """
     Simpler method that just provides the elapsed time for a method call. Used only for the 'main' method
     to provide an elapsed total time for indexing
@@ -26,7 +26,7 @@ def elapsedtime(func):
     """
 
     @wraps(func)
-    def timed_f(*args, **kwargs):
+    def timed_f(*args, **kwargs) -> Callable:
         fname = func.__name__
         log.debug(" --- Timing execution for %s ---", fname)
         start = timeit.default_timer()
@@ -116,7 +116,7 @@ def to_solr_single_required(
 
 
 def to_solr_multi(
-    record: pymarc.Record,
+    record: Optional[pymarc.Record],
     field: str,
     subfield: Optional[str] = None,
     grouped: Optional[bool] = None,
@@ -141,7 +141,7 @@ def to_solr_multi(
     Default is "None"
 
     """
-    if field not in record:
+    if not record or field not in record:
         return None
 
     fields: list[pymarc.Field] = record.get_fields(field)
@@ -237,7 +237,7 @@ def clean_multivalued(fields: dict, field_name: str) -> Optional[list[str]]:
     if field_name not in fields or fields[field_name] is None:
         return None
 
-    return [t.strip() for t in fields.get(field_name).splitlines() if t.strip()]
+    return [t.strip() for t in fields.get(field_name, "").splitlines() if t.strip()]
 
 
 class ExternalResourceDocument(TypedDict, total=False):
@@ -286,7 +286,7 @@ class PersonRelationshipIndexDocument(TypedDict):
 
 def related_person(
     field: pymarc.Field, this_id: str, this_type: str, relationship_number: int
-) -> PersonRelationshipIndexDocument:
+) -> dict[str, object]:
     """
     Generate a related person record. The target of the relationship is given in the other_person_id field,
     while the source of the relationship is given in the this_id field. Since Sources, Institutions, and People
@@ -333,7 +333,7 @@ def get_related_people(
     record_type: str,
     fields: tuple = ("500", "700"),
     ungrouped: bool = False,
-) -> Optional[list[PersonRelationshipIndexDocument]]:
+) -> Optional[list[dict[str, object]]]:
     """
     In some cases you will want to restrict the fields that are used for this lookup. By default it will look at 500
     and 700 fields, since that is where they are kept in the authority records; however, source records use 500 for
@@ -382,7 +382,7 @@ class PlaceRelationshipIndexDocument(TypedDict):
 
 def __related_place(
     field: pymarc.Field, this_id: str, this_type: str, relationship_number: int
-) -> PlaceRelationshipIndexDocument:
+) -> dict[str, object]:
     d: PlaceRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "type": "place",
@@ -402,7 +402,7 @@ def get_related_places(
     record_id: str,
     record_type: str,
     fields: tuple = ("551", "751"),
-) -> Optional[list[PlaceRelationshipIndexDocument]]:
+) -> Optional[list[dict[str, object]]]:
     record_tags: set = {f.tag for f in record}
     if set(fields).isdisjoint(record_tags):
         return None
@@ -430,7 +430,7 @@ class InstitutionRelationshipIndexDocument(TypedDict):
 
 def related_institution(
     field: pymarc.Field, this_id: str, this_type: str, relationship_number: int
-) -> InstitutionRelationshipIndexDocument:
+) -> dict[str, object]:
     relationship_code: str
     if "4" in field:
         relationship_code = field["4"]
@@ -473,7 +473,7 @@ def get_related_institutions(
     record_type: str,
     fields: tuple = ("510", "710"),
     ungrouped: bool = False,
-) -> Optional[list[InstitutionRelationshipIndexDocument]]:
+) -> list[dict[str, object]] | None:
     # Due to inconsistencies in authority records, these relationships are held in both 510 and 710 fields.
     record_tags: set = {f.tag for f in record}
     if set(fields).isdisjoint(record_tags):
@@ -602,9 +602,9 @@ def get_where(
 
     out = []
     for subf, val in conditions.items():
-        for field in fields:
-            if subf in field and field[subf] == val:
-                out.append(field)
+        for marcf in fields:
+            if subf in marcf and marcf[subf] == val:
+                out.append(marcf)
 
     return out
 
@@ -630,7 +630,6 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
         if "852" in record:
             h = record.get("852")
 
-        y: Optional[pymarc.Field]
         if "593" in record:
             # If the record has a 593 and that is for material group 01, then
             # prefer that for generating the titles. If it does not,
@@ -671,10 +670,10 @@ def tokenize_variants(variants: list[str]) -> list[str]:
 
 
 def get_creator_name(record: pymarc.Record) -> Optional[str]:
-    if "100" not in record:
+    creator_field: Optional[pymarc.Field] = record.get("100")
+    if not creator_field:
         return None
 
-    creator_field: Optional[pymarc.Field] = record.get("100")
     creator_name: str = creator_field.get("a", "").strip()
     creator_dates: str = f" ({d})" if (d := creator_field.get("d")) else ""
     return f"{creator_name}{creator_dates}"
@@ -689,7 +688,7 @@ class ContentTypes:
     OTHER = "Other"
 
 
-def get_content_types(record: pymarc.Record) -> list[str]:
+def get_content_types(record: Optional[pymarc.Record]) -> list[str]:
     """
     Takes all record types associated with this record, and returns a list of
     all possible content types for it.
@@ -699,6 +698,9 @@ def get_content_types(record: pymarc.Record) -> list[str]:
     :param record: A pymarc Record field
     :return: A list of index values containing the content types.
     """
+    if record is None:
+        return []
+
     all_content_types: Optional[list[str]] = to_solr_multi(record, "593", "b")
     ret: list = []
 
@@ -796,9 +798,9 @@ def get_bibliographic_references_json(
         return None
 
     refs: dict = {}
-    for r in references:
+    for ref in references:
         # |:| is a unique field delimiter
-        rid, *rest = r.split("|:|")
+        rid, *rest = ref.split("|:|")
 
         try:
             refs[rid] = format_reference(rest)
@@ -820,14 +822,14 @@ def get_bibliographic_references_json(
             continue
 
         literature_id: str = f"literature_{fid}"
-        r = {
+        lit = {
             "id": literature_id,
             "formatted": refs[fid],
         }
         if p := ff.get("n"):
-            r["pages"] = p
+            lit["pages"] = p
 
-        outp.append(r)
+        outp.append(lit)
 
     return outp
 

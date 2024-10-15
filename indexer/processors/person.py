@@ -19,7 +19,6 @@ from indexer.helpers.utilities import (
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 EARLIEST_YEAR_IF_MISSING: int = -2000
 
-
 log = logging.getLogger("muscat_indexer")
 
 
@@ -72,9 +71,7 @@ def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
         names[category].append(subf["a"])
 
     # Sort the variants alphabetically and format as list
-    name_variants: list = [{"type": k, "variants": sorted(v)} for k, v in names.items()]
-
-    return name_variants
+    return [{"type": k, "variants": sorted(v)} for k, v in names.items()]
 
 
 def _get_related_people_data(record: pymarc.Record) -> Optional[list]:

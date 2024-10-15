@@ -6,9 +6,9 @@ import orjson
 
 from indexer.helpers.datelib import parse_date_statement
 from indexer.helpers.identifiers import (
+    COUNTRY_CODE_MAPPING,
     ProjectIdentifiers,
     country_code_from_siglum,
-    COUNTRY_CODE_MAPPING,
     transform_rism_id,
 )
 
@@ -127,7 +127,7 @@ DATE_RE: Pattern = re.compile(
 )
 
 
-def _process_dates(century: str) -> Optional[tuple[int, int]]:
+def _process_dates(century: str) -> Optional[tuple[Optional[int], Optional[int]]]:
     if not century:
         return None
 

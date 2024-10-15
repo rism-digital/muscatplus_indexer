@@ -1,5 +1,5 @@
 import logging
-from typing import Generator
+from typing import Any, Generator
 
 from psycopg.rows import dict_row
 
@@ -11,7 +11,7 @@ from indexer.helpers.utilities import parallelise, update_rism_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_sources(cfg: dict) -> Generator[dict, None, None]:
+def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dds.id AS id, dds.name AS name, dds.shelfmark AS shelfmark, dds.start_date AS start_date,
@@ -61,7 +61,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
             yield rows
 
 
-def _get_diamm_concordance(cfg: dict) -> Generator[dict, None, None]:
+def _get_diamm_concordance(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dds.id AS id, ddsa.identifier AS rism_id,

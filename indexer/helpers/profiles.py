@@ -61,7 +61,7 @@ def process_marc_profile(
                 continue
 
             if to_json:
-                field_result: str = orjson.dumps(field_result).decode("utf-8")
+                field_result = orjson.dumps(field_result).decode("utf-8")
 
             solr_document[solr_field] = field_result
         else:
@@ -75,7 +75,6 @@ def process_marc_profile(
             marc_field = field_config["field"]
             marc_subfield = field_config["subfield"]
 
-            processor_fn: Callable
             if required and multiple:
                 processor_fn = to_solr_multi_required
             elif not required and multiple:

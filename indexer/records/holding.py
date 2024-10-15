@@ -51,7 +51,7 @@ class HoldingIndexDocument(TypedDict):
     bibliographic_references_json: Optional[str]
 
 
-def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocument:
+def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
     record_id: str = f"{record['id']}"
     membership_id: str = f"source_{record['source_id']}"
     marc_record: pymarc.Record = create_marc(record["marc_source"])
@@ -68,7 +68,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
     creator_name: Optional[str] = get_creator_name(source_marc_record)
     record_type_id: int = record["record_type"]
 
-    idx_document: HoldingIndexDocument = holding_index_document(
+    idx_document: dict[str, object] = holding_index_document(
         marc_record,
         holding_id,
         membership_id,
@@ -99,8 +99,8 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
 
     if c := record.get("institution_record_marc"):
         institution_marc_record: pymarc.Record = create_marc(c)
-        additional_institution_fields: Optional[dict] = (
-            _index_additional_institution_fields(institution_marc_record)
+        additional_institution_fields: dict = (
+            _index_additional_institution_fields(institution_marc_record) or {}
         )
         idx_document.update(additional_institution_fields)
 
@@ -141,7 +141,7 @@ def holding_index_document(
     record_type_id: int,
     source_single_item: bool,
     mss_profile: bool,
-) -> HoldingIndexDocument:
+) -> dict[str, object]:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.

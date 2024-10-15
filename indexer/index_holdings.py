@@ -5,7 +5,7 @@ from typing import Generator
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.holding import HoldingIndexDocument, create_holding_index_document
+from indexer.records.holding import create_holding_index_document
 
 log = logging.getLogger("muscat_indexer")
 
@@ -54,7 +54,7 @@ def index_holdings_groups(holdings: list, cfg: dict) -> bool:
     records_to_index: deque = deque()
 
     for record in holdings:
-        doc: HoldingIndexDocument = create_holding_index_document(record, cfg)
+        doc: dict[str, object] = create_holding_index_document(record, cfg)
         records_to_index.append(doc)
 
     check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)

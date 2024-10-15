@@ -1,5 +1,5 @@
 import logging
-from typing import Generator
+from typing import Any, Generator
 
 from psycopg.rows import dict_row
 
@@ -11,7 +11,9 @@ from indexer.helpers.utilities import parallelise, update_rism_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_unlinked_cantus_institutions(cfg: dict) -> Generator[dict, None, None]:
+def _get_unlinked_cantus_institutions(
+    cfg: dict,
+) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         # Only select institutions that have *published* sources attached to them.
@@ -28,7 +30,9 @@ def _get_unlinked_cantus_institutions(cfg: dict) -> Generator[dict, None, None]:
         yield rows
 
 
-def _get_linked_cantus_institutions(cfg: dict) -> Generator[dict, None, None]:
+def _get_linked_cantus_institutions(
+    cfg: dict,
+) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT cti.id AS id, ctii.identifier AS rism_id, cti.name AS name,

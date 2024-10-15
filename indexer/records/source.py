@@ -135,10 +135,10 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     parent_record_type_id: Optional[int] = record.get("parent_record_type")
     source_membership_data: Optional[dict] = None
     if parent_record_type_id:
-        parent_material_source_types: Optional[list] = to_solr_multi(
+        parent_material_source_types: Optional[list[str]] = to_solr_multi(
             parent_marc_record, "593", "a"
         )
-        parent_material_content_types: Optional[list] = to_solr_multi(
+        parent_material_content_types: Optional[list[str]] = to_solr_multi(
             parent_marc_record, "593", "b"
         )
 
@@ -210,7 +210,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     works_catalogue: Optional[list[dict]] = get_bibliographic_references_json(
         marc_record, "690", publication_entries
     )
-    works_catalogue_titles: Optional[list[dict]] = get_bibliographic_reference_titles(
+    works_catalogue_titles: Optional[list[str]] = get_bibliographic_reference_titles(
         publication_entries
     )
 
@@ -350,7 +350,7 @@ def _get_manuscript_holdings(
     creator_name: Optional[str],
     record_type_id: int,
     institution_places: list[str],
-) -> Optional[list[HoldingIndexDocument]]:
+) -> Optional[list[dict[str, object]]]:
     """
     Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
     This is so that we can provide a unified interface for searching all holdings of an institution
@@ -365,7 +365,7 @@ def _get_manuscript_holdings(
     # should result in a unique identifier for this holding record.
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
 
-    idx_doc: HoldingIndexDocument = holding_index_document(
+    idx_doc: dict[str, object] = holding_index_document(
         record,
         holding_id,
         source_id,
@@ -434,7 +434,7 @@ def _get_holding_orgs_ids(
 
 
 def _get_full_holding_identifiers(
-    mss_holdings: list[HoldingIndexDocument], all_holdings: list[pymarc.Record]
+    mss_holdings: list[dict[str, str]], all_holdings: list[pymarc.Record]
 ) -> list[str]:
     ids: set[str] = set()
 
@@ -591,7 +591,7 @@ def _get_related_sources(
         record_id = normalize_id(rel_marc_record["001"].value())
 
         source_id: str = f"source_{record_id}"
-        title: Optional[list[str]] = get_titles(rel_marc_record, "240")
+        title: Optional[list[dict[str, object]]] = get_titles(rel_marc_record, "240")
 
         note: Optional[str] = None
         if record_id in notes:

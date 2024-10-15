@@ -249,7 +249,6 @@ COUNTRY_CODE_MAPPING = {
     "ZA": ["South Africa"],
 }
 
-
 ISO3166_TO_SIGLUM_MAPPING = {
     "XA-AT": "A",
     "XA-AT-2": "A",
@@ -341,7 +340,6 @@ ISO3166_TO_SIGLUM_MAPPING = {
     "XE-PG": "PNG",
 }
 
-
 RISM_ID_SUB: re.Pattern = re.compile(r"(?:people|sources|institutions)/(?P<doc_id>\d+)")
 
 
@@ -354,7 +352,7 @@ def transform_rism_id(q_id: Optional[str]) -> Optional[str]:
     if not q_id:
         return None
 
-    doc_matcher: re.Match = re.match(RISM_ID_SUB, q_id)
+    doc_matcher: Optional[re.Match[str]] = re.match(RISM_ID_SUB, q_id)
     if not doc_matcher:
         return None
 

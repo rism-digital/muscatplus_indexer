@@ -43,7 +43,9 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         if record.get("general_notes")
         else None
     )
-    holding_institution_id: str = transform_rism_id(record["archive_rism_identifier"])
+    holding_institution_id: Optional[str] = transform_rism_id(
+        record["archive_rism_identifier"]
+    )
     country_code: str = country_code_from_siglum(record["siglum"])
 
     date_ranges: Optional[list]
@@ -96,7 +98,9 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "holding_institutions_identifiers_sm": _get_full_diamm_holding_identifiers(
             record
         ),
-        "holding_institutions_ids": [holding_institution_id],
+        "holding_institutions_ids": [holding_institution_id]
+        if holding_institution_id
+        else None,
         "holding_institutions_places_sm": [record["city_name"]],
         "country_codes_sm": [country_code],
         "related_institutions_ids": _get_related_institutions_ids(

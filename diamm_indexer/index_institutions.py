@@ -1,5 +1,5 @@
 import logging
-from typing import Generator
+from typing import Any, Generator
 
 from psycopg.rows import dict_row
 
@@ -11,7 +11,7 @@ from indexer.helpers.utilities import parallelise, update_rism_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
+def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
@@ -59,7 +59,9 @@ def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
             yield rows
 
 
-def _get_linked_diamm_organizations(cfg: dict) -> Generator[dict, None, None]:
+def _get_linked_diamm_organizations(
+    cfg: dict,
+) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddoi.identifier AS rism_id, ddo.name AS name,
@@ -83,7 +85,9 @@ def index_organizations(cfg: dict) -> bool:
     return True
 
 
-def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
+def _get_linked_diamm_archives(
+    cfg: dict,
+) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id, dda.name AS name,

@@ -13,6 +13,10 @@ class PlaceIndexDocument(TypedDict):
     alternate_terms_sm: Optional[list[str]]
     topic_sm: Optional[list[str]]
     subtopic_sm: Optional[list[str]]
+    sources_count_i: int
+    people_count_i: int
+    institutions_count_i: int
+    holdings_count_i: int
 
 
 def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
@@ -23,7 +27,8 @@ def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
     :param place: A dictionary result from the places table
     :return: A Solr index document.
     """
-    rism_id: str = place.get("id")
+    rism_id: str = place["id"]
+
     d: PlaceIndexDocument = {
         "id": f"place_{rism_id}",
         "rism_id": rism_id,

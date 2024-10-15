@@ -21,7 +21,7 @@ log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml"))  # noqa: SIM115
 
 RenderedPAE = namedtuple("RenderedPAE", ["svg", "midi", "features"])
-verovio.enableLog(False)
+verovio.enableLog(False)  # noqa
 VEROVIO_OPTIONS = {
     # "paeFeatures": True,
     "footer": "none",
@@ -107,7 +107,7 @@ def __incipit(
     num: int,
     country_codes: list[str],
     has_digitization: bool,
-) -> IncipitIndexDocument:
+) -> dict[str, object]:
     record_id: str = normalize_id(record["001"].value())
     record_ident: str = f"source_{record_id}"
 
@@ -154,7 +154,7 @@ def __incipit(
     creator: Optional[str] = get_creator_name(record)
     date_statements: Optional[list] = to_solr_multi(record, "260", "c")
 
-    source_dates: list = []
+    source_dates: Optional[list] = None
     if date_statements:
         source_dates = process_date_statements(date_statements, record_id)
 

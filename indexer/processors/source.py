@@ -133,6 +133,9 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
         return False
 
     fields: Optional[list] = record.get_fields("240")
+    if fields is None:
+        return False
+
     valid_statements: tuple = ("Arr", "arr", "Arrangement")
     # if any 240 field has it, we mark the whole record as an arrangement.
     return any("o" in field and field["o"] in valid_statements for field in fields)
@@ -273,6 +276,9 @@ def _get_source_membership(record: pymarc.Record) -> Optional[list]:
         return None
     members: Optional[list] = record.get_fields("774")
 
+    if members is None:
+        return None
+
     ret: list = []
 
     for tag in members:
@@ -289,7 +295,7 @@ def _get_source_membership(record: pymarc.Record) -> Optional[list]:
     return ret
 
 
-def _get_num_source_membership(record: pymarc.Record) -> Optional[list]:
+def _get_num_source_membership(record: pymarc.Record) -> Optional[int]:
     ret: list = _get_source_membership(record) or []
     return len(ret) or None
 

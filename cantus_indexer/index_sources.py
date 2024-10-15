@@ -1,6 +1,6 @@
 import logging
 from collections import deque
-from typing import Generator
+from typing import Any, Generator
 
 from psycopg.rows import dict_row
 
@@ -13,7 +13,7 @@ from indexer.helpers.utilities import parallelise
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_sources(cfg: dict) -> Generator[dict, None, None]:
+def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT cts.id AS id, cts.shelfmark AS shelfmark, cts.date AS source_date, cts.summary AS source_summary,

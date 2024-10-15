@@ -7,7 +7,6 @@ from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.institution import (
-    InstitutionIndexDocument,
     create_institution_index_document,
 )
 
@@ -117,9 +116,7 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
 
     for record in institutions:
         try:
-            doc: InstitutionIndexDocument = create_institution_index_document(
-                record, cfg
-            )
+            doc: dict[str, object] = create_institution_index_document(record, cfg)
         except RequiredFieldException:
             log.error(
                 "A required field was not found, so this document was not indexed."

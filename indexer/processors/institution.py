@@ -36,7 +36,7 @@ def _get_external_ids(record: pymarc.Record) -> Optional[list]:
 # This is a multivalued field with a single value so that we can use the same field name (country_codes_sm)
 # as sources.
 def _get_country_codes(record: pymarc.Record) -> Optional[list[str]]:
-    return [_get_country_code(record)]
+    return [c] if (c := _get_country_code(record)) else None
 
 
 def _get_country_code(record: pymarc.Record) -> Optional[str]:

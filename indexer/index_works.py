@@ -51,7 +51,7 @@ def index_works(cfg: dict) -> bool:
 
 def index_work_groups(works: list, cfg: dict) -> bool:
     log.info("Indexing Work Group")
-    records_to_index = deque()
+    records_to_index: deque = deque()
 
     for record in works:
         try:

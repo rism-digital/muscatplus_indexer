@@ -36,9 +36,7 @@ class InstitutionIndexDocument(TypedDict):
     location_loc: Optional[str]
 
 
-def create_institution_index_document(
-    record: dict, cfg: dict
-) -> InstitutionIndexDocument:
+def create_institution_index_document(record: dict, cfg: dict) -> dict[str, object]:
     marc_record: pymarc.Record = create_marc(record["marc_source"])
     rism_id: str = normalize_id(marc_record["001"].value())
     institution_id: str = f"institution_{rism_id}"
@@ -215,7 +213,7 @@ def _get_related_json(
         else:
             relationship_code = "xi"
 
-        institution_info: dict = related_institutions.get(institution_id)
+        institution_info: dict = related_institutions.get(institution_id, {})
         now_in: dict = {
             "id": f"{num}",
             "type": "institution",

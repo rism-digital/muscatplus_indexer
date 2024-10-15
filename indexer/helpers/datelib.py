@@ -214,11 +214,13 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
         year: int = int(simplest_single_match.group("year"))
         return year, year
 
+    first: int
+    second: int
     # Fast path: If we have a really simple range, then short circuit all additional processing
     # and check this first.
     if simplest_range_match := SIMPLE_RANGE_REGEX.match(date_statement):
-        first: int = int(simplest_range_match.group("first"))
-        second: int = int(simplest_range_match.group("second"))
+        first = int(simplest_range_match.group("first"))
+        second = int(simplest_range_match.group("second"))
 
         return first, second
 
@@ -285,9 +287,9 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
     # Parse "18/19" (i.e., 18th-19th centuries) into (1700, 1899)
     if slashes_match := CENTURY_TRUNCATED_REGEX.match(simplified_date_statement):
         # 18 = 17 * 100 = 1700
-        first: int = (int(slashes_match.group("first")) - 1) * 100
+        first = (int(slashes_match.group("first")) - 1) * 100
         # 19 = 18 * 100 = 1800 + 50 = 1850
-        second: int = ((int(slashes_match.group("second"))) * 100) - 1
+        second = ((int(slashes_match.group("second"))) * 100) - 1
         return first, second
 
     # handle cleaned integers directly

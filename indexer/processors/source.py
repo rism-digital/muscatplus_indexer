@@ -154,19 +154,20 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
 def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[list]:
     if "510" not in record:
         return None
+
     fields: list[pymarc.Field] = record.get_fields("510")
 
     ret: list = []
 
     for field in fields:
-        stmt: str = ""
+        stmt: list = []
         if series := field.get("a"):
-            stmt += series
+            stmt.append(series)
         if ident := field.get("c"):
-            stmt += f" {ident}"
+            stmt.append(f"{ident}")
 
         if stmt:
-            ret.append(stmt)
+            ret.append(" ".join(stmt))
 
     return ret
 

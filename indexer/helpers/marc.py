@@ -43,8 +43,8 @@ def create_marc(record: str) -> pymarc.Record:
     fields: list[pymarc.Field] = [
         _parse_field(line) for line in lines if line and line != ""
     ]
-    p_record: pymarc.Record = pymarc.Record()
-    p_record.add_field(*fields)
+    p_record: pymarc.Record = pymarc.Record(fields=fields)
+    # p_record.add_field(*fields)
 
     return p_record
 

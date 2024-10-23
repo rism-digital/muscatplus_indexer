@@ -2,13 +2,13 @@
 
 [[package]]
 name = "anyio"
-version = "4.6.2"
+version = "4.6.2.post1"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "anyio-4.6.2-py3-none-any.whl", hash = "sha256:6caec6b1391f6f6d7b2ef2258d2902d36753149f67478f7df4be8e54d03a8f54"},
-    {file = "anyio-4.6.2.tar.gz", hash = "sha256:f72a7bb3dd0752b3bd8b17a844a019d7fbf6ae218c588f4f9ba1b2f600b12347"},
+    {file = "anyio-4.6.2.post1-py3-none-any.whl", hash = "sha256:6d170c36fba3bdd840c73d3868c1e777e33676a69c3a72cf0a0d5d6d8009b61d"},
+    {file = "anyio-4.6.2.post1.tar.gz", hash = "sha256:4c8bc31ccdb51c7f7bd251f51c609e038d63e34219b44aa86e47576389880b4c"},
 ]
 
 [package.dependencies]
@@ -50,31 +50,6 @@ files = [
 ]
 
 [[package]]
-name = "chardet"
-version = "5.2.0"
-description = "Universal encoding detector for Python 3"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "chardet-5.2.0-py3-none-any.whl", hash = "sha256:e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970"},
-    {file = "chardet-5.2.0.tar.gz", hash = "sha256:1b3b6ff479a8c414bc3fa2c0852995695c4a026dcd6d0633b2dd092ca39c1cf7"},
-]
-
-[[package]]
-name = "click"
-version = "8.1.7"
-description = "Composable command line interface toolkit"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "click-8.1.7-py3-none-any.whl", hash = "sha256:ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28"},
-    {file = "click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de"},
-]
-
-[package.dependencies]
-colorama = {version = "*", markers = "platform_system == \"Windows\""}
-
-[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -111,23 +86,6 @@ files = [
     {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
     {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
 ]
-
-[[package]]
-name = "deptry"
-version = "0.13.0"
-description = "A command line utility to check for unused, missing and transitive dependencies in a Python project."
-optional = false
-python-versions = ">=3.8,<4.0"
-files = [
-    {file = "deptry-0.13.0-py3-none-any.whl", hash = "sha256:edee5124fbb443b3726f251d7763977237e764969d49f695cf2be43536848177"},
-    {file = "deptry-0.13.0.tar.gz", hash = "sha256:37e0277d1b7cfd94b69d502995b2e4397445a94ffb9a840d1fac3cfa3b1e387b"},
-]
-
-[package.dependencies]
-chardet = ">=4.0.0"
-click = ">=8.0.0,<9.0.0"
-colorama = {version = ">=0.4.6", markers = "sys_platform == \"win32\""}
-pathspec = ">=0.9.0"
 
 [[package]]
 name = "edtf"
@@ -468,17 +426,6 @@ qa = ["flake8 (==5.0.4)", "mypy (==0.971)", "types-setuptools (==67.2.0.1)"]
 testing = ["docopt", "pytest"]
 
 [[package]]
-name = "pathspec"
-version = "0.12.1"
-description = "Utility library for gitignore style pattern matching of file paths."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08"},
-    {file = "pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712"},
-]
-
-[[package]]
 name = "pexpect"
 version = "4.9.0"
 description = "Pexpect allows easy control of interactive console applications."
@@ -663,10 +610,14 @@ version = "5.2.2"
 description = "Read, write and modify MARC bibliographic data"
 optional = false
 python-versions = ">=3.7"
-files = [
-    {file = "pymarc-5.2.2-py3-none-any.whl", hash = "sha256:d654ee1faae5d80845b7a44b27deb6ea9b5377994d16aeba5d3e19e7856d7d43"},
-    {file = "pymarc-5.2.2.tar.gz", hash = "sha256:0913b4167a4337190598914c3642c5ae4f0f64a26bc4316f380cc54f65d8a741"},
-]
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://gitlab.com/ahankinson/pymarc.git"
+reference = "optimize-fields"
+resolved_reference = "24d72f132f4871f5293127193dbdd8e92c811488"
 
 [[package]]
 name = "pyparsing"
@@ -760,13 +711,13 @@ files = [
 
 [[package]]
 name = "sentry-sdk"
-version = "2.16.0"
+version = "2.17.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sentry_sdk-2.16.0-py2.py3-none-any.whl", hash = "sha256:49139c31ebcd398f4f6396b18910610a0c1602f6e67083240c33019d1f6aa30c"},
-    {file = "sentry_sdk-2.16.0.tar.gz", hash = "sha256:90f733b32e15dfc1999e6b7aca67a38688a567329de4d6e184154a73f96c6892"},
+    {file = "sentry_sdk-2.17.0-py2.py3-none-any.whl", hash = "sha256:625955884b862cc58748920f9e21efdfb8e0d4f98cca4ab0d3918576d5b606ad"},
+    {file = "sentry_sdk-2.17.0.tar.gz", hash = "sha256:dd0a05352b78ffeacced73a94e86f38b32e2eae15fff5f30ca5abb568a72eacf"},
 ]
 
 [package.dependencies]
@@ -906,6 +857,46 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "verovio"
+version = "4.4.0.dev118"
+description = "A library and toolkit for engraving MEI music notation into SVG"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "verovio-4.4.0.dev118-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:942e0f4f5222f48882e1271a561f0bc1e41394a70bc7339108d117f89769fac0"},
+    {file = "verovio-4.4.0.dev118-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:98d17c009ef9c4d409581329b937f4b52cca40e37bf508d96c0970ad1b473b20"},
+    {file = "verovio-4.4.0.dev118-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:337f81ef63a44d1a2044d0da7498bf784de3a267c6859a4b5bb3d9d57391747f"},
+    {file = "verovio-4.4.0.dev118-cp310-cp310-win32.whl", hash = "sha256:fed939bb8f75cb005371341433c084ed9ff1fbc59015d1bc68de66a4897040fb"},
+    {file = "verovio-4.4.0.dev118-cp310-cp310-win_amd64.whl", hash = "sha256:6e8c2fb105f444310187efab47fe3b1cdf26a66255795094350d17723e74efd0"},
+    {file = "verovio-4.4.0.dev118-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:1e617b9babb6d2a4422c880decc474878fd3b4bfc4917698600237d12d253542"},
+    {file = "verovio-4.4.0.dev118-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:d392fd717e04b79ac37c5ea36594fc937d4b0cd4446d3544a5ffd8fa0764e149"},
+    {file = "verovio-4.4.0.dev118-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4f103802e6fef10473abd4b5b29756af757ea256cdd5057d2197ef9aa4ebd169"},
+    {file = "verovio-4.4.0.dev118-cp311-cp311-win32.whl", hash = "sha256:abb273a85b6ff0d4c8d808dcd663656c6db5f05e478ef4b19859c1c7b3ecc674"},
+    {file = "verovio-4.4.0.dev118-cp311-cp311-win_amd64.whl", hash = "sha256:f076e7f3d0b8073110b2a665d0e9f198555ed45d183a3cb583d40ba71da7723c"},
+    {file = "verovio-4.4.0.dev118-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ef324f9ecc273c5013abfcdedc49e852c01c84003981d2fe35ca0d21d5b3e89b"},
+    {file = "verovio-4.4.0.dev118-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:6d0f69facb5cd75b33aa3572a9bfd05e43bc899e4d833c3eda5b7cbb64afa787"},
+    {file = "verovio-4.4.0.dev118-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:88af187f4c51f0841d1534d9e9969b97a5fee90fac3d3b9973b7bdb5762d369b"},
+    {file = "verovio-4.4.0.dev118-cp312-cp312-win32.whl", hash = "sha256:a24950f21639da54f7c9b5b5827efd58b617c213ae1524fb626fe82f89b44e9c"},
+    {file = "verovio-4.4.0.dev118-cp312-cp312-win_amd64.whl", hash = "sha256:9ee7d3cb184c02de1baee58960ec16bfecb7514b4f10cfce84f8d690e972e1ce"},
+    {file = "verovio-4.4.0.dev118-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:dbed3b40cc12e8657add92ebe0a4dde1aee4df9323dfb3ccd03c2171cb0f7100"},
+    {file = "verovio-4.4.0.dev118-cp313-cp313-macosx_11_0_x86_64.whl", hash = "sha256:26ba54cfe678ab53122d9ff54636dc0608c67a7251ed87d347549e7e0df6f112"},
+    {file = "verovio-4.4.0.dev118-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b4b7c954243e49a2729f65ff38965f62893a0448fb6b9ea518ab7b0e0d78c3fb"},
+    {file = "verovio-4.4.0.dev118-cp313-cp313-win32.whl", hash = "sha256:22a45a0dc8c8762db5c905bee956547d3b31ba1fdeb0bdb449b38cb8a3ff718a"},
+    {file = "verovio-4.4.0.dev118-cp313-cp313-win_amd64.whl", hash = "sha256:75e327834d27370c7eef983a4a1fe3c26b29cb09f0641351b064403e8d2bb019"},
+    {file = "verovio-4.4.0.dev118-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:dd0187c071512c9b390583efc93521223d2d074eec4c3fe61ba0bca2846236bf"},
+    {file = "verovio-4.4.0.dev118-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:cd9cbc3ebfff6ea9058d4894bd232c316755dd735e56c7143e6150e33985b1df"},
+    {file = "verovio-4.4.0.dev118-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:290ce93f613625bcb6b5e8e7ac59482498f65183355f17ba8f24153d534a7c47"},
+    {file = "verovio-4.4.0.dev118-cp39-cp39-win32.whl", hash = "sha256:96724cacd13b3fe98e030fb8c10f8cfd96aadbe882792092d166ae86939c3f7f"},
+    {file = "verovio-4.4.0.dev118-cp39-cp39-win_amd64.whl", hash = "sha256:612b2cde749c92feed3a4c0ba4938cb001dc1d2d18f025c0d12ad0d3d2d976a9"},
+    {file = "verovio-4.4.0.dev118.tar.gz", hash = "sha256:2e4d72792782faf80ddbeb6c26408a3313f0b9a946ec290506eee5299d917b1d"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://test.pypi.org/simple"
+reference = "testpypi"
+
+[[package]]
 name = "wcwidth"
 version = "0.2.13"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -919,4 +910,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "0aa37c0ac0c452fb3fc0828be34ab0922b84bd32977fec34ba9cf95c2140b7e7"
+content-hash = "01b88acc02596079c4cdf407d02ec230c7a6009b4f81de754be4f3bae4e643f0"

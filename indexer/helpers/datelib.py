@@ -111,6 +111,10 @@ NO_DATES = {
     "(s.d)",
     "unk",
     "unknown",
+    "[s. f.]",
+    "[s. n.]",
+    "[s. d,]",
+    "[sine anno]",
 }
 
 

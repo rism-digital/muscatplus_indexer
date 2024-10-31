@@ -5,15 +5,16 @@ import os.path
 import sys
 import timeit
 from pathlib import Path
+from typing import Optional
 
 import sentry_sdk
 import yaml
 from sentry_sdk.integrations.logging import LoggingIntegration
 
 from cantus_indexer.index import clean_cantus, index_cantus
-
-# from cmo_indexer.index import index_cmo, clean_cmo
+from cantus_indexer.latest_record import get_latest_cantus_datetime
 from diamm_indexer.index import clean_diamm, index_diamm
+from diamm_indexer.latest_record import get_latest_diamm_datetime
 from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.solr import (
     empty_solr_core,
@@ -40,15 +41,24 @@ logging.config.dictConfig(log_config)
 log = logging.getLogger("muscat_indexer")
 
 
-def index_indexer(cfg: dict, start: float, end: float) -> bool:
+def index_indexer(
+    cfg: dict,
+    start: float,
+    end: float,
+    diamm_latest: Optional[str],
+    cantus_latest: Optional[str],
+) -> bool:
     version: str = cfg["common"]["version"]
 
     # The 'indexed' and 'id' fields are added automatically by Solr.
     idx_record: dict = {
+        "id": "rism-online-index-info",
         "type": "indexer",
         "indexer_version_sni": version,
         "index_start_fp": start,
         "index_end_fp": end,
+        "diamm_latest_dt": diamm_latest,
+        "cantus_latest_dt": cantus_latest,
     }
 
     check: bool = submit_to_solr([idx_record], cfg)
@@ -230,7 +240,16 @@ def main(args: argparse.Namespace) -> bool:
     if res and not args.dry:
         # Add a single record that records some metadata about this index run
         log.info("Adding indexer record.")
-        res &= index_indexer(idx_config, idx_start, idx_end)
+        diamm_datetime: Optional[str] = (
+            get_latest_diamm_datetime() if not args.skip_diamm else None
+        )
+
+        cantus_datetime: Optional[str] = (
+            get_latest_cantus_datetime() if not args.skip_cantus else None
+        )
+        res &= index_indexer(
+            idx_config, idx_start, idx_end, diamm_datetime, cantus_datetime
+        )
 
         # force a core reload to ensure it's up-to-date
         res &= reload_core(

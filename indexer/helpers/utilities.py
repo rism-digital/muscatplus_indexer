@@ -805,9 +805,7 @@ def get_bibliographic_references_json(
         try:
             refs[rid] = format_reference(rest)
         except ValueError:
-            log.error(
-                "Could not index references for record %s.", record["001"].value()
-            )
+            log.error("Could not index references for record %s", record["001"].value())
             return None
 
     outp: list = []
@@ -817,7 +815,9 @@ def get_bibliographic_references_json(
         fid: Optional[str] = ff.get("0")
         if not fid:
             log.error(
-                "No field 0 for entry in record %s. Skipping.", record["001"].value()
+                "No field 0 for entry in record %s. Skipping: %s",
+                record["001"].value(),
+                str(ff),
             )
             continue
 

@@ -17,7 +17,7 @@ sentry-sdk = "^2.0.0"
 orjson = "^3.10.3"
 pymarc = {git = "https://gitlab.com/ahankinson/pymarc.git", rev = "optimize-fields"}
 #pymarc = {git = "https://gitlab.com/ahankinson/pymarc", rev = "fix-tag-length"}
-psycopg = {extras = ["binary", "pool"], version = "^3.2.3"}
+psycopg = {version = "3.1.20", extras = ["pool"]}
 
 [[tool.poetry.source]]
 name = "PyPI"

@@ -115,6 +115,11 @@ NO_DATES = {
     "[s. n.]",
     "[s. d,]",
     "[sine anno]",
+    "XVI-XVIII",
+    "XVII-XIX",
+    "[20th c.]",
+    "XIX-XX",
+    "Año X",
 }
 
 

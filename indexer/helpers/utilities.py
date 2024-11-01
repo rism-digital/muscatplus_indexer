@@ -165,7 +165,7 @@ def to_solr_multi(
             and fl.get("8") is None
             or grouped is None
         ):
-            retval += [subf.strip() for subf in fl.get_subfields(subfield)]
+            retval += [subf.strip() for subf in fl.get_subfields(subfield) if subf]
         else:
             # Skip anything else and don't do anything.
             continue

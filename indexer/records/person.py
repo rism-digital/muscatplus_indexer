@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
 import pymarc
 import yaml
@@ -10,7 +10,7 @@ from indexer.helpers.utilities import normalize_id
 from indexer.processors import person as person_processor
 
 log = logging.getLogger("muscat_indexer")
-person_profile: dict = yaml.full_load(open("profiles/people.yml", "r"))
+person_profile: dict = yaml.full_load(open("profiles/people.yml"))  # noqa: SIM115
 
 
 class PersonIndexDocument(TypedDict):

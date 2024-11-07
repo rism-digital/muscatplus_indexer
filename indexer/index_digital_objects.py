@@ -25,7 +25,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict, None, None]:
        do.attachment_file_name, dol.object_link_type
        FROM {dbname}.digital_object_links AS dol
        LEFT JOIN {dbname}.digital_objects AS do ON do.id = dol.digital_object_id
-       {id_where_clause};"""
+       {id_where_clause};"""  # noqa: S608
 
     curs.execute(sql_query)
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
@@ -49,10 +49,7 @@ def index_dobject_groups(dobjects: list, cfg: dict) -> bool:
         doc = create_digital_object_index_document(record, cfg)
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(list(records_to_index), cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting digital objects to Solr")

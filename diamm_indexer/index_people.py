@@ -1,16 +1,21 @@
 import logging
-from typing import Generator
+from typing import Any, Generator, Optional
+
 from psycopg.rows import dict_row
+
 from diamm_indexer.helpers.db import postgres_pool
-from diamm_indexer.helpers.solr import record_indexer
-from diamm_indexer.records.person import create_person_index_document, update_rism_person_document
-from indexer.helpers.solr import submit_to_solr
-from indexer.helpers.utilities import parallelise
+from diamm_indexer.records.person import (
+    create_person_index_document,
+    get_date_statement,
+    get_name,
+)
+from indexer.helpers.solr import record_indexer, submit_to_solr
+from indexer.helpers.utilities import parallelise, update_rism_document
 
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_people(cfg: dict) -> Generator[dict, None, None]:
+def _get_people(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddp.last_name AS last_name,
@@ -53,7 +58,7 @@ ORDER BY ddp.id;""")
             yield rows
 
 
-def _get_linked_diamm_people(cfg: dict) -> Generator[dict, None, None]:
+def _get_linked_diamm_people(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddpi.identifier AS rism_id,ddp.last_name AS last_name,
@@ -84,15 +89,19 @@ def update_person_records_with_diamm_info(people: list, cfg: dict) -> bool:
     records = []
 
     for record in people:
-        doc = update_rism_person_document(record, cfg)
+        name: str = get_name(record)
+        date_statement: Optional[str] = get_date_statement(record)
+        if not date_statement:
+            continue
+
+        full_name: str = f"{name} ({date_statement})" if date_statement else f"{name}"
+
+        doc = update_rism_document(record, "diamm", "person", full_name, cfg)
         if not doc:
             continue
         records.append(doc)
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
+
+    check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)
 
     if not check:
         log.error("There was an error submitting people to Solr")

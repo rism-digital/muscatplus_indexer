@@ -23,8 +23,13 @@ mysql:
   resultsize: 1000
 
 postgres:
-  server: localhost
+  server: ""
   username: "ahankins"
   password: ""
-  database: "diamm_data_server"
   resultsize: 1000
+  diamm_db: "diamm_data_server"
+  cantus_db: "cantusdb"
+
+cmo:
+  sources_marc: "/Users/ahankins/Documents/code/rism/MuscatPlus/CMO-MARCXML/Source"
+  expressions_marc: "/Users/ahankins/Documents/code/rism/MuscatPlus/CMO-MARCXML/Expression"

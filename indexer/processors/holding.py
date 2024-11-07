@@ -4,12 +4,12 @@ import pymarc as pymarc
 
 from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.utilities import (
-    to_solr_single,
     external_resource_data,
-    get_related_people,
     get_related_institutions,
-    normalize_id,
+    get_related_people,
     get_titles,
+    normalize_id,
+    to_solr_single,
 )
 
 
@@ -77,10 +77,11 @@ def _get_holding_titles_data(record: pymarc.Record) -> Optional[dict]:
         "holding_siglum": holding.get("a"),
         "holding_shelfmark": holding.get("c"),
         "holding_institution": holding.get("e"),
-        "holding_institution_id": holding_id
+        "holding_institution_id": holding_id,
     }
 
     return {k: v for k, v in d.items() if v}
+
 
 # def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
 #     return get_titles(record, "240")

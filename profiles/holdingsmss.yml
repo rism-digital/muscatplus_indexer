@@ -9,6 +9,19 @@ holding_titles_json:
   processor: "_get_holding_titles_data"
   json: true
 
+acquisition_note_s:
+  field: "541"
+  subfield: "a"
+acquisition_method_s:
+  field: "541"
+  subfield: "c"
+acquisition_date_s:
+  field: "541"
+  subfield: "d"
+accession_number_s:
+  field: "541"
+  subfield: "e"
+
 siglum_s:
   field: "852"
   subfield: "a"

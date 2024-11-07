@@ -12,15 +12,12 @@ mysqlclient = "^2.2.4"
 pyyaml = "^6.0.0"
 edtf = {git = "https://github.com/rism-digital/python-edtf.git", rev = "performance-enhancements"}
 httpx = "^0.27.0"
-verovio = { version = "^4.1.0", allow-prereleases = true }
+verovio = { version = "^4.4.0.dev118", allow-prereleases = true }
 sentry-sdk = "^2.0.0"
 orjson = "^3.10.3"
-#pymarc = "^5.0.0"
-pymarc = {git = "https://gitlab.com/ahankinson/pymarc", rev = "fix-tag-length"}
-psycopg = {extras = ["pool"], version = "^3.2.1"}
-
-[tool.poetry.dev-dependencies]
-ipython = "^8.0.0"
+pymarc = {git = "https://gitlab.com/ahankinson/pymarc.git", rev = "optimize-fields"}
+#pymarc = {git = "https://gitlab.com/ahankinson/pymarc", rev = "fix-tag-length"}
+psycopg = {version = "3.1.20", extras = ["pool"]}
 
 [[tool.poetry.source]]
 name = "PyPI"
@@ -31,9 +28,9 @@ name = "testpypi"
 url = "https://test.pypi.org/simple/"
 priority = "supplemental"
 
-
 [tool.poetry.group.dev.dependencies]
-deptry = "^0.13.0"
+ipython = "^8.0.0"
+mypy = "^1.11.2"
 
 [tool.black]
 line-length = 121
@@ -41,3 +38,35 @@ line-length = 121
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.masonry.api"
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # pycodestyle warnings
+    "W",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    ## Flake8 plugins
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-comprehensions
+    "C",
+    # flake8-django
+    "DJ",
+    # flake8-bandit
+    "S",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+
+ignore = [
+    # Ignore Pycodestyle line-length warnings, (mainly long comments).
+    "E501",
+    # Ignore McCabe complexity (for now).
+    "C901",
+]

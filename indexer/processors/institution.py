@@ -4,17 +4,17 @@ from typing import Optional
 import pymarc
 
 from indexer.helpers.identifiers import (
-    country_code_from_siglum,
     COUNTRY_CODE_MAPPING,
     ISO3166_TO_SIGLUM_MAPPING,
+    country_code_from_siglum,
 )
 from indexer.helpers.utilities import (
-    to_solr_single,
-    normalize_id,
-    get_related_people,
-    get_related_institutions,
-    get_related_places,
     external_resource_data,
+    get_related_institutions,
+    get_related_people,
+    get_related_places,
+    normalize_id,
+    to_solr_single,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -36,14 +36,14 @@ def _get_external_ids(record: pymarc.Record) -> Optional[list]:
 # This is a multivalued field with a single value so that we can use the same field name (country_codes_sm)
 # as sources.
 def _get_country_codes(record: pymarc.Record) -> Optional[list[str]]:
-    return [_get_country_code(record)]
+    return [c] if (c := _get_country_code(record)) else None
 
 
 def _get_country_code(record: pymarc.Record) -> Optional[str]:
-    if "110" not in record or "043" not in record:
+    if "094" not in record or "043" not in record:
         return None
 
-    siglum: Optional[str] = to_solr_single(record, "110", "g")
+    siglum: Optional[str] = to_solr_single(record, "094", "a")
 
     # If we have a siglum, prefer this.
     if siglum:
@@ -139,7 +139,7 @@ def _address(address_field: pymarc.Field) -> Optional[dict]:
         "postcode": address_field.get_subfields("e"),
         "email": address_field.get_subfields("m"),
         "website": address_field.get_subfields("u"),
-        "note": address_field.get_subfields("z")
+        "note": address_field.get_subfields("z"),
     }
 
     return {k: v for k, v in d.items() if v}

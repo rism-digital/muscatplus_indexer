@@ -7,3 +7,4 @@ mp.tar.gz
 *.sql
 db_small.sql.gz
 index_config_remote_dev.yml
+.DS_Store

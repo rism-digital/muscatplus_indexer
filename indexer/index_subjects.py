@@ -18,13 +18,9 @@ def index_subjects(cfg: dict) -> bool:
         id_where_clause = f"WHERE id = {cfg['id']}"
 
     curs.execute(
-        f"""SELECT 
-        id, 
-        term, 
-        alternate_terms, 
-        notes
-        FROM {dbname}.standard_terms 
-        {id_where_clause};"""
+        f"""SELECT id, term, alternate_terms, notes
+        FROM {dbname}.standard_terms
+        {id_where_clause};"""  # noqa: S608
     )
 
     all_subjects: list[dict] = curs._cursor.fetchall()
@@ -34,10 +30,7 @@ def index_subjects(cfg: dict) -> bool:
         doc: SubjectIndexDocument = create_subject_index_document(subject, cfg)
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records_to_index, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records_to_index, cfg)
 
     if not check:
         log.error("There was an error submitting subjects to Solr")

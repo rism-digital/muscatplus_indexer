@@ -7,7 +7,6 @@ from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.institution import (
-    InstitutionIndexDocument,
     create_institution_index_document,
 )
 
@@ -45,7 +44,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     (SELECT COUNT(DISTINCT si.source_id)
                        FROM {dbname}.sources_to_institutions AS si
                        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-                       WHERE si.institution_id = i.id AND si.marc_tag = '852' 
+                       WHERE si.institution_id = i.id AND si.marc_tag = '852'
                             AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
                        AS source_count,
                     (SELECT COUNT(DISTINCT hi.holding_id)
@@ -56,7 +55,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     (SELECT COUNT(DISTINCT si.source_id)
                        FROM {dbname}.sources_to_institutions AS si
                        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-                       WHERE si.institution_id = i.id AND si.marc_tag = '710' 
+                       WHERE si.institution_id = i.id AND si.marc_tag = '710'
                             AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
                        AS other_count,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
@@ -74,9 +73,9 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                         LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
                         WHERE rela.institution_a_id = i.id AND rela.marc_tag = '710')
                         AS related_institutions,
-                    (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') 
-                        FROM {dbname}.digital_object_links AS do 
-                        WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id) 
+                    (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',')
+                        FROM {dbname}.digital_object_links AS do
+                        WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id)
                         AS digital_objects,
                     (SELECT GROUP_CONCAT(DISTINCT ssi.relator_code SEPARATOR ',')
                         FROM {dbname}.sources_to_institutions AS ssi
@@ -94,7 +93,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                          (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
                         ) {id_where_clause}
                     GROUP BY i.id
-                    ORDER BY i.id ASC;"""
+                    ORDER BY i.id ASC;"""  # noqa: S608
     )
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
@@ -117,9 +116,7 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
 
     for record in institutions:
         try:
-            doc: InstitutionIndexDocument = create_institution_index_document(
-                record, cfg
-            )
+            doc: dict[str, object] = create_institution_index_document(record, cfg)
         except RequiredFieldException:
             log.error(
                 "A required field was not found, so this document was not indexed."
@@ -128,10 +125,7 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
 
         records_to_index.append(doc)
 
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(list(records_to_index), cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting institutions to Solr")

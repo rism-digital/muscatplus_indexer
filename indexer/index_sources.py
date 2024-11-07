@@ -59,7 +59,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         LEFT JOIN {dbname}.publications pub ON spt.publication_id = pub.id
         WHERE child.wf_stage = 1 {id_where_clause}
         GROUP BY child.id
-        ORDER BY child.id asc;"""
+        ORDER BY child.id asc;"""  # noqa: S608
 
     curs.execute(sql_query)
 
@@ -91,20 +91,14 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
         log.debug("Appending source document")
         records_to_index.extend(docs)
 
-    records_list: list = list(records_to_index)
-
-    if cfg["dry"]:
-        # dry runs always return success.
-        check = True
-    else:
-        check = submit_to_solr(records_list, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting sources to Solr")
 
     del sources
     del records_to_index
-    del records_list
+
     gc.collect()
 
     return check

@@ -1,18 +1,17 @@
 import logging
-from typing import Generator
+from typing import Any, Generator
 
 from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
-from diamm_indexer.helpers.solr import record_indexer
-from diamm_indexer.records.organization import create_organization_index_document, update_rism_institution_document
-from indexer.helpers.solr import submit_to_solr
-from indexer.helpers.utilities import parallelise
+from diamm_indexer.records.organization import create_organization_index_document
+from indexer.helpers.solr import record_indexer, submit_to_solr
+from indexer.helpers.utilities import parallelise, update_rism_document
 
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
+def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
@@ -60,7 +59,9 @@ def _get_organizations(cfg: dict) -> Generator[dict, None, None]:
             yield rows
 
 
-def _get_linked_diamm_organizations(cfg: dict) -> Generator[dict, None, None]:
+def _get_linked_diamm_organizations(
+    cfg: dict,
+) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddoi.identifier AS rism_id, ddo.name AS name,
@@ -79,34 +80,14 @@ def index_organizations(cfg: dict) -> bool:
     parallelise(org_groups, record_indexer, create_organization_index_document, cfg)
 
     rism_orgs = _get_linked_diamm_organizations(cfg)
-    parallelise(rism_orgs, update_institution_records_with_diamm_organizations, cfg)
+    parallelise(rism_orgs, update_institution_records_with_diamm_info, cfg)
 
     return True
 
 
-def update_institution_records_with_diamm_organizations(orgs: list, cfg: dict) -> bool:
-    log.info("Updating RISM organization records with DIAMM info")
-
-    records = []
-    for record in orgs:
-        doc = update_rism_institution_document(record, cfg)
-        if not doc:
-            continue
-        records.append(doc)
-
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
-
-    if not check:
-        log.error("There was an error updating institution records with DIAMM orgs")
-
-    return check
-
-
-def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
+def _get_linked_diamm_archives(
+    cfg: dict,
+) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id, dda.name AS name,
@@ -122,26 +103,23 @@ def _get_linked_diamm_archives(cfg: dict) -> Generator[dict, None, None]:
 
 def update_archives(cfg: dict) -> bool:
     rism_archives = _get_linked_diamm_archives(cfg)
-    parallelise(rism_archives, update_institution_records_with_diamm_archives, cfg)
+    parallelise(rism_archives, update_institution_records_with_diamm_info, cfg)
 
     return True
 
 
-def update_institution_records_with_diamm_archives(archives: list, cfg: dict) -> bool:
-    log.info("Updating RISM archive records with DIAMM info")
+def update_institution_records_with_diamm_info(archives: list, cfg: dict) -> bool:
+    log.info("Updating RISM institution records with DIAMM info")
     records = []
 
     for record in archives:
-        doc = update_rism_institution_document(record, cfg)
+        label: str = record.get("name")
+        doc = update_rism_document(record, "diamm", "institution", label, cfg)
         if not doc:
             continue
         records.append(doc)
 
-    check: bool
-    if cfg["dry"]:
-        check = True
-    else:
-        check = submit_to_solr(records, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)
 
     if not check:
         log.error("There was an error updating institution records in Solr")
@@ -155,4 +133,3 @@ def index_institutions(cfg: dict) -> bool:
     res |= update_archives(cfg)
 
     return res
-

@@ -3,7 +3,7 @@ import logging.config
 from diamm_indexer.index_institutions import index_institutions
 from diamm_indexer.index_people import index_people
 from diamm_indexer.index_sources import index_sources
-from indexer.helpers.solr import empty_diamm_records
+from indexer.helpers.solr import empty_project_records
 from indexer.helpers.utilities import elapsedtime
 
 log = logging.getLogger("muscat_indexer")
@@ -28,4 +28,4 @@ def index_diamm(idx_config: dict) -> bool:
 
 def clean_diamm(idx_config: dict) -> bool:
     log.info("Cleaning out the old DIAMM records")
-    return empty_diamm_records(idx_config)
+    return empty_project_records("diamm", idx_config)

@@ -1,38 +1,50 @@
+import csv
 import functools
-import logging
 import logging.config
 import math
 import re
 from typing import Optional, Tuple, Pattern
 
+import edtf
 import yaml
-import csv
+from edtf.parser.edtf_exceptions import EDTFParseException
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.marc import create_marc
 from indexer.helpers.utilities import to_solr_multi
-import edtf
-from edtf.parser.edtf_exceptions import EDTFParseException
-log_config: dict = yaml.full_load(open('../logging.yml', 'r'))
+
+log_config: dict = yaml.full_load(open("../logging.yml", "r"))
 
 logging.config.dictConfig(log_config)
 log = logging.getLogger("date_checker")
 
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
-DOT_DIVIDED_REGEX: Pattern = re.compile(r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?")
-CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})(?:th|st|rd) century, (?P<adjective1>\w+)(?: (?P<adjective2>\w+))?$', re.IGNORECASE)
+DOT_DIVIDED_REGEX: Pattern = re.compile(
+    r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?"
+)
+CENTURY_REGEX: Pattern = re.compile(
+    r"^(?P<century>\d{2})(?:th|st|rd) century, (?P<adjective1>\w+)(?: (?P<adjective2>\w+))?$",
+    re.IGNORECASE,
+)
 # Parses dates like '18.2q' (18th century, second quarter) or '19.in' (beginning of the 19th Century)
 # Also matches "20.sc" ("20eme siecle")
-ANOTHER_CENTURY_REGEX: Pattern = re.compile(r'^(?P<century>\d{2})\.(?P<adjective1>[\diesm])(?P<adjective2>[dqhtnxce])$')
-CENTURY_DASHES_REGEX: Pattern = re.compile(r'^(\d\d)(?:--|\?\?)$')
+ANOTHER_CENTURY_REGEX: Pattern = re.compile(
+    r"^(?P<century>\d{2})\.(?P<adjective1>[\diesm])(?P<adjective2>[dqhtnxce])$"
+)
+CENTURY_DASHES_REGEX: Pattern = re.compile(r"^(\d\d)(?:--|\?\?)$")
 CENTURY_TRUNCATED_REGEX: Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
 
 # Some date ranges are given as "YYYY-MM-DD-YYYY-MM-DD" so we want to swap the second hyphen for a slash.
-MULTI_YEAR_REGEX: Pattern = re.compile(r'^(?P<first>\d{4}-\d{2}-\d{2})-(?P<second>\d{4}-\d{2}-\d{2})')
+MULTI_YEAR_REGEX: Pattern = re.compile(
+    r"^(?P<first>\d{4}-\d{2}-\d{2})-(?P<second>\d{4}-\d{2}-\d{2})"
+)
 # A lot of dates have a letters attached to them for some odd reason.
 STRIP_LETTERS: Pattern = re.compile(r"(?P<year>\d{4})(?:c|p|q|a|!])")
 # Find any cases like "between XXXX and YYYY". Also handles French ('entre XXXX et YYYY') and german ('um XXXX bis um XXXX)
-EXPLICIT_BETWEEN: Pattern = re.compile(r"^.*(?:between|entre|um|von|vor).*(?P<first>\d{4}).*(?P<second>\d{4}).*$", re.IGNORECASE)
+EXPLICIT_BETWEEN: Pattern = re.compile(
+    r"^.*(?:between|entre|um|von|vor).*(?P<first>\d{4}).*(?P<second>\d{4}).*$",
+    re.IGNORECASE,
+)
 # Any ranges with explicitly named century periods in parens can be ignored too, e.g., "1750-1799 (18.2d)"
 # Also, any ones with just a single date can be ignored. We can combine these parenthetical statements into
 # a single regex statement afterwards.
@@ -42,14 +54,20 @@ PARENTHETICAL_APPENDAGES2: Pattern = re.compile(r"(?P<year>\d{4})\s+\(.*\)")
 ZERO_DAY_REGEX: Pattern = re.compile(r"(?P<year>\d{4})-\d{2}-00")
 # Deal with dates that are mushed together, e.g., 19991010-19991020
 MUSHED_TOGETHER_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}")
-MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}-(?P<second>\d{4})\d{4}")
-INTRO_OUTRO_REGEX: Pattern = re.compile(r"(?P<first>\d{2})\.ex\s?\/\s?(?P<second>\d{2})\.in")
+MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(
+    r"(?P<first>\d{4})\d{4}-(?P<second>\d{4})\d{4}"
+)
+INTRO_OUTRO_REGEX: Pattern = re.compile(
+    r"(?P<first>\d{2})\.ex\s?\/\s?(?P<second>\d{2})\.in"
+)
 
 EARLY_CENTURY_END_YEAR: int = 10
 LATE_CENTURY_START_YEAR: int = 90
 
 
-def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: str) -> Optional[Tuple[int, int]]:
+def _parse_century_date_with_fraction(
+    century_start: int, ordinal: str, period: str
+) -> Optional[Tuple[int, int]]:
     """
     Parse dates of the form '16th century, second half', '15th century, last third', "18.2d" (second decade of the
     18th century), "17.3q" (third quarter of the 17th century), '19.in' (beginning of the 19th century), '18.ex'
@@ -63,48 +81,54 @@ def _parse_century_date_with_fraction(century_start: int, ordinal: str, period: 
     :param period: e.g. quarter
     :return: A tuple corresponding to the correct span of years.
     """
-    log.debug("Century start: %s, ordinal: %s, period: %s", century_start, ordinal, period)
+    log.debug(
+        "Century start: %s, ordinal: %s, period: %s", century_start, ordinal, period
+    )
 
     divider: int
-    if period in ('half', 'h'):
+    if period in ("half", "h"):
         divider = 2
-    elif period in ('third', 't'):
+    elif period in ("third", "t"):
         divider = 3
-    elif period in ('quarter', 'q'):
+    elif period in ("quarter", "q"):
         divider = 4
     # interpret 'beginning' (n) and 'end' (x) as a decade, as in '18.ex' or '19.in'
-    elif period in ('d', 'n', 'x'):
+    elif period in ("d", "n", "x"):
         divider = 10
-    elif period in ('c', 'e'):
+    elif period in ("c", "e"):
         divider = 1
     else:
-        log.debug('Unknown period %s when parsing century date', period)
+        log.debug("Unknown period %s when parsing century date", period)
         return None
 
     multiplier: int
     if ordinal.isdigit():
         multiplier = int(ordinal)
     # if the beginning, treat it as the first decade
-    elif ordinal in ('first', 'i'):
+    elif ordinal in ("first", "i"):
         multiplier = 1
-    elif ordinal == 'second':
+    elif ordinal == "second":
         multiplier = 2
-    elif ordinal == 'third':
+    elif ordinal == "third":
         multiplier = 3
-    elif ordinal == 'fourth':
+    elif ordinal == "fourth":
         multiplier = 4
     # if the ending, treat it as the last decade
-    elif ordinal in ('last', 'e', 's', 'm'):
+    elif ordinal in ("last", "e", "s", "m"):
         multiplier = divider
     else:
-        log.debug('Unknown ordinal %s when parsing century date', ordinal)
+        log.debug("Unknown ordinal %s when parsing century date", ordinal)
         return None
 
     period_years: int = math.floor(100 / divider)
-    return century_start + ((multiplier - 1) * period_years), century_start + (multiplier * period_years)
+    return century_start + ((multiplier - 1) * period_years), century_start + (
+        multiplier * period_years
+    )
 
 
-def _parse_century_date_with_adjective(century_start: int, adjective: str) -> Optional[Tuple[int, int]]:
+def _parse_century_date_with_adjective(
+    century_start: int, adjective: str
+) -> Optional[Tuple[int, int]]:
     """
     Parse dates of the form '16th century, early', '15th century, end'
     :param century_start: e.g. 1500
@@ -132,30 +156,68 @@ def _format_start_end_from_century(start: int, end: int) -> tuple:
 @functools.lru_cache(maxsize=2048)
 def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[int]]:  # noqa: MC0001
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
-    if not date_statement or date_statement in ("[s.a.]", "[s. a.]", "s/d", "n/d", "(s.d.)", "[s.d.]", "[s.d]", "[s. d.]", "s. d.", "s.d.", "[n.d.]", "n. d.", "n.d.", "[n. d.]", "[o.J]", "o.J", "o.J.", "[s.n.]", "(s. d.)"):
+    if not date_statement or date_statement in (
+        "[s.a.]",
+        "[s. a.]",
+        "s/d",
+        "n/d",
+        "(s.d.)",
+        "[s.d.]",
+        "[s.d]",
+        "[s. d.]",
+        "s. d.",
+        "s.d.",
+        "[n.d.]",
+        "n. d.",
+        "n.d.",
+        "[n. d.]",
+        "[o.J]",
+        "o.J",
+        "o.J.",
+        "[s.n.]",
+        "(s. d.)",
+    ):
         return None, None
 
     # simplify known problems for the edtf parser
-    simplified_date_statement = date_statement.replace('(?)', '')
+    simplified_date_statement = date_statement.replace("(?)", "")
 
     # Replace any dates that use dots instead of dashes to separate the parameters.
     if DOT_DIVIDED_REGEX.match(simplified_date_statement):
         simplified_date_statement = simplified_date_statement.replace(".", "-")
 
-    simplified_date_statement = re.sub(r'[?\[\]]', r'', simplified_date_statement)
-    simplified_date_statement = re.sub(STRIP_LETTERS, r"\g<year>", simplified_date_statement)
-    simplified_date_statement = re.sub(ZERO_DAY_REGEX, r"\g<year>", simplified_date_statement)
-    simplified_date_statement = re.sub(MUSHED_TOGETHER_REGEX, r"\g<first>", simplified_date_statement)
-    simplified_date_statement = re.sub(MULTI_YEAR_REGEX, r"\g<first>/\g<second>", simplified_date_statement)
-    simplified_date_statement = re.sub(EXPLICIT_BETWEEN, r'\g<first>/\g<second>', simplified_date_statement)
-    simplified_date_statement = re.sub(MUSHED_TOGETHER_RANGE_REGEX, r'\g<first>/\g<second>', simplified_date_statement)
-    simplified_date_statement = re.sub(PARENTHETICAL_APPENDAGES1, r"\g<year>", simplified_date_statement)
-    simplified_date_statement = re.sub(PARENTHETICAL_APPENDAGES2, r"\g<year>", simplified_date_statement)
+    simplified_date_statement = re.sub(r"[?\[\]]", r"", simplified_date_statement)
+    simplified_date_statement = re.sub(
+        STRIP_LETTERS, r"\g<year>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        ZERO_DAY_REGEX, r"\g<year>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        MUSHED_TOGETHER_REGEX, r"\g<first>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        MULTI_YEAR_REGEX, r"\g<first>/\g<second>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        EXPLICIT_BETWEEN, r"\g<first>/\g<second>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        MUSHED_TOGETHER_RANGE_REGEX, r"\g<first>/\g<second>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        PARENTHETICAL_APPENDAGES1, r"\g<year>", simplified_date_statement
+    )
+    simplified_date_statement = re.sub(
+        PARENTHETICAL_APPENDAGES2, r"\g<year>", simplified_date_statement
+    )
     # Any remaining parenthesis should be dropped from anywhere in the string
     simplified_date_statement = re.sub(r"([\(\)])", "", simplified_date_statement)
     # Strip any leading or trailing quotation marks.
-    simplified_date_statement = simplified_date_statement.lstrip("\"").rstrip("\"")
-    simplified_date_statement = simplified_date_statement.replace('not after', 'before').replace('not before', 'after')
+    simplified_date_statement = simplified_date_statement.lstrip('"').rstrip('"')
+    simplified_date_statement = simplified_date_statement.replace(
+        "not after", "before"
+    ).replace("not before", "after")
     simplified_date_statement = simplified_date_statement.strip()
     log.debug("Parsing %s simplified to %s", date_statement, simplified_date_statement)
 
@@ -201,7 +263,9 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
         if not adjective2:
             century_date = _parse_century_date_with_adjective(century_start, adjective1)
         else:
-            century_date = _parse_century_date_with_fraction(century_start, adjective1, adjective2)
+            century_date = _parse_century_date_with_fraction(
+                century_start, adjective1, adjective2
+            )
 
         if century_date:
             return century_date
@@ -218,19 +282,36 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
     # If that didn't work, try a less strict 'natural language' approach
     if not parsed_date:
         try:
-            parsed_date_string: Optional[str] = edtf.text_to_edtf(simplified_date_statement)
+            parsed_date_string: Optional[str] = edtf.text_to_edtf(
+                simplified_date_statement
+            )
             if not parsed_date_string:
                 raise Exception("Could not parse date string")
             log.debug("Edtf parsed as %s", parsed_date_string)
             parsed_date = edtf.parse_edtf(parsed_date_string)
         except EDTFParseException as e:
-            log.debug("Error parsing date %s, simplified to %s: %s", date_statement, simplified_date_statement, e)
+            log.debug(
+                "Error parsing date %s, simplified to %s: %s",
+                date_statement,
+                simplified_date_statement,
+                e,
+            )
             raise
         except TypeError as e:
-            log.debug("Error parsing date %s, simplified to %s: %s", date_statement, simplified_date_statement, e)
+            log.debug(
+                "Error parsing date %s, simplified to %s: %s",
+                date_statement,
+                simplified_date_statement,
+                e,
+            )
             raise
         except ValueError as e:
-            log.debug("Error parsing date %s, simplified to %s: %s", date_statement, simplified_date_statement, e)
+            log.debug(
+                "Error parsing date %s, simplified to %s: %s",
+                date_statement,
+                simplified_date_statement,
+                e,
+            )
             raise
 
     # get the year for each edtf struct directly
@@ -245,8 +326,13 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
 
     # remember start_year and end_year could be 0, which is also falsey
     if start_year is not None and end_year is not None and start_year > end_year:
-        log.warning('Error parsing date: start %s is greater than end %s from %s, simplified to %s',
-                    start_year, end_year, date_statement, simplified_date_statement)
+        log.warning(
+            "Error parsing date: start %s is greater than end %s from %s, simplified to %s",
+            start_year,
+            end_year,
+            date_statement,
+            simplified_date_statement,
+        )
         raise
 
     # edtf returns 0 and 9999 in some cases if only the year is unknown - it's pretty useless for us
@@ -259,16 +345,16 @@ def parse_date_statement(date_statement: str) -> Tuple[Optional[int], Optional[i
         # if one end of a date range is unknown the default is to set the strict date to 10 years before/after the
         # known date we detect that case here and make the date None instead
         # we could also consider changing edtf.appsettings.DELTA_IF_UNKNOWN
-        if str(parsed_date.lower) == 'unknown':
+        if str(parsed_date.lower) == "unknown":
             start_year = None
-        if str(parsed_date.upper) == 'unknown':
+        if str(parsed_date.upper) == "unknown":
             end_year = None
 
     return start_year, end_year
 
 
 if __name__ == "__main__":
-    idx_config: dict = yaml.full_load(open('../index_config.yml', 'r'))
+    idx_config: dict = yaml.full_load(open("../index_config.yml", "r"))
 
     query = """
     SELECT child.id AS id, child.marc_source AS marc_source
@@ -285,7 +371,7 @@ if __name__ == "__main__":
     errors: list[dict] = []
 
     while record := curs._cursor.fetchone():
-        marc_source = record['marc_source']
+        marc_source = record["marc_source"]
         marc_record = create_marc(marc_source)
         date_statements: Optional[list] = to_solr_multi(marc_record, "260", "c")
 
@@ -296,15 +382,17 @@ if __name__ == "__main__":
             try:
                 earliest, latest = parse_date_statement(statement)
             except Exception as e:
-                log.info("Failed parsing %s for %s", statement, record['id'])
+                log.info("Failed parsing %s for %s", statement, record["id"])
 
-                errors.append({
-                    "source": record["id"],
-                    "url": f"https://muscat.rism.info/admin/sources/{record['id']}",
-                    "statement": statement
-                })
+                errors.append(
+                    {
+                        "source": record["id"],
+                        "url": f"https://muscat.rism.info/admin/sources/{record['id']}",
+                        "statement": statement,
+                    }
+                )
 
-    with open("date-errors.csv", "w", newline='') as csvfile:
+    with open("date-errors.csv", "w", newline="") as csvfile:
         fieldnames = ["source", "url", "statement"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()

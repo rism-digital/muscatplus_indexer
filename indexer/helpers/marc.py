@@ -1,10 +1,8 @@
-import functools
 from typing import Optional
 
 import pymarc
 
 
-@functools.lru_cache(maxsize=2048)
 def _parse_field(line: str) -> pymarc.Field:
     # General format: =TAG  ##$afoo$bbar
     tag_value: str = line[1:4]
@@ -24,7 +22,6 @@ def _parse_field(line: str) -> pymarc.Field:
     return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 
-@functools.lru_cache(maxsize=2048)
 def _parse_subf(subf_value: str) -> pymarc.Subfield:
     code: str = subf_value[0]
     value: str = subf_value[1:].strip()
@@ -42,12 +39,9 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    lines: list = record.split("\n")
-    fields: list[pymarc.Field] = [
-        _parse_field(line) for line in lines if line and line != ""
-    ]
+    lines: list = record.splitlines()
+    fields: list[pymarc.Field] = [_parse_field(line) for line in lines]
     p_record: pymarc.Record = pymarc.Record(fields=fields)
-    # p_record.add_field(*fields)
 
     return p_record
 

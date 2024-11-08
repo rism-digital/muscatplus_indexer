@@ -274,14 +274,6 @@ def main(args: argparse.Namespace) -> bool:
 
 
 if __name__ == "__main__":
-    idx_pid = str(os.getpid())
-    pid_file: Path = Path("/tmp", "muscatplus_indexer.pid")  # noqa: S108
-    if pid_file.exists():
-        log.critical("Process is already running. Exiting")
-        sys.exit(1)
-
-    pid_file.write_text(idx_pid)
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose output"
@@ -351,14 +343,24 @@ if __name__ == "__main__":
 
     input_args: argparse.Namespace = parser.parse_args()
 
+    idx_pid = str(os.getpid())
+    pid_file: Path = Path("/tmp", "muscatplus_indexer.pid")  # noqa: S108
+    if pid_file.exists() and not input_args.dry:
+        log.critical("Process is already running. Exiting")
+        sys.exit(1)
+
+    if not input_args.dry:
+        pid_file.write_text(idx_pid)
+
     try:
         success: bool = main(input_args)
     except Exception as e:
         log.critical("Main method raised an exception and could not continue: %s", e)
         success = False
 
-    # Remove the PID file
-    pid_file.unlink()
+    if not input_args.dry:
+        # Remove the PID file
+        pid_file.unlink()
 
     if success:
         # Exit with status 0 (success).

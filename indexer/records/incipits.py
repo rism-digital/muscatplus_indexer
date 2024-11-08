@@ -7,14 +7,9 @@ import pymarc
 import verovio
 import yaml
 
-from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.utilities import (
     get_content_types,
-    get_creator_name,
-    get_titles,
-    normalize_id,
-    to_solr_multi,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -107,10 +102,12 @@ def __incipit(
     num: int,
     country_codes: list[str],
     has_digitization: bool,
+    record_id,
+    record_ident,
+    creator,
+    source_dates,
+    standard_title_json,
 ) -> dict[str, object]:
-    record_id: str = normalize_id(record["001"].value())
-    record_ident: str = f"source_{record_id}"
-
     # If a record has neither a 774 (parent -> child) nor a 773 (child -> parent) then it's a single item.
     is_single_item: bool = "774" not in record or "773" not in record
 
@@ -151,13 +148,6 @@ def __incipit(
         music_incipit = music_incipit.strip()
         incipit_len = len(music_incipit)
 
-    creator: Optional[str] = get_creator_name(record)
-    date_statements: Optional[list] = to_solr_multi(record, "260", "c")
-
-    source_dates: Optional[list] = None
-    if date_statements:
-        source_dates = process_date_statements(date_statements, record_id)
-
     # Take the first value if our list of possible time signatures is greater than 0, else take the
     # original field value. This may also be None if field['o'] is None.
     time_signature_data: Optional[str] = field.get("o")
@@ -185,8 +175,6 @@ def __incipit(
     key_sig: str = field["n"] if "n" in field and field["n"].strip() else "n"
 
     norm_key_sig: str = key_sig.replace("[", "").replace("]", "")
-
-    standard_title_json = get_titles(record, "240")
 
     d: dict = {
         "id": f"{record_ident}_incipit_{num}",
@@ -283,8 +271,13 @@ def get_incipits(
     record: pymarc.Record,
     parent_record_title: str,
     record_type_id: int,
+    record_id,
+    record_ident,
     country_codes: list[str],
     has_digitization: bool,
+    creator_name: Optional[str],
+    source_dates: Optional[list[int]],
+    standard_titles_json: Optional[list[dict]],
 ) -> Optional[list]:
     if "031" not in record:
         return None
@@ -300,6 +293,11 @@ def get_incipits(
             num,
             country_codes,
             has_digitization,
+            record_id,
+            record_ident,
+            creator_name,
+            source_dates,
+            standard_titles_json,
         )
         for num, f in enumerate(incipits, 1)
     ]

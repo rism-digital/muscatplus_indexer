@@ -320,13 +320,26 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     )
     source_core.update(additional_fields)
 
+    source_dates: Optional[list[int]] = additional_fields.get("date_ranges_im")
+    standard_titles_json = additional_fields.get("standard_titles_json")
+    creator_name = additional_fields.get("creator_name_s")
+
     # Extended incipits have their fingerprints calculated for similarity matching.
     # They are configurable because they slow down indexing considerably, so can be disabled
     # if faster indexing is needed.
 
     incipits: list = (
         get_incipits(
-            marc_record, main_title, record_type_id, country_codes, has_digitization
+            marc_record,
+            main_title,
+            record_type_id,
+            rism_id,
+            source_id,
+            country_codes,
+            has_digitization,
+            creator_name,
+            source_dates,
+            standard_titles_json,
         )
         or []
     )

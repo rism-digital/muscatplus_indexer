@@ -1,8 +1,10 @@
+import functools
 from typing import Optional
 
 import pymarc
 
 
+@functools.lru_cache(maxsize=2048)
 def _parse_field(line: str) -> pymarc.Field:
     # General format: =TAG  ##$afoo$bbar
     tag_value: str = line[1:4]
@@ -22,6 +24,7 @@ def _parse_field(line: str) -> pymarc.Field:
     return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 
+@functools.lru_cache(maxsize=2048)
 def _parse_subf(subf_value: str) -> pymarc.Subfield:
     code: str = subf_value[0]
     value: str = subf_value[1:].strip()

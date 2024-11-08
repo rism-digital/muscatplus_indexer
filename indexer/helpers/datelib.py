@@ -123,6 +123,7 @@ NO_DATES = {
 }
 
 
+@functools.lru_cache(maxsize=1024)
 def _parse_century_date_with_fraction(
     century_start: int, ordinal: str, period: str
 ) -> Optional[tuple[int, int]]:
@@ -184,6 +185,7 @@ def _parse_century_date_with_fraction(
     )
 
 
+@functools.lru_cache(maxsize=1024)
 def _parse_century_date_with_adjective(
     century_start: int, adjective: str
 ) -> Optional[tuple[int, int]]:

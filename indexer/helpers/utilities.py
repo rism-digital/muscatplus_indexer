@@ -814,7 +814,7 @@ def get_bibliographic_references_json(
     for ff in fields:
         fid: Optional[str] = ff.get("0")
         if not fid:
-            log.error(
+            log.warning(
                 "No field 0 for entry in record %s. Skipping: %s",
                 record["001"].value(),
                 str(ff),

@@ -40,7 +40,9 @@ def create_marc(record: str) -> pymarc.Record:
     :return: an instance of a pymarc.Record
     """
     lines: list = record.splitlines()
-    fields: list[pymarc.Field] = [_parse_field(line) for line in lines]
+    fields: list[pymarc.Field] = [
+        _parse_field(line) for line in lines if line and line != ""
+    ]
     p_record: pymarc.Record = pymarc.Record(fields=fields)
 
     return p_record

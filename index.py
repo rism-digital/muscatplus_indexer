@@ -4,6 +4,7 @@ import logging.config
 import os.path
 import sys
 import timeit
+import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -356,6 +357,7 @@ if __name__ == "__main__":
         success: bool = main(input_args)
     except Exception as e:
         log.critical("Main method raised an exception and could not continue: %s", e)
+        traceback.print_exc()
         success = False
 
     if not input_args.dry:

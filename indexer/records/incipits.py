@@ -10,6 +10,7 @@ import yaml
 from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.utilities import (
     get_content_types,
+    get_titles,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -106,7 +107,7 @@ def __incipit(
     record_ident,
     creator,
     source_dates,
-    standard_title_json,
+    standard_titles,
 ) -> dict[str, object]:
     # If a record has neither a 774 (parent -> child) nor a 773 (child -> parent) then it's a single item.
     is_single_item: bool = "774" not in record or "773" not in record
@@ -206,8 +207,8 @@ def __incipit(
         "general_notes_sm": field.get_subfields("q"),
         "scoring_sm": field.get_subfields("z"),
         "country_codes_sm": country_codes,
-        "standard_titles_json": orjson.dumps(standard_title_json).decode("utf-8")
-        if standard_title_json
+        "standard_titles_json": orjson.dumps(standard_titles).decode("utf-8")
+        if standard_titles
         else None,
         "has_digitization_b": has_digitization,
     }
@@ -277,12 +278,12 @@ def get_incipits(
     has_digitization: bool,
     creator_name: Optional[str],
     source_dates: Optional[list[int]],
-    standard_titles_json: Optional[list[dict]],
 ) -> Optional[list]:
     if "031" not in record:
         return None
 
     incipits: list = record.get_fields("031")
+    standard_titles: Optional[list[dict]] = get_titles(record, "240")
 
     return [
         __incipit(
@@ -297,7 +298,7 @@ def get_incipits(
             record_ident,
             creator_name,
             source_dates,
-            standard_titles_json,
+            standard_titles,
         )
         for num, f in enumerate(incipits, 1)
     ]

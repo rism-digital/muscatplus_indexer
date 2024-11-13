@@ -321,7 +321,6 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     source_core.update(additional_fields)
 
     source_dates: Optional[list[int]] = additional_fields.get("date_ranges_im")
-    standard_titles_json = additional_fields.get("standard_titles_json")
     creator_name = additional_fields.get("creator_name_s")
 
     # Extended incipits have their fingerprints calculated for similarity matching.
@@ -339,7 +338,6 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
             has_digitization,
             creator_name,
             source_dates,
-            standard_titles_json,
         )
         or []
     )

@@ -38,6 +38,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', stos.relator_code, sours.marc_source) SEPARATOR '|~|') FROM {dbname}.sources_to_sources AS stos LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id WHERE marc_tag = '787' AND source_a_id = child.id) AS related_sources,
         (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Source' AND do.object_link_id = child.id) AS digital_objects,
         (SELECT GROUP_CONCAT(DISTINCT sw.work_id SEPARATOR '\n') FROM {dbname}.sources_to_works AS sw WHERE sw.source_id = child.id) AS work_ids,
+        (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', wn.id, wn.marc_source) SEPARATOR '|~|') FROM {dbname}.sources_to_work_nodes AS swn LEFT JOIN {dbname}.work_nodes AS wn ON swn.work_node_id = wn.id WHERE swn.source_id = child.id) AS work_nodes,
         GROUP_CONCAT(DISTINCT h.marc_source SEPARATOR '\n') AS holdings_marc,
         GROUP_CONCAT(DISTINCT hp.marc_source SEPARATOR '\n') as parent_holdings_marc,
         GROUP_CONCAT(DISTINCT h.lib_siglum SEPARATOR '\n') AS holdings_org,

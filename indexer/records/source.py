@@ -673,7 +673,7 @@ def _get_work_node(wns: str, source_id: str) -> Optional[dict]:
         dates: str = f" ({d})" if (d := creator.get("d")) else ""
 
         composer_name = f"{name}{dates}"
-        composer_id = f"person_{creator["0"]}"
+        composer_id = f"person_{creator['0']}"
 
         work_title_subf: str = creator["t"]
         partial_title_subf: str = f". {pt}" if (pt := creator.get("p")) else ""

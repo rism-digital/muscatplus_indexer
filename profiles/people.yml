@@ -8,10 +8,6 @@ name_s:
   field: "100"
   subfield: "a"
 
-gender_s:
-  field: "375"
-  subfield: "a"
-
 date_statement_s:
   field: "100"
   subfield: "d"
@@ -20,6 +16,10 @@ date_ranges_im:  # process $d into earliest and latest years.
 other_dates_s:
   field: "100"
   subfield: "y"
+
+gender_s:
+  field: "375"
+  subfield: "a"
 
 variant_names_sm:
   processor: "_get_name_variants"

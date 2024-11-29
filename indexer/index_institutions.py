@@ -75,7 +75,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                         AS related_institutions,
                     (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',')
                         FROM {dbname}.digital_object_links AS do
-                        WHERE do.object_link_type = 'Person' AND do.object_link_id = i.id)
+                        WHERE do.object_link_type = 'Institution' AND do.object_link_id = i.id)
                         AS digital_objects,
                     (SELECT GROUP_CONCAT(DISTINCT ssi.relator_code SEPARATOR ',')
                         FROM {dbname}.sources_to_institutions AS ssi

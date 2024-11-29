@@ -9,8 +9,7 @@ def _parse_field(line: str) -> pymarc.Field:
 
     # Control fields are those in the <010 range. They do not have
     # subfields, but have the data encoded in them directly.
-    control: bool = tag_value.isdigit() and int(tag_value) < 10
-    if control:
+    if tag_value.isdigit() and int(tag_value) < 10:
         return pymarc.Field(tag=tag_value, data=line[6:].rstrip("\r\n"))
 
     indicators: pymarc.Indicators = pymarc.Indicators(line[6], line[7])
@@ -43,20 +42,21 @@ def create_marc(record: str) -> pymarc.Record:
     fields: list[pymarc.Field] = [
         _parse_field(line) for line in lines if line and line != ""
     ]
-    p_record: pymarc.Record = pymarc.Record(fields=fields)
-
-    return p_record
+    return pymarc.Record(fields=fields)
 
 
-def create_marc_list(marc_records: Optional[str]) -> list[pymarc.Record]:
+def create_marc_list(
+    marc_records: Optional[str], delimiter: str = "\n"
+) -> list[pymarc.Record]:
     """
     Will always return a list, potentially an empty one.
 
     :param marc_records: A string of newline-separated MARC records
+    :param delimiter: A string that marks the separator between MARC records. Newline (\n) by default.
     :return: A list of pymarc.Record objects
     """
     return (
-        [create_marc(rec.strip()) for rec in marc_records.split("\n") if rec]
+        [create_marc(rec.strip()) for rec in marc_records.split(delimiter) if rec]
         if marc_records
         else []
     )

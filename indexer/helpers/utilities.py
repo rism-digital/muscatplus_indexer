@@ -900,3 +900,52 @@ def update_rism_document(
         "has_external_record_b": {"set": True},
         "external_records_jsonm": {"add-distinct": entry_s},
     }
+
+
+def get_work_node(
+    record: pymarc.Record, record_id: str, record_type: str
+) -> Optional[dict]:
+    wnid = record["001"].value()
+    work_node_id: str = f"work_node_{wnid}"
+
+    if "024" not in record:
+        log.error("Work Node without an 024. Skipping: %s", work_node_id)
+        return None
+
+    link_field: pymarc.Field = record["024"]
+
+    if link_field and "2" in link_field and "a" in link_field:
+        ident: str = f"{link_field['2'].lower()}:{link_field['a']}"
+    else:
+        log.error("Work Node with 024 but without $2 or $a. Skipping: %s", work_node_id)
+        return None
+
+    creator: pymarc.Field = record.get("100")
+    composer_name: Optional[str] = None
+    composer_id: Optional[str] = None
+    work_title: Optional[str] = None
+
+    if creator and "a" in creator:
+        name: str = creator["a"].strip()
+        dates: str = f" ({d})" if (d := creator.get("d")) else ""
+
+        composer_name = f"{name}{dates}"
+        composer_id = f"person_{creator['0']}"
+
+        work_title_subf: str = creator["t"]
+        partial_title_subf: str = f". {pt}" if (pt := creator.get("p")) else ""
+
+        work_title = f"{work_title_subf}{partial_title_subf}"
+
+    d: dict = {
+        "id": work_node_id,
+        "type": "work_node",
+        "external_id": ident,
+        "composer_name": composer_name,
+        "composer_id": composer_id,
+        "work_title": work_title,
+        "this_id": record_id,
+        "this_type": record_type,
+    }
+
+    return {k: v for k, v in d.items() if v}

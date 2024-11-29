@@ -37,7 +37,18 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                         LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
                         WHERE p.id = ssp.person_id AND sss.wf_stage = 1)
                         AS source_relationships,
-                     (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',') FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id) AS digital_objects
+                     (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',')
+                        FROM {dbname}.digital_object_links AS do
+                        WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id)
+                        AS digital_objects,
+                     (SELECT GROUP_CONCAT(DISTINCT wn.marc_source SEPARATOR '|~|')
+                        FROM {dbname}.work_nodes_to_people AS wntp
+                        LEFT JOIN {dbname}.work_nodes AS wn ON wntp.work_node_id = wn.id
+                        WHERE
+                            (SELECT COUNT(swn.source_id) FROM {dbname}.sources_to_work_nodes AS swn WHERE wn.id = swn.work_node_id) > 0
+                             AND p.id = wntp.person_id
+                        ORDER BY wn.title ASC
+                    ) AS work_nodes
                      FROM {dbname}.people AS p
                      WHERE
                      ((SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR

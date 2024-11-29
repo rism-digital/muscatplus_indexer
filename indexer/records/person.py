@@ -3,10 +3,11 @@ from typing import Optional, TypedDict
 
 import pymarc
 import yaml
+from orjson import orjson
 
-from indexer.helpers.marc import create_marc
+from indexer.helpers.marc import create_marc, create_marc_list
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import normalize_id
+from indexer.helpers.utilities import get_work_node, normalize_id
 from indexer.processors import person as person_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -57,6 +58,13 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         else []
     )
 
+    work_nodes_json = None
+    work_node_ids = None
+    if work_nodes := record.get("work_nodes"):
+        all_work_nodes: list[dict] = _get_work_nodes(work_nodes, person_id)
+        work_node_ids = [wn["id"] for wn in all_work_nodes if wn]
+        work_nodes_json = orjson.dumps(all_work_nodes).decode("utf-8")
+
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
     core_person: dict = {
@@ -70,6 +78,8 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "source_count_i": source_count if rism_id != "30004985" else 0,
         # "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
         "total_sources_i": total_count if rism_id != "30004985" else 0,
+        "work_node_ids": work_node_ids,
+        "work_nodes_json": work_nodes_json,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -87,3 +97,12 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         core_person.update({"earliest_date_i": dates[0]})
 
     return core_person
+
+
+def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
+    marc_records: list[pymarc.Record] = create_marc_list(
+        work_nodes_marc, delimiter="|~|"
+    )
+    work_nodes = [get_work_node(record, person_id, "person") for record in marc_records]
+
+    return work_nodes

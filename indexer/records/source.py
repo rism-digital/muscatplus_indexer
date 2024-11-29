@@ -21,6 +21,7 @@ from indexer.helpers.utilities import (
     get_creator_name,
     get_parent_order_for_members,
     get_titles,
+    get_work_node,
     normalize_id,
     to_solr_multi,
     to_solr_single,
@@ -258,9 +259,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
 
     work_node_json = None
     work_node_id = None
-    if (w := record.get("work_node")) and (work_node := _get_work_node(w, source_id)):
-        work_node_id = work_node["external_id"]
-        work_node_json = orjson.dumps(work_node).decode("utf-8")
+    if w := record.get("work_node"):
+        wnid, wn_marc_source = w.split("|:|")
+        wn_record: pymarc.Record = create_marc(wn_marc_source)
+        work_node: Optional[dict] = get_work_node(wn_record, source_id, "source")
+        if work_node:
+            work_node_id = work_node["external_id"]
+            work_node_json = orjson.dumps(work_node).decode("utf-8")
 
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
@@ -641,54 +646,3 @@ def _get_holding_people_ids(records: list[pymarc.Record]) -> set[str]:
             ids.update(p_ids)
 
     return ids
-
-
-def _get_work_node(wns: str, source_id: str) -> Optional[dict]:
-    wnid, wn_marc_source = wns.split("|:|")
-    wn_marc_record: Optional[pymarc.Record] = (
-        create_marc(wn_marc_source) if wn_marc_source else None
-    )
-    if not wn_marc_record:
-        log.error("Could not load Work Node MARC record: %s", wnid)
-        return None
-
-    work_node_id: str = f"work_node_{wnid}"
-    link_field: pymarc.Field = wn_marc_record.get("024")
-    if not link_field:
-        log.error("Work Node without an 024. Skipping: %s", work_node_id)
-        return None
-
-    if link_field and "2" in link_field and "a" in link_field:
-        ident: str = f"{link_field['2'].lower()}:{link_field['a']}"
-    else:
-        log.error("Work Node with 024 but without $2 or $a. Skipping: %s", work_node_id)
-        return None
-
-    creator: pymarc.Field = wn_marc_record.get("100")
-    composer_name: Optional[str] = None
-    composer_id: Optional[str] = None
-    work_title: Optional[str] = None
-    if creator and "a" in creator:
-        name: str = creator["a"].strip()
-        dates: str = f" ({d})" if (d := creator.get("d")) else ""
-
-        composer_name = f"{name}{dates}"
-        composer_id = f"person_{creator['0']}"
-
-        work_title_subf: str = creator["t"]
-        partial_title_subf: str = f". {pt}" if (pt := creator.get("p")) else ""
-
-        work_title = f"{work_title_subf}{partial_title_subf}"
-
-    d: dict = {
-        "id": work_node_id,
-        "type": "work_node",
-        "external_id": ident,
-        "composer_name": composer_name,
-        "composer_id": composer_id,
-        "work_title": work_title,
-        "this_id": source_id,
-        "this_type": "source",
-    }
-
-    return {k: v for k, v in d.items() if v}

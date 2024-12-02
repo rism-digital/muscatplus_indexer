@@ -344,6 +344,10 @@ if __name__ == "__main__":
 
     input_args: argparse.Namespace = parser.parse_args()
 
+    if input_args.include:
+        input_args.skip_diamm = True
+        input_args.skip_cantus = True
+
     idx_pid = str(os.getpid())
     pid_file: Path = Path("/tmp", "muscatplus_indexer.pid")  # noqa: S108
     if pid_file.exists() and not input_args.dry:

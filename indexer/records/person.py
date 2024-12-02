@@ -5,7 +5,7 @@ import pymarc
 import yaml
 from orjson import orjson
 
-from indexer.helpers.marc import create_marc, create_marc_list
+from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import get_work_node, normalize_id
 from indexer.processors import person as person_processor
@@ -100,9 +100,11 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
 
 
 def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
-    marc_records: list[pymarc.Record] = create_marc_list(
-        work_nodes_marc, delimiter="|~|"
-    )
-    work_nodes = [get_work_node(record, person_id, "person") for record in marc_records]
+    record_data = work_nodes_marc.split("|~|")
+    work_nodes = []
+    for r in record_data:
+        count_marc = r.split("|:|")
+        count, marc = count_marc[0], create_marc(count_marc[1])
+        work_nodes.append(get_work_node(marc, person_id, "person", int(count)))
 
     return work_nodes

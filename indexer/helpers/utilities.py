@@ -903,7 +903,7 @@ def update_rism_document(
 
 
 def get_work_node(
-    record: pymarc.Record, record_id: str, record_type: str
+    record: pymarc.Record, record_id: str, record_type: str, source_count: int = 0
 ) -> Optional[dict]:
     wnid = record["001"].value()
     work_node_id: str = f"work_node_{wnid}"
@@ -946,6 +946,7 @@ def get_work_node(
         "work_title": work_title,
         "this_id": record_id,
         "this_type": record_type,
+        "source_count": source_count if source_count > 0 else None,
     }
 
     return {k: v for k, v in d.items() if v}

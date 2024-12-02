@@ -41,14 +41,14 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                         FROM {dbname}.digital_object_links AS do
                         WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id)
                         AS digital_objects,
-                     (SELECT GROUP_CONCAT(DISTINCT wn.marc_source SEPARATOR '|~|')
-                        FROM {dbname}.work_nodes_to_people AS wntp
-                        LEFT JOIN {dbname}.work_nodes AS wn ON wntp.work_node_id = wn.id
-                        WHERE
-                            (SELECT COUNT(swn.source_id) FROM {dbname}.sources_to_work_nodes AS swn WHERE wn.id = swn.work_node_id) > 0
-                             AND p.id = wntp.person_id
-                        ORDER BY wn.title ASC
-                    ) AS work_nodes
+                     (SELECT GROUP_CONCAT(CONCAT_WS('|:|', scount, marc_source) SEPARATOR '|~|') AS work_nodes
+                        FROM (SELECT COUNT(swn.source_id) AS scount, wn.marc_source AS marc_source, wn.title AS title
+                                FROM muscat_development.sources_to_work_nodes AS swn
+                                LEFT JOIN muscat_development.work_nodes AS wn ON swn.work_node_id = wn.id
+                                WHERE wn.person_id = 30001209
+                                GROUP BY wn.id, wn.title
+                                ORDER BY wn.title ASC) AS sss
+                      ) AS work_nodes
                      FROM {dbname}.people AS p
                      WHERE
                      ((SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR

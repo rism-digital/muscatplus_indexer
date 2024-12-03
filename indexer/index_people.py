@@ -43,9 +43,9 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                         AS digital_objects,
                      (SELECT GROUP_CONCAT(CONCAT_WS('|:|', scount, marc_source) SEPARATOR '|~|') AS work_nodes
                         FROM (SELECT COUNT(swn.source_id) AS scount, wn.marc_source AS marc_source, wn.title AS title
-                                FROM muscat_development.sources_to_work_nodes AS swn
-                                LEFT JOIN muscat_development.work_nodes AS wn ON swn.work_node_id = wn.id
-                                WHERE wn.person_id = 30001209
+                                FROM {dbname}.sources_to_work_nodes AS swn
+                                LEFT JOIN {dbname}.work_nodes AS wn ON swn.work_node_id = wn.id
+                                WHERE wn.person_id = p.id
                                 GROUP BY wn.id, wn.title
                                 ORDER BY wn.title ASC) AS sss
                       ) AS work_nodes

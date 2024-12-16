@@ -62,7 +62,9 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     work_node_ids = None
     if work_nodes := record.get("work_nodes"):
         all_work_nodes: list[dict] = _get_work_nodes(work_nodes, person_id)
-        work_node_ids = [wn["id"] for wn in all_work_nodes if wn]
+        work_node_ids = [
+            wn.get("external_id") for wn in all_work_nodes if wn and "external_id" in wn
+        ]
         work_nodes_json = orjson.dumps(all_work_nodes).decode("utf-8")
 
     # For the source count we take the literal count *except* for the Anonymous user,

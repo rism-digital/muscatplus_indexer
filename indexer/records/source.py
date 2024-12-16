@@ -263,7 +263,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         wnid, wn_marc_source = w.split("|:|")
         wn_record: pymarc.Record = create_marc(wn_marc_source)
         work_node: Optional[dict] = get_work_node(wn_record, source_id, "source")
-        if work_node:
+        if work_node and "external_id" in work_node:
             work_node_id = work_node["external_id"]
             work_node_json = orjson.dumps(work_node).decode("utf-8")
 

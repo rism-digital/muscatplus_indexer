@@ -805,7 +805,9 @@ def get_bibliographic_references_json(
         try:
             refs[rid] = format_reference(rest)
         except ValueError:
-            log.error("Could not index references for record %s", record["001"].value())
+            log.warning(
+                "Could not index references for record %s", record["001"].value()
+            )
             return None
 
     outp: list = []
@@ -909,7 +911,7 @@ def get_work_node(
     work_node_id: str = f"work_node_{wnid}"
 
     if "024" not in record:
-        log.error("Work Node without an 024. Skipping: %s", work_node_id)
+        log.warning("Work Node without an 024. Skipping: %s", work_node_id)
         return None
 
     link_field: pymarc.Field = record["024"]
@@ -917,7 +919,9 @@ def get_work_node(
     if link_field and "2" in link_field and "a" in link_field:
         ident: str = f"{link_field['2'].lower()}:{link_field['a']}"
     else:
-        log.error("Work Node with 024 but without $2 or $a. Skipping: %s", work_node_id)
+        log.warning(
+            "Work Node with 024 but without $2 or $a. Skipping: %s", work_node_id
+        )
         return None
 
     creator: pymarc.Field = record.get("100")

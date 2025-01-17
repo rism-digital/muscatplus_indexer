@@ -105,7 +105,7 @@ test = ["coverage", "django (>=4.2,<5.0)", "junitparser", "pre-commit", "pytest"
 type = "git"
 url = "https://github.com/rism-digital/python-edtf.git"
 reference = "performance-enhancements"
-resolved_reference = "9da1d94436e124a337fd81133cee5ac48b85cea5"
+resolved_reference = "ffbe2d4e31635565155443b4f902f70eeb153dda"
 
 [[package]]
 name = "executing"

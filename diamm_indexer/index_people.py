@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Generator, Optional
+from collections.abc import Generator
+from typing import Any, Optional
 
 from psycopg.rows import dict_row
 

@@ -1,6 +1,6 @@
 import logging
 from collections import deque
-from typing import Generator
+from collections.abc import Generator
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr

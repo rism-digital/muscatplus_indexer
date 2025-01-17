@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Optional, Pattern
+from typing import Optional
 
 import orjson
 
@@ -122,7 +122,7 @@ def _get_minimal_manuscript_holding_data_cantus(record) -> list:
     ]
 
 
-DATE_RE: Pattern = re.compile(
+DATE_RE: re.Pattern = re.compile(
     r"(?P<century>\d{2}th century)(?: \(((?P<date_range>\d{3,4}-\d{3,4})|\d{1}.*)\))?"
 )
 

@@ -1,6 +1,6 @@
 import logging
 from collections import deque
-from typing import Generator
+from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool

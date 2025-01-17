@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 from psycopg.rows import dict_row
 
@@ -92,7 +93,7 @@ def update_source_records_with_diamm_info(sources: list, cfg: dict) -> bool:
     records = []
 
     for record in sources:
-        label = f'{record.get("siglum", "")} {record.get("shelfmark", "")}'
+        label = f"{record.get('siglum', '')} {record.get('shelfmark', '')}"
         additional_fields = {}
         if n := record.get("name"):
             additional_fields["name"] = n

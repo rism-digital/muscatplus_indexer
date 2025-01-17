@@ -3,7 +3,7 @@ import functools
 import logging.config
 import math
 import re
-from typing import Optional, Pattern
+from typing import Optional
 
 import edtf
 from edtf.parser.edtf_exceptions import EDTFParseException
@@ -13,47 +13,47 @@ log = logging.getLogger("muscat_indexer")
 edtf.appsettings.DAY_FIRST = True
 
 # The simplest single year match
-SIMPLE_SINGLE_YEAR_REGEX: Pattern = re.compile(r"^(?P<year>\d{4})$")
+SIMPLE_SINGLE_YEAR_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})$")
 # The simplest date range -- 1234-1256
-SIMPLE_RANGE_REGEX: Pattern = re.compile(r"^(?P<first>\d{4})-(?P<second>\d{4})$")
+SIMPLE_RANGE_REGEX: re.Pattern = re.compile(r"^(?P<first>\d{4})-(?P<second>\d{4})$")
 
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
-DOT_DIVIDED_REGEX: Pattern = re.compile(
+DOT_DIVIDED_REGEX: re.Pattern = re.compile(
     r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?"
 )
-CENTURY_REGEX: Pattern = re.compile(
+CENTURY_REGEX: re.Pattern = re.compile(
     r"^(?P<century>\d{2})(?:th|st|rd) century, (?P<adjective1>\w+)(?: (?P<adjective2>\w+))?$",
     re.IGNORECASE,
 )
 # Parses dates like '18.2q' (18th century, second quarter) or '19.in' (beginning of the 19th Century)
 # Also matches "20.sc" ("20eme siecle")
-ANOTHER_CENTURY_REGEX: Pattern = re.compile(
+ANOTHER_CENTURY_REGEX: re.Pattern = re.compile(
     r"^(?P<century>\d{2})\.(?P<adjective1>[\diesm])(?P<adjective2>[dqhtnxce])$"
 )
-CENTURY_DASHES_REGEX: Pattern = re.compile(r"^(\d\d)(?:--|\?\?)$")
-CENTURY_TRUNCATED_REGEX: Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
+CENTURY_DASHES_REGEX: re.Pattern = re.compile(r"^(\d\d)(?:--|\?\?)$")
+CENTURY_TRUNCATED_REGEX: re.Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
 
 # Some date ranges are given as "YYYY-MM-DD-YYYY-MM-DD". We only want the years, though.
-MULTI_YEAR_REGEX: Pattern = re.compile(
+MULTI_YEAR_REGEX: re.Pattern = re.compile(
     r"^(?P<first>\d{4})-\d{2}-\d{2}-(?P<second>\d{4})-\d{2}-\d{2}"
 )
 # A lot of dates have a letters attached to them for some odd reason.
-STRIP_LETTERS: Pattern = re.compile(r"(?P<year>\d{3,4})(?:c|p|q|a|!])")
+STRIP_LETTERS: re.Pattern = re.compile(r"(?P<year>\d{3,4})(?:c|p|q|a|!])")
 # Find any cases like "between XXXX and YYYY". Also handles French ('entre XXXX et YYYY') and german ('um XXXX bis um XXXX)
-EXPLICIT_BETWEEN: Pattern = re.compile(
+EXPLICIT_BETWEEN: re.Pattern = re.compile(
     r"^.*(?:between|entre|um|von|vor|et).*(?P<first>\d{4}).*(?P<second>\d{4}).*$",
     re.IGNORECASE,
 )
 # Any ranges with explicitly named century periods in parens can be ignored too, e.g., "1750-1799 (18.2d)"
 # Also, any ones with just a single date can be ignored. We can combine these parenthetical statements into
 # a single regex statement afterwards.
-PARENTHETICAL_APPENDAGES1: Pattern = re.compile(r"(?P<year>\d{4}-\d{4})\s+\(.*\)")
-PARENTHETICAL_APPENDAGES2: Pattern = re.compile(r"(?P<year>\d{4})\s+\(.*\)")
+PARENTHETICAL_APPENDAGES1: re.Pattern = re.compile(r"(?P<year>\d{4}-\d{4})\s+\(.*\)")
+PARENTHETICAL_APPENDAGES2: re.Pattern = re.compile(r"(?P<year>\d{4})\s+\(.*\)")
 # Deal with years that have zeros or Xs as the day, e.g., 1999-10-00, 1999-10-XX
-ZERO_DAY_REGEX: Pattern = re.compile(r"^(?P<year>\d{4})-\d{2}-(00|XX)$")
+ZERO_DAY_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})-\d{2}-(00|XX)$")
 # Deal with dates that are mushed together, e.g., 19991010-19991020
-MUSHED_TOGETHER_REGEX: Pattern = re.compile(r"(?P<first>\d{4})\d{4}")
-MUSHED_TOGETHER_RANGE_REGEX: Pattern = re.compile(
+MUSHED_TOGETHER_REGEX: re.Pattern = re.compile(r"(?P<first>\d{4})\d{4}")
+MUSHED_TOGETHER_RANGE_REGEX: re.Pattern = re.compile(
     r"(?P<first>\d{4})\d{4}-(?P<second>\d{4})\d{4}"
 )
 

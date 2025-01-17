@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from pymarc.marcxml import parse_xml_to_array
 
 from cmo_indexer.records.source import create_source_index_document
@@ -18,9 +19,7 @@ def index_sources(cfg: dict) -> bool:
         expression_ident = expression_file.stem
         expression_contents[expression_ident] = parse_xml_to_array(expression_file)[0]
 
-    for source_ident, parsed_source in source_contents.items():
-        solr_records = create_source_index_document(
-            parsed_source, expression_contents, cfg
-        )
+    for _, parsed_source in source_contents.items():
+        _ = create_source_index_document(parsed_source, expression_contents, cfg)
 
     return True

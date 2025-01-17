@@ -15,7 +15,9 @@ from indexer.helpers.utilities import (
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
-institution_profile: dict = yaml.full_load(open("profiles/institutions.yml"))
+
+with open("profiles/institutions.yml") as pi:
+    institution_profile: dict = yaml.full_load(pi)
 
 
 class InstitutionIndexDocument(TypedDict):

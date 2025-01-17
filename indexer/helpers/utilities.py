@@ -4,8 +4,9 @@ import logging
 import re
 import timeit
 from collections import OrderedDict
+from collections.abc import Iterable
 from functools import wraps
-from typing import Callable, Iterable, Optional, Pattern, TypedDict
+from typing import Callable, Optional, TypedDict
 
 import orjson
 import pymarc
@@ -494,14 +495,14 @@ def get_related_institutions(
     ]
 
 
-BREAK_CONVERT: Pattern = re.compile(r"({{brk}})")
-URL_MATCH: Pattern = re.compile(
+BREAK_CONVERT: re.Pattern = re.compile(r"({{brk}})")
+URL_MATCH: re.Pattern = re.compile(
     r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?+-=\\.&]*)", re.MULTILINE | re.UNICODE
 )
-OPAC_LINK: Pattern = re.compile(
+OPAC_LINK: re.Pattern = re.compile(
     r"https?://opac\.rism\.info/search\?id=(\d+)&View=rism", re.MULTILINE | re.UNICODE
 )
-MUSCAT_LINK: Pattern = re.compile(
+MUSCAT_LINK: re.Pattern = re.compile(
     r"https?://muscat\.rism\.info/admin/sources/(\d+)", re.MULTILINE | re.UNICODE
 )
 
@@ -887,7 +888,7 @@ def update_rism_document(
     entry: dict = {
         "id": f"{project_id}",
         "type": f"{record_type}",
-        "project_type": f'{record.get("project_type")}',
+        "project_type": f"{record.get('project_type')}",
         "project": f"{project}",
         "label": f"{label}",
     }

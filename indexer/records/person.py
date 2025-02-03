@@ -107,6 +107,8 @@ def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
     for r in record_data:
         count_marc = r.split("|:|")
         count, marc = count_marc[0], create_marc(count_marc[1])
-        work_nodes.append(get_work_node(marc, person_id, "person", int(count)))
+        work_node: Optional[dict] = get_work_node(marc, person_id, "person", int(count))
+        if work_node:
+            work_nodes.append(work_node)
 
     return work_nodes

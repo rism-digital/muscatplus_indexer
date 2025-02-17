@@ -66,7 +66,8 @@ def _get_diamm_concordance(cfg: dict) -> Generator[list[dict[str, Any]], None, N
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dds.id AS id, ddsa.identifier AS rism_id,
-                        dds.name AS name, dds.shelfmark AS shelfmark, dda.siglum AS siglum
+                        dds.name AS name, dds.shelfmark AS shelfmark, dda.siglum AS siglum,
+                        'sources' AS project_type
                         FROM diamm_data_source dds
                         LEFT JOIN diamm_data_sourceauthority ddsa ON ddsa.source_id = dds.id
                         LEFT JOIN diamm_data_archive dda on dds.archive_id = dda.id

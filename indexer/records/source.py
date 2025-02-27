@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import orjson
 import pymarc
@@ -43,13 +42,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     source: str = record["marc_source"]
     marc_record: pymarc.Record = create_marc(source)
 
-    parent_source: Optional[str] = record.get("parent_marc_source")
-    parent_marc_record: Optional[pymarc.Record] = (
+    parent_source: str | None = record.get("parent_marc_source")
+    parent_marc_record: pymarc.Record | None = (
         create_marc(parent_source) if parent_source else None
     )
 
     record_type_id: int = record["record_type"]
-    parent_id: Optional[int] = record.get("source_id")
+    parent_id: int | None = record.get("source_id")
     child_count: int = record.get("child_count", 0)
     # A source is always either its own member, or belonging to group of sources
     # all with the same "parent" source. This is stored in the Muscat database in the 'source_id'
@@ -74,12 +73,12 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     )
     child_composers: set[str] = set()
     for child_record in child_marc_records:
-        c: Optional[str] = get_creator_name(child_record)
+        c: str | None = get_creator_name(child_record)
         if not c:
             continue
         child_composers.add(c)
 
-    creator_name: Optional[str] = get_creator_name(marc_record)
+    creator_name: str | None = get_creator_name(marc_record)
     institution_places: list[str] = (
         [s for s in record["institution_places"].split("|") if s]
         if record.get("institution_places")
@@ -133,13 +132,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         _get_country_codes(manuscript_holdings, all_print_holding_records) or []
     )
 
-    parent_record_type_id: Optional[int] = record.get("parent_record_type")
-    source_membership_data: Optional[dict] = None
+    parent_record_type_id: int | None = record.get("parent_record_type")
+    source_membership_data: dict | None = None
     if parent_record_type_id:
-        parent_material_source_types: Optional[list[str]] = to_solr_multi(
+        parent_material_source_types: list[str] | None = to_solr_multi(
             parent_marc_record, "593", "a"
         )
-        parent_material_content_types: Optional[list[str]] = to_solr_multi(
+        parent_material_content_types: list[str] | None = to_solr_multi(
             parent_marc_record, "593", "b"
         )
 
@@ -172,7 +171,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         if (d := record.get("people_names"))
         else []
     )
-    variant_people_names: Optional[list] = _get_variant_people_names(
+    variant_people_names: list | None = _get_variant_people_names(
         record.get("alt_people_names")
     )
 
@@ -187,7 +186,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     source_people_ids |= holding_people_ids
     related_people_ids: list[str] = list(source_people_ids)
 
-    variant_standard_terms: Optional[list] = _get_variant_standard_terms(
+    variant_standard_terms: list | None = _get_variant_standard_terms(
         record.get("alt_standard_terms")
     )
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
@@ -197,7 +196,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         if (d := record.get("publication_entries"))
         else []
     )
-    bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
+    bibliographic_references: list[dict] | None = get_bibliographic_references_json(
         marc_record, "691", publication_entries
     )
     bibliographic_references_json = (
@@ -205,13 +204,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         if bibliographic_references
         else None
     )
-    bibliographic_reference_titles: Optional[list[str]] = (
+    bibliographic_reference_titles: list[str] | None = (
         get_bibliographic_reference_titles(publication_entries)
     )
-    works_catalogue: Optional[list[dict]] = get_bibliographic_references_json(
+    works_catalogue: list[dict] | None = get_bibliographic_references_json(
         marc_record, "690", publication_entries
     )
-    works_catalogue_titles: Optional[list[str]] = get_bibliographic_reference_titles(
+    works_catalogue_titles: list[str] | None = get_bibliographic_reference_titles(
         publication_entries
     )
 
@@ -262,7 +261,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     if w := record.get("work_node"):
         wnid, wn_marc_source = w.split("|:|")
         wn_record: pymarc.Record = create_marc(wn_marc_source)
-        work_node: Optional[dict] = get_work_node(wn_record, source_id, "source")
+        work_node: dict | None = get_work_node(wn_record, source_id, "source")
         if work_node and "external_id" in work_node:
             work_node_id = work_node["external_id"]
             work_node_json = orjson.dumps(work_node).decode("utf-8")
@@ -333,7 +332,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     )
     source_core.update(additional_fields)
 
-    source_dates: Optional[list[int]] = additional_fields.get("date_ranges_im")
+    source_dates: list[int] | None = additional_fields.get("date_ranges_im")
     creator_name = additional_fields.get("creator_name_s")
 
     # Extended incipits have their fingerprints calculated for similarity matching.
@@ -371,10 +370,10 @@ def _get_manuscript_holdings(
     source_id: str,
     source_is_single_item: bool,
     main_title: str,
-    creator_name: Optional[str],
+    creator_name: str | None,
     record_type_id: int,
     institution_places: list[str],
-) -> Optional[list[dict[str, object]]]:
+) -> list[dict[str, object]] | None:
     """
     Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
     This is so that we can provide a unified interface for searching all holdings of an institution
@@ -384,7 +383,7 @@ def _get_manuscript_holdings(
     if "852" not in record:
         return None
 
-    holding_institution_ident: Optional[str] = to_solr_single(record, "852", "x")
+    holding_institution_ident: str | None = to_solr_single(record, "852", "x")
     # Since these are for MSS, the holding ID is created by tying together the source id and the institution id; this
     # should result in a unique identifier for this holding record.
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
@@ -407,7 +406,7 @@ def _get_manuscript_holdings(
     return [idx_doc]
 
 
-def _get_variant_people_names(variant_names: Optional[str]) -> Optional[list]:
+def _get_variant_people_names(variant_names: str | None) -> list | None:
     if not variant_names:
         return None
 
@@ -415,7 +414,7 @@ def _get_variant_people_names(variant_names: Optional[str]) -> Optional[list]:
     return tokenize_variants(list_of_names)
 
 
-def _get_variant_standard_terms(variant_terms: Optional[str]) -> Optional[list]:
+def _get_variant_standard_terms(variant_terms: str | None) -> list | None:
     if not variant_terms:
         return None
 
@@ -425,7 +424,7 @@ def _get_variant_standard_terms(variant_terms: Optional[str]) -> Optional[list]:
 
 def _get_holding_orgs(
     mss_holdings: list[HoldingIndexDocument], all_holding_sigla: list[str]
-) -> Optional[list[str]]:
+) -> list[str] | None:
     # Coalesces both print and mss holdings into a multivalued field so that we can filter sources by their holding
     # library
     # If there are any holding records for MSS, get the siglum. Use a set to ignore any duplicates
@@ -483,12 +482,12 @@ def _get_country_codes(
     codes: set[str] = set()
 
     for mss in mss_holdings:
-        institution_sig: Optional[str] = mss.get("siglum_s")
+        institution_sig: str | None = mss.get("siglum_s")
         if institution_sig:
             codes.add(country_code_from_siglum(institution_sig))
 
     for rec in all_holdings:
-        rec_sig: Optional[str] = to_solr_single(rec, "852", "a")
+        rec_sig: str | None = to_solr_single(rec, "852", "a")
         if rec_sig:
             codes.add(country_code_from_siglum(rec_sig))
 
@@ -552,7 +551,7 @@ def _get_digitization_notes(all_records: list[pymarc.Record]) -> list[str]:
     return list(all_project_notes)
 
 
-def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:
+def _create_sigla_list_from_str(sigla: str | None) -> list[str]:
     """
     Returns a list of sigla for a source. This is a set, that is cast to a list.
     Always returns a list.
@@ -562,7 +561,7 @@ def _create_sigla_list_from_str(sigla: Optional[str]) -> list[str]:
     return list({s.strip() for s in sigla.split("\n") if s}) if sigla else []
 
 
-def _get_num_holdings_facet(num: int) -> Optional[str]:
+def _get_num_holdings_facet(num: int) -> str | None:
     if num == 0:
         return None
     elif num == 1:
@@ -577,7 +576,7 @@ def _get_num_holdings_facet(num: int) -> Optional[str]:
 
 def _get_related_sources(
     related: str, relationship_fields: list[pymarc.Field], host_source_id: str
-) -> Optional[list[dict]]:
+) -> list[dict] | None:
     """
     Combines the MARC source from related sources and the 787 entries from a record to create a JSON
     field for the related sources.
@@ -605,7 +604,7 @@ def _get_related_sources(
     related_entries: list = []
     for relationship_id, individual_record in enumerate(all_records, 1):
         relator_code, relmarc_source = individual_record.split("|:|")
-        rel_marc_record: Optional[pymarc.Record] = (
+        rel_marc_record: pymarc.Record | None = (
             create_marc(relmarc_source) if relmarc_source else None
         )
         if not rel_marc_record:
@@ -615,9 +614,9 @@ def _get_related_sources(
         record_id = normalize_id(rel_marc_record["001"].value())
 
         source_id: str = f"source_{record_id}"
-        title: Optional[list[dict[str, object]]] = get_titles(rel_marc_record, "240")
+        title: list[dict[str, object]] | None = get_titles(rel_marc_record, "240")
 
-        note: Optional[str] = None
+        note: str | None = None
         if record_id in notes:
             note = notes[record_id]
 

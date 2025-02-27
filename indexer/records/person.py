@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import pymarc
 import yaml
@@ -18,24 +18,24 @@ class PersonIndexDocument(TypedDict):
     id: str
     type: str
     person_id: str
-    name_s: Optional[str]
-    date_statement_s: Optional[str]
-    other_dates_s: Optional[str]
-    variant_names_sm: Optional[list]
-    related_places_sm: Optional[list]
-    related_people_sm: Optional[list]
-    related_institutions_sm: Optional[list]
-    general_notes_sm: Optional[list]
-    additional_biography_sm: Optional[list]
-    gender_s: Optional[str]
-    roles_sm: Optional[list]
-    external_ids: Optional[list]
+    name_s: str | None
+    date_statement_s: str | None
+    other_dates_s: str | None
+    variant_names_sm: list | None
+    related_places_sm: list | None
+    related_people_sm: list | None
+    related_institutions_sm: list | None
+    general_notes_sm: list | None
+    additional_biography_sm: list | None
+    gender_s: str | None
+    roles_sm: list | None
+    external_ids: list | None
     boost: int
-    related_people_json: Optional[str]
-    related_places_json: Optional[str]
-    related_institutions_json: Optional[str]
-    name_variants_json: Optional[str]
-    external_resources_json: Optional[str]
+    related_people_json: str | None
+    related_places_json: str | None
+    related_institutions_json: str | None
+    name_variants_json: str | None
+    external_resources_json: str | None
 
 
 def create_person_index_document(record: dict, cfg: dict) -> dict:
@@ -109,7 +109,7 @@ def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
     for r in record_data:
         count_marc = r.split("|:|")
         count, marc = count_marc[0], create_marc(count_marc[1])
-        work_node: Optional[dict] = get_work_node(marc, person_id, "person", int(count))
+        work_node: dict | None = get_work_node(marc, person_id, "person", int(count))
         if work_node:
             work_nodes.append(work_node)
 

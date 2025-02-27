@@ -1,6 +1,6 @@
 import logging
 from collections import namedtuple
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import orjson
 import pymarc
@@ -50,17 +50,17 @@ class IncipitIndexDocument(TypedDict):
     incipit_num_i: int
     incipit_len_i: int
     work_num_s: str
-    music_incipit_s: Optional[str]
-    text_incipit_s: Optional[str]
-    role_s: Optional[str]
-    titles_sm: Optional[str]
-    key_mode_s: Optional[str]
-    key_s: Optional[str]
-    timesig_s: Optional[str]
-    clef_s: Optional[str]
+    music_incipit_s: str | None
+    text_incipit_s: str | None
+    role_s: str | None
+    titles_sm: str | None
+    key_mode_s: str | None
+    key_s: str | None
+    timesig_s: str | None
+    clef_s: str | None
     is_mensural_b: bool
-    general_notes_sm: Optional[list[str]]
-    scoring_sm: Optional[list[str]]
+    general_notes_sm: list[str] | None
+    scoring_sm: list[str] | None
 
 
 def _incipit_to_pae(incipit: dict) -> str:
@@ -132,7 +132,7 @@ def __incipit(
     if work_number == "x.x.x":
         log.warning("Bad incipit number for %s", record_ident)
 
-    clef: Optional[str] = field.get("g")
+    clef: str | None = field.get("g")
 
     log.debug("Creating incipits %s %s", record_ident, work_number)
 
@@ -142,7 +142,7 @@ def __incipit(
 
     # This is a rough measure of the length of an incipit is so that we can
     # identify and check the rendering of long incipits.
-    music_incipit: Optional[str] = field.get("p")
+    music_incipit: str | None = field.get("p")
     incipit_len: int = 0
     if music_incipit:
         # ensure we strip any leading or trailing whitespace.
@@ -151,7 +151,7 @@ def __incipit(
 
     # Take the first value if our list of possible time signatures is greater than 0, else take the
     # original field value. This may also be None if field['o'] is None.
-    time_signature_data: Optional[str] = field.get("o")
+    time_signature_data: str | None = field.get("o")
 
     # if we have more than two space characters in the string, collapse excessive ones into a since space
     # by splitting on space characters and then joining with a single space.
@@ -167,7 +167,7 @@ def __incipit(
             s.strip() for s in time_signature_data.split(";") if s and s.strip()
         ]
 
-    time_sig: Optional[str] = (
+    time_sig: str | None = (
         tsig_components[0] if len(tsig_components) > 0 else time_signature_data
     )
 
@@ -213,7 +213,7 @@ def __incipit(
         "has_digitization_b": has_digitization,
     }
 
-    pae_code: Optional[str] = _incipit_to_pae(d) if d["music_incipit_s"] else None
+    pae_code: str | None = _incipit_to_pae(d) if d["music_incipit_s"] else None
 
     # Run the PAE through Verovio
     if pae_code:
@@ -276,14 +276,14 @@ def get_incipits(
     record_ident,
     country_codes: list[str],
     has_digitization: bool,
-    creator_name: Optional[str],
-    source_dates: Optional[list[int]],
-) -> Optional[list]:
+    creator_name: str | None,
+    source_dates: list[int] | None,
+) -> list | None:
     if "031" not in record:
         return None
 
     incipits: list = record.get_fields("031")
-    standard_titles: Optional[list[dict]] = get_titles(record, "240")
+    standard_titles: list[dict] | None = get_titles(record, "240")
 
     return [
         __incipit(

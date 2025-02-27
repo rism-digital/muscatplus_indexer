@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pymarc as pymarc
 
 from indexer.helpers.identifiers import country_code_from_siglum
@@ -13,15 +11,15 @@ from indexer.helpers.utilities import (
 )
 
 
-def _get_country_code(marc_record: pymarc.Record) -> Optional[str]:
-    siglum: Optional[str] = to_solr_single(marc_record, "852", "a")
+def _get_country_code(marc_record: pymarc.Record) -> str | None:
+    siglum: str | None = to_solr_single(marc_record, "852", "a")
     if not siglum:
         return None
 
     return country_code_from_siglum(siglum)
 
 
-def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_people_data(record: pymarc.Record) -> list | None:
     rism_id: str = normalize_id(record["001"].value())
     holding_id: str = f"holding_{rism_id}"
     return get_related_people(
@@ -29,13 +27,13 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     )
 
 
-def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     rism_id: str = normalize_id(record["001"].value())
     holding_id: str = f"holding_{rism_id}"
     return get_related_institutions(record, holding_id, "holding", fields=("710",))
 
 
-def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
+def _get_external_resources_data(record: pymarc.Record) -> list | None:
     """
     Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
     material group descriptions -- those are handled in the material group indexing section above.
@@ -62,11 +60,11 @@ def _has_external_resources(record: pymarc.Record) -> bool:
     return "856" in record
 
 
-def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
+def _get_standard_titles_data(record: pymarc.Record) -> list | None:
     return get_titles(record, "240")
 
 
-def _get_holding_titles_data(record: pymarc.Record) -> Optional[dict]:
+def _get_holding_titles_data(record: pymarc.Record) -> dict | None:
     if "852" not in record:
         return None
 
@@ -87,7 +85,7 @@ def _get_holding_titles_data(record: pymarc.Record) -> Optional[dict]:
 #     return get_titles(record, "240")
 
 
-def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
+def _get_iiif_manifest_uris(record: pymarc.Record) -> list | None:
     if "856" not in record:
         return None
 

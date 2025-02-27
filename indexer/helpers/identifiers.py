@@ -1,6 +1,5 @@
 import re
 from enum import IntEnum, unique
-from typing import Optional
 
 
 class ProjectIdentifiers:
@@ -78,7 +77,7 @@ def get_source_type(record_type_id: int) -> str:
         return "unspecified"
 
 
-def get_is_contents_record(record_type_id: int, parent_id: Optional[int]) -> bool:
+def get_is_contents_record(record_type_id: int, parent_id: int | None) -> bool:
     return bool(
         record_type_id
         in (
@@ -343,7 +342,7 @@ ISO3166_TO_SIGLUM_MAPPING = {
 RISM_ID_SUB: re.Pattern = re.compile(r"(?:people|sources|institutions)/(?P<doc_id>\d+)")
 
 
-def transform_rism_id(q_id: Optional[str]) -> Optional[str]:
+def transform_rism_id(q_id: str | None) -> str | None:
     """
     Transform an incoming RISM ID into a Solr ID.
     :param q_id: Query ID
@@ -352,7 +351,7 @@ def transform_rism_id(q_id: Optional[str]) -> Optional[str]:
     if not q_id:
         return None
 
-    doc_matcher: Optional[re.Match[str]] = re.match(RISM_ID_SUB, q_id)
+    doc_matcher: re.Match[str] | None = re.match(RISM_ID_SUB, q_id)
     if not doc_matcher:
         return None
 

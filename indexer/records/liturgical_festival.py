@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 from indexer.helpers.utilities import clean_multivalued
 
@@ -7,8 +7,8 @@ class LiturgicalFestivalIndexDocument(TypedDict):
     id: str
     type: str
     name_s: str
-    alternate_terms_sm: Optional[list[str]]
-    notes_sm: Optional[list[str]]
+    alternate_terms_sm: list[str] | None
+    notes_sm: list[str] | None
 
 
 def create_liturgical_festival_document(

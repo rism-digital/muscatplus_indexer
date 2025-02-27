@@ -1,12 +1,11 @@
 import datetime
-from typing import Optional
 
 from psycopg.rows import dict_row
 
 from cantus_indexer.helpers.db import postgres_pool
 
 
-def get_latest_cantus_datetime() -> Optional[str]:
+def get_latest_cantus_datetime() -> str | None:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute(
@@ -14,7 +13,7 @@ def get_latest_cantus_datetime() -> Optional[str]:
         )
         res = curs.fetchone()
 
-    updated_dt: Optional[datetime] = res.get("date_updated")
+    updated_dt: datetime | None = res.get("date_updated")
     if updated_dt:
         utc_tz = updated_dt.astimezone(datetime.UTC)
         return utc_tz.strftime("%Y-%m-%dT%H:%M:%SZ")

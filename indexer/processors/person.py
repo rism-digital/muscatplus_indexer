@@ -1,7 +1,6 @@
 import datetime
 import logging
 from collections import defaultdict
-from typing import Optional
 
 import pymarc
 
@@ -22,7 +21,7 @@ EARLIEST_YEAR_IF_MISSING: int = -2000
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_external_ids(record: pymarc.Record) -> Optional[list]:
+def _get_external_ids(record: pymarc.Record) -> list | None:
     """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later."""
     if "024" not in record:
         return None
@@ -36,8 +35,8 @@ def _get_external_ids(record: pymarc.Record) -> Optional[list]:
     ]
 
 
-def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
-    date_statements: Optional[list] = to_solr_multi(record, "100", "d")
+def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
+    date_statements: list | None = to_solr_multi(record, "100", "d")
     if not date_statements:
         return None
 
@@ -46,8 +45,8 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     return process_date_statements(date_statements, record_id)
 
 
-def _get_name_variants(record: pymarc.Record) -> Optional[list[str]]:
-    name_variants: Optional[list[str]] = to_solr_multi(record, "400", "a")
+def _get_name_variants(record: pymarc.Record) -> list[str] | None:
+    name_variants: list[str] | None = to_solr_multi(record, "400", "a")
 
     if not name_variants:
         return None
@@ -55,7 +54,7 @@ def _get_name_variants(record: pymarc.Record) -> Optional[list[str]]:
     return tokenize_variants(name_variants)
 
 
-def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
+def _get_name_variant_data(record: pymarc.Record) -> list | None:
     if "400" not in record:
         return None
 
@@ -74,35 +73,35 @@ def _get_name_variant_data(record: pymarc.Record) -> Optional[list]:
     return [{"type": k, "variants": sorted(v)} for k, v in names.items()]
 
 
-def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_people_data(record: pymarc.Record) -> list | None:
     record_id: str = normalize_id(record["001"].value())
     person_id: str = f"person_{record_id}"
-    people: Optional[list] = get_related_people(
+    people: list | None = get_related_people(
         record, person_id, "person", ungrouped=True
     )
 
     return people
 
 
-def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     record_id: str = normalize_id(record["001"].value())
     person_id: str = f"person_{record_id}"
-    institutions: Optional[list] = get_related_institutions(
+    institutions: list | None = get_related_institutions(
         record, person_id, "person", ungrouped=True
     )
 
     return institutions
 
 
-def _get_related_places_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_places_data(record: pymarc.Record) -> list | None:
     record_id: str = normalize_id(record["001"].value())
     person_id: str = f"person_{record_id}"
-    places: Optional[list] = get_related_places(record, person_id, "person")
+    places: list | None = get_related_places(record, person_id, "person")
 
     return places
 
 
-def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
+def _get_external_resources_data(record: pymarc.Record) -> list | None:
     """
     Fetch the external links defined on the record.
     :param record: A pymarc record

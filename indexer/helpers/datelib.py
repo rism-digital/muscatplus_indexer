@@ -3,7 +3,6 @@ import functools
 import logging.config
 import math
 import re
-from typing import Optional
 
 import edtf
 from edtf.parser.edtf_exceptions import EDTFParseException
@@ -126,7 +125,7 @@ NO_DATES = {
 @functools.lru_cache(maxsize=1024)
 def _parse_century_date_with_fraction(
     century_start: int, ordinal: str, period: str
-) -> Optional[tuple[int, int]]:
+) -> tuple[int, int] | None:
     """
     Parse dates of the form '16th century, second half', '15th century, last third', "18.2d" (second decade of the
     18th century), "17.3q" (third quarter of the 17th century), '19.in' (beginning of the 19th century), '18.ex'
@@ -188,7 +187,7 @@ def _parse_century_date_with_fraction(
 @functools.lru_cache(maxsize=1024)
 def _parse_century_date_with_adjective(
     century_start: int, adjective: str
-) -> Optional[tuple[int, int]]:
+) -> tuple[int, int] | None:
     """
     Parse dates of the form '16th century, early', '15th century, end'
     :param century_start: e.g. 1500
@@ -206,7 +205,7 @@ def _parse_century_date_with_adjective(
 
 
 @functools.lru_cache(maxsize=2048)
-def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[int]]:  # noqa: MC0001
+def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]:  # noqa: MC0001
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
     if not date_statement or date_statement in NO_DATES:
         return None, None
@@ -319,7 +318,7 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
         # Match the century (18), subtract 1 (17), and multiply by 100 (1700)
         century_start: int = (int(century_match.group("century")) - 1) * 100
         adjective1: str = century_match.group("adjective1")
-        adjective2: Optional[str] = century_match.group("adjective2")
+        adjective2: str | None = century_match.group("adjective2")
         if not adjective2:
             century_date = _parse_century_date_with_adjective(century_start, adjective1)
         else:
@@ -342,7 +341,7 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
     # If that didn't work, try a less strict 'natural language' approach
     if not parsed_date:
         try:
-            parsed_date_string: Optional[str] = edtf.text_to_edtf(
+            parsed_date_string: str | None = edtf.text_to_edtf(
                 simplified_date_statement
             )
             if not parsed_date_string:
@@ -382,8 +381,8 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
     # get the year for each edtf struct directly
     # We could parse as datetime instead but it's an extra step and doesn't support all the dates edtf does
     try:
-        start_year: Optional[int] = parsed_date.lower_strict()[0]
-        end_year: Optional[int] = parsed_date.upper_strict()[0]
+        start_year: int | None = parsed_date.lower_strict()[0]
+        end_year: int | None = parsed_date.upper_strict()[0]
     except AttributeError as e:
         # todo: remove this once https://github.com/ixc/python-edtf/issues/32 is fixed
         log.debug("Unexpected error %s while parsing %s", e, date_statement)
@@ -419,8 +418,8 @@ def parse_date_statement(date_statement: str) -> tuple[Optional[int], Optional[i
 
 
 def parse_date_metadata(
-    date_statements: list[str], start_year: Optional[int], end_year: Optional[int]
-) -> tuple[Optional[int], Optional[int]]:
+    date_statements: list[str], start_year: int | None, end_year: int | None
+) -> tuple[int | None, int | None]:
     """
     Parse the date metadata we're given in mods/dc (usually some combination of date statements, start year and end year)
     into start year and end year, with missing information filled in from the other date fields where possible
@@ -475,7 +474,7 @@ LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 
 def process_date_statements(
     date_statements: list[str], record_id: str
-) -> Optional[list[int]]:
+) -> list[int] | None:
     earliest_dates: list[int] = []
     latest_dates: list[int] = []
 

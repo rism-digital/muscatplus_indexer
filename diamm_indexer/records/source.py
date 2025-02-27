@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import orjson
 
@@ -38,17 +37,17 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     if nm := record.get("name"):
         display_label = f"{display_label} ({nm})"
 
-    general_description: Optional[list] = (
+    general_description: list | None = (
         _get_general_notes(record["general_notes"])
         if record.get("general_notes")
         else None
     )
-    holding_institution_id: Optional[str] = transform_rism_id(
+    holding_institution_id: str | None = transform_rism_id(
         record["archive_rism_identifier"]
     )
     country_code: str = country_code_from_siglum(record["siglum"])
 
-    date_ranges: Optional[list]
+    date_ranges: list | None
     if not record["start_date"] and not record["end_date"]:
         date_ranges = None
     elif record["start_date"] and not record["end_date"]:
@@ -217,7 +216,7 @@ def _get_external_institution_resource(record) -> list[dict]:
     ]
 
 
-def _get_related_institutions_names(orgs: Optional[str]) -> Optional[list]:
+def _get_related_institutions_names(orgs: str | None) -> list | None:
     if not orgs:
         return None
 
@@ -225,7 +224,7 @@ def _get_related_institutions_names(orgs: Optional[str]) -> Optional[list]:
     return [o.split("||")[0] for o in orgs_raw]
 
 
-def _get_related_institutions_ids(orgs: Optional[str]) -> Optional[list]:
+def _get_related_institutions_ids(orgs: str | None) -> list | None:
     if not orgs:
         return None
 
@@ -233,7 +232,7 @@ def _get_related_institutions_ids(orgs: Optional[str]) -> Optional[list]:
     return [f"diamm_organization_{o.split('||')[1]}" for o in orgs_raw]
 
 
-def _get_related_institutions_json(orgs: Optional[str]) -> list[dict]:
+def _get_related_institutions_json(orgs: str | None) -> list[dict]:
     if not orgs:
         return []
 

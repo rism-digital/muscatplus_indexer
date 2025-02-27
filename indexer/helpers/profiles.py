@@ -1,6 +1,7 @@
 import logging
 import types
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import orjson
 import pymarc
@@ -68,7 +69,7 @@ def process_marc_profile(
             breaks: bool = field_config.get("breaks", False)
             links: bool = field_config.get("links", False)
             # Values are True, False, and None. Default is None.
-            grouping: Optional[bool] = field_config.get("grouping")
+            grouping: bool | None = field_config.get("grouping")
             sortout: bool = field_config.get("sorted", True)
 
             # these will explode if the configuration is not correct.

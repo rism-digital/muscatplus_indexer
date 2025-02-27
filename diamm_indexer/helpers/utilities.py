@@ -1,10 +1,8 @@
-from typing import Optional
-
 from diamm_indexer.helpers.identifiers import RELATOR_MAP
 from indexer.helpers.identifiers import ProjectIdentifiers
 
 
-def get_related_sources_json(sources: Optional[str]) -> list[dict]:
+def get_related_sources_json(sources: str | None) -> list[dict]:
     if not sources:
         return []
 

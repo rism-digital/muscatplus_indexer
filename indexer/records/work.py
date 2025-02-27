@@ -1,5 +1,3 @@
-from typing import Optional
-
 import orjson
 import pymarc
 import yaml
@@ -32,7 +30,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         if (d := record.get("source_ids"))
         else set()
     )
-    works_catalogue: Optional[list[dict]] = get_bibliographic_references_json(
+    works_catalogue: list[dict] | None = get_bibliographic_references_json(
         marc_record, "690", publication_entries
     )
 

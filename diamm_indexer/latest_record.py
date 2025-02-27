@@ -1,12 +1,11 @@
 import datetime
-from typing import Optional
 
 from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
 
 
-def get_latest_diamm_datetime() -> Optional[str]:
+def get_latest_diamm_datetime() -> str | None:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute(
@@ -14,7 +13,7 @@ def get_latest_diamm_datetime() -> Optional[str]:
         )
         res = curs.fetchone()
 
-    updated_dt: Optional[datetime] = res.get("updated")
+    updated_dt: datetime | None = res.get("updated")
     if updated_dt:
         utc_tz = updated_dt.astimezone(datetime.UTC)
         return utc_tz.strftime("%Y-%m-%dT%H:%M:%SZ")

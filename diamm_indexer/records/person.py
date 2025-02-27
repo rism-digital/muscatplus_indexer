@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import orjson
 
@@ -35,7 +34,7 @@ def create_person_index_document(record, cfg: dict) -> list[dict]:
     return [d]
 
 
-def get_date_statement(record) -> Optional[str]:
+def get_date_statement(record) -> str | None:
     earliest_approx = record.get("earliest_approx")
     latest_approx = record.get("latest_approx")
     earliest = record.get("earliest_year")

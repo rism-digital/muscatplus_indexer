@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Generator
-from typing import Any, Optional
+from typing import Any
 
 from psycopg.rows import dict_row
 
@@ -91,7 +91,7 @@ def update_person_records_with_diamm_info(people: list, cfg: dict) -> bool:
 
     for record in people:
         name: str = get_name(record)
-        date_statement: Optional[str] = get_date_statement(record)
+        date_statement: str | None = get_date_statement(record)
         if not date_statement:
             continue
 

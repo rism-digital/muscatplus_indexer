@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import orjson
 import pymarc
@@ -29,26 +29,26 @@ class HoldingIndexDocument(TypedDict):
     main_title_s: str
     # Convenience for URL construction; should not be used for lookups.
     holding_id_sni: str
-    siglum_s: Optional[str]
-    department_s: Optional[str]
-    city_s: Optional[str]
-    country_code_s: Optional[str]
-    institution_name_s: Optional[str]
-    institution_id: Optional[str]
-    provenance_sm: Optional[list[str]]
-    shelfmark_s: Optional[str]
-    former_shelfmarks_sm: Optional[list[str]]
-    material_held_sm: Optional[list[str]]
-    local_numbers_sm: Optional[list[str]]
-    acquisition_note_s: Optional[str]
-    acquisition_date_s: Optional[str]
-    acquisition_method_s: Optional[str]
-    accession_number_s: Optional[str]
-    access_restrictions_sm: Optional[list[str]]
-    provenance_notes_sm: Optional[list[str]]
-    external_resources_json: Optional[str]
-    source_membership_order_i: Optional[int]
-    bibliographic_references_json: Optional[str]
+    siglum_s: str | None
+    department_s: str | None
+    city_s: str | None
+    country_code_s: str | None
+    institution_name_s: str | None
+    institution_id: str | None
+    provenance_sm: list[str] | None
+    shelfmark_s: str | None
+    former_shelfmarks_sm: list[str] | None
+    material_held_sm: list[str] | None
+    local_numbers_sm: list[str] | None
+    acquisition_note_s: str | None
+    acquisition_date_s: str | None
+    acquisition_method_s: str | None
+    accession_number_s: str | None
+    access_restrictions_sm: list[str] | None
+    provenance_notes_sm: list[str] | None
+    external_resources_json: str | None
+    source_membership_order_i: int | None
+    bibliographic_references_json: str | None
 
 
 def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
@@ -65,7 +65,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
     )
 
     # For consistency it's better to store the creator name with the dates attached!
-    creator_name: Optional[str] = get_creator_name(source_marc_record)
+    creator_name: str | None = get_creator_name(source_marc_record)
     record_type_id: int = record["record_type"]
 
     idx_document: dict[str, object] = holding_index_document(
@@ -82,7 +82,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
     if composite_record := record.get("comp_marc"):
         # We can do this here since we don't need to worry about the case where a fake holding record for a MS
         # is needed. (We're indexing "real" holding records here, not making "fake" ones from the MS source record).
-        composite_marc: Optional[pymarc.Record] = (
+        composite_marc: pymarc.Record | None = (
             create_marc(composite_record) if composite_record else None
         )
         (
@@ -108,8 +108,8 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
         publication_entries: list = (
             list({n.strip() for n in p.split("|~|") if n and n.strip()}) if p else []
         )
-        bibliographic_references: Optional[list[dict]] = (
-            get_bibliographic_references_json(marc_record, "691", publication_entries)
+        bibliographic_references: list[dict] | None = get_bibliographic_references_json(
+            marc_record, "691", publication_entries
         )
         idx_document.update(
             {
@@ -125,7 +125,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
 def _index_additional_institution_fields(record: pymarc.Record) -> dict:
     ret: dict = {}
 
-    city_field: Optional[str] = to_solr_single(record, "110", "c")
+    city_field: str | None = to_solr_single(record, "110", "c")
     if city_field:
         ret["city_s"] = city_field
 
@@ -137,7 +137,7 @@ def holding_index_document(
     holding_id: str,
     source_id: str,
     main_title: str,
-    creator_name: Optional[str],
+    creator_name: str | None,
     record_type_id: int,
     source_single_item: bool,
     mss_profile: bool,

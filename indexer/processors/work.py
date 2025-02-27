@@ -1,11 +1,9 @@
-from typing import Optional
-
 import pymarc
 
 from indexer.helpers.utilities import get_related_people, normalize_id
 
 
-def _get_creator_name(record: pymarc.Record) -> Optional[str]:
+def _get_creator_name(record: pymarc.Record) -> str | None:
     if "100" not in record:
         return None
 
@@ -16,7 +14,7 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
     return f"{name}{dates}"
 
 
-def _get_creator_data(record: pymarc.Record) -> Optional[list]:
+def _get_creator_data(record: pymarc.Record) -> list | None:
     if "100" not in record:
         return None
 

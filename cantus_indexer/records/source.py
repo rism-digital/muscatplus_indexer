@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import Optional
 
 import orjson
 
@@ -29,8 +28,8 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         rii.split("\n") if (rii := record.get("institution_rism_ids")) else []
     )
     source_date: str = record.get("source_century", "")
-    source_summary: Optional[str] = record.get("source_summary")
-    general_note: Optional[str] = record.get("html_source_description")
+    source_summary: str | None = record.get("source_summary")
+    general_note: str | None = record.get("html_source_description")
 
     source_record: dict = {
         "id": f"cantus_source_{record['id']}",
@@ -127,7 +126,7 @@ DATE_RE: re.Pattern = re.compile(
 )
 
 
-def _process_dates(century: str) -> Optional[tuple[Optional[int], Optional[int]]]:
+def _process_dates(century: str) -> tuple[int | None, int | None] | None:
     if not century:
         return None
 

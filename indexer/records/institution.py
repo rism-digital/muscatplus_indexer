@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import orjson
 import pymarc
@@ -25,17 +25,17 @@ class InstitutionIndexDocument(TypedDict):
     type: str
     institution_id: str
     name_s: str
-    city_s: Optional[str]
-    siglum_s: Optional[str]
-    country_code_s: Optional[str]
-    alternate_names_sm: Optional[list[str]]
-    institution_types_sm: Optional[list[str]]
-    website_s: Optional[str]
-    external_ids: Optional[list[str]]
-    related_people_json: Optional[str]
-    related_places_json: Optional[str]
-    related_institutions_json: Optional[str]
-    location_loc: Optional[str]
+    city_s: str | None
+    siglum_s: str | None
+    country_code_s: str | None
+    alternate_names_sm: list[str] | None
+    institution_types_sm: list[str] | None
+    website_s: str | None
+    external_ids: list[str] | None
+    related_people_json: str | None
+    related_places_json: str | None
+    related_institutions_json: str | None
+    location_loc: str | None
 
 
 def create_institution_index_document(record: dict, cfg: dict) -> dict[str, object]:
@@ -48,9 +48,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     other_count: int = record.get("other_count", 0)
     total_count: int = record.get("total_source_count", 0)
 
-    now_in: Optional[list[dict]] = None
-    now_in_sigla: Optional[list] = None
-    now_in_institutions: Optional[str] = record.get("now_in_institutions")
+    now_in: list[dict] | None = None
+    now_in_sigla: list | None = None
+    now_in_institutions: str | None = record.get("now_in_institutions")
     if now_in_institutions:
         all_now_in_institutions: list = now_in_institutions.split("\n")
         now_in_institution_lookup: dict = _process_related_institutions(
@@ -66,9 +66,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
             if s and "siglum" in s
         ]
 
-    contains: Optional[list[dict]] = None
-    contains_sigla: Optional[list] = None
-    contains_institutions: Optional[str] = record.get("contains_institutions")
+    contains: list[dict] | None = None
+    contains_sigla: list | None = None
+    contains_institutions: str | None = record.get("contains_institutions")
     if contains_institutions:
         all_contains_institutions: list = contains_institutions.split("\n")
         contains_institution_lookup: dict = _process_related_institutions(
@@ -83,7 +83,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
 
     related = None
     related_sigla = None
-    related_institutions: Optional[str] = record.get("related_institutions")
+    related_institutions: str | None = record.get("related_institutions")
     if related_institutions:
         all_related_institutions: list = related_institutions.split("\n")
         related_institutions_lookup: dict = _process_related_institutions(
@@ -115,7 +115,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         if (d := record.get("publication_entries"))
         else []
     )
-    bibliographic_references: Optional[list[dict]] = get_bibliographic_references_json(
+    bibliographic_references: list[dict] | None = get_bibliographic_references_json(
         marc_record, "670", publication_entries
     )
     bibliographic_references_json = (
@@ -123,7 +123,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         if bibliographic_references
         else None
     )
-    bibliographic_reference_titles: Optional[list[str]] = (
+    bibliographic_reference_titles: list[str] | None = (
         get_bibliographic_reference_titles(publication_entries)
     )
 
@@ -183,7 +183,7 @@ def _process_related_institutions(institutions: list) -> dict:
 
 def _get_related_json(
     record: pymarc.Record, related_institutions: dict, this_id: str, tag_num: str
-) -> Optional[list[dict]]:
+) -> list[dict] | None:
     if tag_num not in record:
         return None
 
@@ -237,9 +237,7 @@ def _get_related_json(
     return all_entries
 
 
-def _get_contains_json(
-    contained_institutions: dict, this_id: str
-) -> Optional[list[dict]]:
+def _get_contains_json(contained_institutions: dict, this_id: str) -> list[dict] | None:
     all_entries: list = []
 
     for inst_id, inst_info in contained_institutions.items():
@@ -264,7 +262,7 @@ def _get_contains_json(
     return all_entries
 
 
-def _get_num_sources_facet(num: int) -> Optional[str]:
+def _get_num_sources_facet(num: int) -> str | None:
     if num == 0:
         return None
     elif num == 1:

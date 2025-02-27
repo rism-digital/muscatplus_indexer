@@ -1,7 +1,6 @@
 import itertools
 import logging
 from collections import defaultdict
-from typing import Optional
 
 import pymarc
 
@@ -33,7 +32,7 @@ def _get_num_incipits(record: pymarc.Record) -> int:
     return len(record.get_fields("031"))
 
 
-def _get_creator_name(record: pymarc.Record) -> Optional[str]:
+def _get_creator_name(record: pymarc.Record) -> str | None:
     if "100" not in record:
         return None
 
@@ -44,7 +43,7 @@ def _get_creator_name(record: pymarc.Record) -> Optional[str]:
     return f"{name}{dates}"
 
 
-def _get_creator_data(record: pymarc.Record) -> Optional[list]:
+def _get_creator_data(record: pymarc.Record) -> list | None:
     if "100" not in record:
         return None
 
@@ -65,7 +64,7 @@ def _is_anonymous_creator(record: pymarc.Record) -> bool:
     return to_solr_single(record, "100", "0") == "30004985"
 
 
-def _get_subjects(record: pymarc.Record) -> Optional[list[dict]]:
+def _get_subjects(record: pymarc.Record) -> list[dict] | None:
     if "650" not in record:
         return None
     subject_fields: list[pymarc.Field] = record.get_fields("650")
@@ -79,11 +78,11 @@ def _get_subjects(record: pymarc.Record) -> Optional[list[dict]]:
     return ret
 
 
-def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
+def _get_standard_titles_data(record: pymarc.Record) -> list | None:
     return get_titles(record, "240")
 
 
-def _get_catalogue_numbers(record: pymarc.Record) -> Optional[list]:
+def _get_catalogue_numbers(record: pymarc.Record) -> list | None:
     # Catalogue numbers are spread across a number of fields, including 'opus numbers'
     # (383) and 'catalogue of works' (690), where the catalogue and the catalogue
     # entry are held in different subfields. This function consolidates both of those fields,
@@ -104,7 +103,7 @@ def _get_catalogue_numbers(record: pymarc.Record) -> Optional[list]:
     return catalogue_nums
 
 
-def _get_scoring_summary(record: pymarc.Record) -> Optional[list]:
+def _get_scoring_summary(record: pymarc.Record) -> list | None:
     """Takes a list of instrument fields and ensures that they are split into a multi-valued representation. So a
     value of:
     ["V, orch", "B, guit"]
@@ -113,7 +112,7 @@ def _get_scoring_summary(record: pymarc.Record) -> Optional[list]:
 
     ["V", "orch", "B", "guit"]
     """
-    fields: Optional[list] = to_solr_multi(record, "240", "m")
+    fields: list | None = to_solr_multi(record, "240", "m")
     if not fields:
         return None
 
@@ -132,7 +131,7 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
     if "240" not in record:
         return False
 
-    fields: Optional[list] = record.get_fields("240")
+    fields: list | None = record.get_fields("240")
     if fields is None:
         return False
 
@@ -141,8 +140,8 @@ def _get_is_arrangement(record: pymarc.Record) -> bool:
     return any("o" in field and field["o"] in valid_statements for field in fields)
 
 
-def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
-    date_statements: Optional[list] = to_solr_multi(record, "260", "c")
+def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
+    date_statements: list | None = to_solr_multi(record, "260", "c")
     if not date_statements:
         return None
 
@@ -151,7 +150,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> Optional[list[int]]:
     return process_date_statements(date_statements, record_id)
 
 
-def _get_rism_series_identifiers(record: pymarc.Record) -> Optional[list]:
+def _get_rism_series_identifiers(record: pymarc.Record) -> list | None:
     if "510" not in record:
         return None
 
@@ -178,7 +177,7 @@ def __scoring(field: pymarc.Field) -> dict:
     return {k: v for k, v in d.items() if v}
 
 
-def _get_scoring_data(record: pymarc.Record) -> Optional[list[dict]]:
+def _get_scoring_data(record: pymarc.Record) -> list[dict] | None:
     if "594" not in record:
         return None
     fields: list = record.get_fields("594")
@@ -186,7 +185,7 @@ def _get_scoring_data(record: pymarc.Record) -> Optional[list[dict]]:
     return [__scoring(i) for i in fields]
 
 
-def _get_dramatic_roles_data(record: pymarc.Record) -> Optional[list[dict]]:
+def _get_dramatic_roles_data(record: pymarc.Record) -> list[dict] | None:
     if "595" not in record:
         return None
 
@@ -199,7 +198,7 @@ def _get_dramatic_roles_data(record: pymarc.Record) -> Optional[list[dict]]:
     return ret
 
 
-def _get_rism_series_data(record: pymarc.Record) -> Optional[list[dict]]:
+def _get_rism_series_data(record: pymarc.Record) -> list[dict] | None:
     if "596" not in record:
         return None
     fields: list[pymarc.Field] = record.get_fields("596")
@@ -212,7 +211,7 @@ def _get_rism_series_data(record: pymarc.Record) -> Optional[list[dict]]:
     return ret
 
 
-def _get_location_performance_data(record: pymarc.Record) -> Optional[list]:
+def _get_location_performance_data(record: pymarc.Record) -> list | None:
     if "651" not in record:
         return None
 
@@ -228,7 +227,7 @@ def __liturgical_festival(field: pymarc.Field) -> dict:
     return {k: v for k, v in d.items() if v}
 
 
-def _get_liturgical_festival_data(record: pymarc.Record) -> Optional[list[dict]]:
+def _get_liturgical_festival_data(record: pymarc.Record) -> list[dict] | None:
     if "657" not in record:
         return None
     fields: list = record.get_fields("657")
@@ -245,7 +244,7 @@ def __secondary_literature_data(field: pymarc.Field) -> dict:
     return {k: v for k, v in d.items() if v}
 
 
-def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_people_data(record: pymarc.Record) -> list | None:
     if "700" not in record:
         return None
 
@@ -257,7 +256,7 @@ def _get_related_people_data(record: pymarc.Record) -> Optional[list]:
     return people or None
 
 
-def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
+def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     if "710" not in record:
         return None
     source_id: str = f"source_{normalize_id(record['001'].value())}"
@@ -268,14 +267,14 @@ def _get_related_institutions_data(record: pymarc.Record) -> Optional[list]:
     return institutions or None
 
 
-def _get_additional_titles_data(record: pymarc.Record) -> Optional[list]:
+def _get_additional_titles_data(record: pymarc.Record) -> list | None:
     return get_titles(record, "730")
 
 
-def _get_source_membership(record: pymarc.Record) -> Optional[list]:
+def _get_source_membership(record: pymarc.Record) -> list | None:
     if "774" not in record:
         return None
-    members: Optional[list] = record.get_fields("774")
+    members: list | None = record.get_fields("774")
 
     if members is None:
         return None
@@ -287,7 +286,7 @@ def _get_source_membership(record: pymarc.Record) -> Optional[list]:
             continue
         member_id: str = tag["w"]
 
-        member_type: Optional[str] = tag.get("4")
+        member_type: str | None = tag.get("4")
         # Create an ID like "holding_12345" or "source_4567" (default)
         ret.append(
             f"{member_type if member_type else 'source'}_{normalize_id(member_id)}"
@@ -296,20 +295,20 @@ def _get_source_membership(record: pymarc.Record) -> Optional[list]:
     return ret
 
 
-def _get_num_source_membership(record: pymarc.Record) -> Optional[int]:
+def _get_num_source_membership(record: pymarc.Record) -> int | None:
     ret: list = _get_source_membership(record) or []
     return len(ret) or None
 
 
-def _get_country_code(record: pymarc.Record) -> Optional[str]:
-    siglum: Optional[str] = to_solr_single(record, "852", "a")
+def _get_country_code(record: pymarc.Record) -> str | None:
+    siglum: str | None = to_solr_single(record, "852", "a")
     if not siglum:
         return None
 
     return country_code_from_siglum(siglum)
 
 
-def _get_minimal_manuscript_holding_data(record: pymarc.Record) -> Optional[list]:
+def _get_minimal_manuscript_holding_data(record: pymarc.Record) -> list | None:
     """
     A minimal holdings record suitable for indexing directly on the source. Only used for manuscript holdings
     so that we can link the holding institution and shelfmark directly in the record. For all other uses, the
@@ -337,7 +336,7 @@ def _get_minimal_manuscript_holding_data(record: pymarc.Record) -> Optional[list
     return ret
 
 
-def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
+def _get_external_resources_data(record: pymarc.Record) -> list | None:
     """
     Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
     material group descriptions -- those are handled in the material group indexing section above.
@@ -356,7 +355,7 @@ def _get_external_resources_data(record: pymarc.Record) -> Optional[list]:
     return resources if resources else None
 
 
-def _get_iiif_manifest_uris(record: pymarc.Record) -> Optional[list]:
+def _get_iiif_manifest_uris(record: pymarc.Record) -> list | None:
     if "856" not in record:
         return None
 
@@ -505,7 +504,7 @@ def __mg_external(field: pymarc.Field, source_id: str) -> MaterialGroupFields:
     return res
 
 
-def _get_material_groups(record: pymarc.Record) -> Optional[list[dict]]:
+def _get_material_groups(record: pymarc.Record) -> list[dict] | None:
     """
     To get all the material groups we must first find all the members of each group, and then
     process the individual fields belonging to that group. Every source should always have a group

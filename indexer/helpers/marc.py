@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pymarc
 
 
@@ -46,7 +44,7 @@ def create_marc(record: str) -> pymarc.Record:
 
 
 def create_marc_list(
-    marc_records: Optional[str], delimiter: str = "\n"
+    marc_records: str | None, delimiter: str = "\n"
 ) -> list[pymarc.Record]:
     """
     Will always return a list, potentially an empty one.

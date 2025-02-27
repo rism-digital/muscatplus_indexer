@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import orjson
 
@@ -13,7 +12,7 @@ log = logging.getLogger("muscat_indexer")
 def create_organization_index_document(record, cfg: dict) -> list[dict]:
     log.debug("Indexing organization %s", record["name"])
     institution_id: str = f"diamm_organization_{record['id']}"
-    raw_locations: Optional[str] = record.get("location")
+    raw_locations: str | None = record.get("location")
     location_map: dict = {}
     if raw_locations:
         locs = raw_locations.split("\n")[0]
@@ -52,7 +51,7 @@ def create_organization_index_document(record, cfg: dict) -> list[dict]:
     return [d]
 
 
-def _get_related_sources_ids(sources: Optional[str]) -> Optional[list]:
+def _get_related_sources_ids(sources: str | None) -> list | None:
     if not sources:
         return None
 

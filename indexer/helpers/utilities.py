@@ -4,9 +4,9 @@ import logging
 import re
 import timeit
 from collections import OrderedDict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import wraps
-from typing import Callable, Optional, TypedDict
+from typing import TypedDict
 
 import orjson
 import pymarc
@@ -68,17 +68,17 @@ def parallelise(records: Iterable, func: Callable, *args, **kwargs) -> None:
 def to_solr_single(
     record: pymarc.Record,
     field: str,
-    subfield: Optional[str] = None,
-    ungrouped: Optional[bool] = None,
-    sortout: Optional[bool] = True,
-) -> Optional[str]:
+    subfield: str | None = None,
+    ungrouped: bool | None = None,
+    sortout: bool | None = True,
+) -> str | None:
     """
     Extracts a single value from the MARC record. Always takes the first instance of the
     tag, and the first instance of the subfield within that tag.
 
     Uses to_solr_multi under the hood; see the comments there to know how this works.
     """
-    values: Optional[list[str]] = to_solr_multi(
+    values: list[str] | None = to_solr_multi(
         record, field, subfield, ungrouped, sortout
     )
 
@@ -91,16 +91,16 @@ def to_solr_single(
 def to_solr_single_required(
     record: pymarc.Record,
     field: str,
-    subfield: Optional[str] = None,
-    ungrouped: Optional[bool] = None,
-    sortout: Optional[bool] = True,
+    subfield: str | None = None,
+    ungrouped: bool | None = None,
+    sortout: bool | None = True,
 ) -> str:
     """
     Same operations as the to_solr_single, but raises an exception if the value is not found.
 
     Uses to_solr_multi under the hood; see the comments there to know how this works.
     """
-    values: Optional[list[str]] = to_solr_multi(
+    values: list[str] | None = to_solr_multi(
         record, field, subfield, ungrouped, sortout
     )
 
@@ -117,12 +117,12 @@ def to_solr_single_required(
 
 
 def to_solr_multi(
-    record: Optional[pymarc.Record],
+    record: pymarc.Record | None,
     field: str,
-    subfield: Optional[str] = None,
-    grouped: Optional[bool] = None,
-    sortout: Optional[bool] = True,
-) -> Optional[list[str]]:
+    subfield: str | None = None,
+    grouped: bool | None = None,
+    sortout: bool | None = True,
+) -> list[str] | None:
     """
     Returns all the values for a given field and subfield. Extracting this data from the
     field is done by creating an OrderedDict from the keys, and then casting it back to a list. This removes
@@ -186,17 +186,15 @@ def to_solr_multi(
 def to_solr_multi_required(
     record: pymarc.Record,
     field: str,
-    subfield: Optional[str] = None,
-    ungrouped: Optional[bool] = None,
-    sortout: Optional[bool] = True,
+    subfield: str | None = None,
+    ungrouped: bool | None = None,
+    sortout: bool | None = True,
 ) -> list[str]:
     """
     The same operation as to_solr_multi, except this function must return at least one value otherwise it
     will raise an exception.
     """
-    ret: Optional[list[str]] = to_solr_multi(
-        record, field, subfield, ungrouped, sortout
-    )
+    ret: list[str] | None = to_solr_multi(record, field, subfield, ungrouped, sortout)
 
     if ret is None:
         record_id: str = normalize_id(record["001"].value())
@@ -234,7 +232,7 @@ def normalize_id(identifier: str) -> str:
     return f"{idval}"
 
 
-def clean_multivalued(fields: dict, field_name: str) -> Optional[list[str]]:
+def clean_multivalued(fields: dict, field_name: str) -> list[str] | None:
     if field_name not in fields or fields[field_name] is None:
         return None
 
@@ -242,12 +240,12 @@ def clean_multivalued(fields: dict, field_name: str) -> Optional[list[str]]:
 
 
 class ExternalResourceDocument(TypedDict, total=False):
-    url: Optional[str]
-    note: Optional[str]
-    link_type: Optional[str]
+    url: str | None
+    note: str | None
+    link_type: str | None
 
 
-def external_resource_data(field: pymarc.Field) -> Optional[ExternalResourceDocument]:
+def external_resource_data(field: pymarc.Field) -> ExternalResourceDocument | None:
     """
     Takes an 856 field and attempts to format a dictionary containing
     the data. Used for adding external links to various places in the indexed records (source, material groups,
@@ -275,11 +273,11 @@ def external_resource_data(field: pymarc.Field) -> Optional[ExternalResourceDocu
 
 class PersonRelationshipIndexDocument(TypedDict):
     id: str
-    name: Optional[str]
+    name: str | None
     type: str
-    relationship: Optional[str]
-    qualifier: Optional[str]
-    date_statement: Optional[str]
+    relationship: str | None
+    qualifier: str | None
+    date_statement: str | None
     person_id: str
     this_id: str
     this_type: str
@@ -334,7 +332,7 @@ def get_related_people(
     record_type: str,
     fields: tuple = ("500", "700"),
     ungrouped: bool = False,
-) -> Optional[list[dict[str, object]]]:
+) -> list[dict[str, object]] | None:
     """
     In some cases you will want to restrict the fields that are used for this lookup. By default it will look at 500
     and 700 fields, since that is where they are kept in the authority records; however, source records use 500 for
@@ -373,9 +371,9 @@ def get_related_people(
 
 class PlaceRelationshipIndexDocument(TypedDict):
     id: str
-    name: Optional[str]
+    name: str | None
     type: str
-    relationship: Optional[str]
+    relationship: str | None
     place_id: str
     this_id: str
     this_type: str
@@ -403,7 +401,7 @@ def get_related_places(
     record_id: str,
     record_type: str,
     fields: tuple = ("551", "751"),
-) -> Optional[list[dict[str, object]]]:
+) -> list[dict[str, object]] | None:
     record_tags: set = {f.tag for f in record}
     if set(fields).isdisjoint(record_tags):
         return None
@@ -420,13 +418,13 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     id: str
     this_id: str
     this_type: str
-    name: Optional[str]
+    name: str | None
     type: str
-    place: Optional[str]
-    department: Optional[str]
-    institution_id: Optional[str]
-    relationship: Optional[str]
-    qualifier: Optional[str]
+    place: str | None
+    department: str | None
+    institution_id: str | None
+    relationship: str | None
+    qualifier: str | None
 
 
 def related_institution(
@@ -541,7 +539,7 @@ def note_links(note: str) -> str:
 
 
 def get_catalogue_numbers(
-    field: pymarc.Field, catalogue_fields: Optional[list[pymarc.Field]]
+    field: pymarc.Field, catalogue_fields: list[pymarc.Field] | None
 ) -> list:
     catalogue_numbers: list = []
 
@@ -562,9 +560,9 @@ def get_catalogue_numbers(
 
 def __title(
     field: pymarc.Field,
-    catalogue_fields: Optional[list[pymarc.Field]],
-    holding: Optional[pymarc.Field],
-    source_type: Optional[pymarc.Field],
+    catalogue_fields: list[pymarc.Field] | None,
+    holding: pymarc.Field | None,
+    source_type: pymarc.Field | None,
 ) -> dict:
     catalogue_numbers = get_catalogue_numbers(field, catalogue_fields)
 
@@ -610,7 +608,7 @@ def get_where(
     return out
 
 
-def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
+def get_titles(record: pymarc.Record, field: str) -> list[dict] | None:
     """
     Standardize the title field structure. This is used for both the 240 and 730 fields
     since they have similar structure.
@@ -623,9 +621,9 @@ def get_titles(record: pymarc.Record, field: str) -> Optional[list[dict]]:
 
     titles = record.get_fields(field)
 
-    c: Optional[list[pymarc.Field]] = None
-    h: Optional[pymarc.Field] = None
-    y: Optional[pymarc.Field] = None
+    c: list[pymarc.Field] | None = None
+    h: pymarc.Field | None = None
+    y: pymarc.Field | None = None
     if field == "240":
         c = record.get_fields("383", "690")
         if "852" in record:
@@ -670,8 +668,8 @@ def tokenize_variants(variants: list[str]) -> list[str]:
     return list(unique_tokens)
 
 
-def get_creator_name(record: pymarc.Record) -> Optional[str]:
-    creator_field: Optional[pymarc.Field] = record.get("100")
+def get_creator_name(record: pymarc.Record) -> str | None:
+    creator_field: pymarc.Field | None = record.get("100")
     if not creator_field:
         return None
 
@@ -689,7 +687,7 @@ class ContentTypes:
     OTHER = "Other"
 
 
-def get_content_types(record: Optional[pymarc.Record]) -> list[str]:
+def get_content_types(record: pymarc.Record | None) -> list[str]:
     """
     Takes all record types associated with this record, and returns a list of
     all possible content types for it.
@@ -702,7 +700,7 @@ def get_content_types(record: Optional[pymarc.Record]) -> list[str]:
     if record is None:
         return []
 
-    all_content_types: Optional[list[str]] = to_solr_multi(record, "593", "b")
+    all_content_types: list[str] | None = to_solr_multi(record, "593", "b")
     ret: list = []
 
     if not all_content_types:
@@ -728,8 +726,8 @@ def get_content_types(record: Optional[pymarc.Record]) -> list[str]:
 
 
 def get_parent_order_for_members(
-    parent_record: Optional[pymarc.Record], this_id: str
-) -> Optional[int]:
+    parent_record: pymarc.Record | None, this_id: str
+) -> int | None:
     """
     Returns an integer representing the order number of this source with respect to the order of the
     child sources listed in the parent. 0-based, since we simply look up the values in a list.
@@ -775,8 +773,8 @@ def get_parent_order_for_members(
 
 
 def get_bibliographic_reference_titles(
-    references: Optional[list[str]],
-) -> Optional[list[str]]:
+    references: list[str] | None,
+) -> list[str] | None:
     if not references:
         return None
 
@@ -790,8 +788,8 @@ def get_bibliographic_reference_titles(
 
 
 def get_bibliographic_references_json(
-    record: pymarc.Record, field: str, references: Optional[list[str]]
-) -> Optional[list[dict]]:
+    record: pymarc.Record, field: str, references: list[str] | None
+) -> list[dict] | None:
     if not references:
         return None
 
@@ -815,7 +813,7 @@ def get_bibliographic_references_json(
     fields: list[pymarc.Field] = record.get_fields(field)
 
     for ff in fields:
-        fid: Optional[str] = ff.get("0")
+        fid: str | None = ff.get("0")
         if not fid:
             log.warning(
                 "No field 0 for entry in record %s. Skipping: %s",
@@ -868,9 +866,9 @@ def update_rism_document(
     record_type: str,
     label: str,
     cfg: dict,
-    additional_fields: Optional[dict] = None,
-) -> Optional[dict]:
-    document_id: Optional[str] = transform_rism_id(record.get("rism_id"))
+    additional_fields: dict | None = None,
+) -> dict | None:
+    document_id: str | None = transform_rism_id(record.get("rism_id"))
     if not document_id:
         return None
 
@@ -914,7 +912,7 @@ def update_rism_document(
 
 def get_work_node(
     record: pymarc.Record, record_id: str, record_type: str, source_count: int = 0
-) -> Optional[dict]:
+) -> dict | None:
     wnid = record["001"].value()
     work_node_id: str = f"work_node_{wnid}"
 
@@ -933,9 +931,9 @@ def get_work_node(
         return None
 
     creator: pymarc.Field = record.get("100")
-    composer_name: Optional[str] = None
-    composer_id: Optional[str] = None
-    work_title: Optional[str] = None
+    composer_name: str | None = None
+    composer_id: str | None = None
+    work_title: str | None = None
 
     if creator and "a" in creator:
         name: str = creator["a"].strip()

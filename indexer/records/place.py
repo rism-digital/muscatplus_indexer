@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 from indexer.helpers.utilities import clean_multivalued
 
@@ -8,11 +8,11 @@ class PlaceIndexDocument(TypedDict):
     type: str
     name_s: str
     rism_id: str
-    country_s: Optional[str]
-    district_s: Optional[str]
-    alternate_terms_sm: Optional[list[str]]
-    topic_sm: Optional[list[str]]
-    subtopic_sm: Optional[list[str]]
+    country_s: str | None
+    district_s: str | None
+    alternate_terms_sm: list[str] | None
+    topic_sm: list[str] | None
+    subtopic_sm: list[str] | None
     sources_count_i: int
     people_count_i: int
     institutions_count_i: int

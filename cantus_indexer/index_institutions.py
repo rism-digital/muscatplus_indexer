@@ -37,7 +37,8 @@ def _get_linked_cantus_institutions(
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT cti.id AS id, ctii.identifier AS rism_id, cti.name AS name,
-                'institution' AS project_type
+                'institution' AS project_type,
+                (SELECT COUNT(*) FROM main_app_source AS s WHERE cti.id = s.holding_institution_id AND s.published IS TRUE) AS source_count
                 FROM main_app_institution AS cti
                 LEFT JOIN main_app_institutionidentifier AS ctii ON cti.id = ctii.institution_id
                 WHERE ctii.institution_id IS NOT NULL AND ctii.identifier_type = 1

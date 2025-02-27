@@ -65,8 +65,8 @@ def _get_linked_diamm_people(cfg: dict) -> Generator[list[dict[str, Any]], None,
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddpi.identifier AS rism_id,ddp.last_name AS last_name,
                             ddp.first_name AS first_name, ddp.earliest_year AS earliest_year,
                             ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,
-                            ddp.latest_year_approximate AS latest_approx,
-                            'people' AS project_type
+                            ddp.latest_year_approximate AS latest_approx, 'people' AS project_type,
+                            (SELECT COUNT(*) FROM diamm_data_source AS dds WHERE dds.archive_id = ddai.id AND dds.public IS TRUE) AS source_count
                         FROM diamm_data_person ddp
                         LEFT JOIN diamm_data_personidentifier ddpi on ddp.id = ddpi.person_id
                         WHERE ddpi.person_id IS NOT NULL AND ddpi.identifier_type = 1

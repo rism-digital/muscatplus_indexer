@@ -898,11 +898,18 @@ def update_rism_document(
 
     entry_s: str = orjson.dumps(entry).decode("utf-8")
 
-    return {
+    update_document = {
         "id": document_id,
         "has_external_record_b": {"set": True},
         "external_records_jsonm": {"add-distinct": entry_s},
     }
+
+    if "source_count" in record and record.get("source_count", 0) > 0:
+        amount: int = record["source_count"]
+        update_document.update(
+            {"source_count_i": {"inc": amount}, "total_sources_i": {"inc": amount}}
+        )
+    return update_document
 
 
 def get_work_node(

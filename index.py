@@ -6,7 +6,6 @@ import sys
 import timeit
 import traceback
 from pathlib import Path
-from typing import Optional
 
 import sentry_sdk
 import yaml
@@ -46,8 +45,8 @@ def index_indexer(
     cfg: dict,
     start: float,
     end: float,
-    diamm_latest: Optional[str],
-    cantus_latest: Optional[str],
+    diamm_latest: str | None,
+    cantus_latest: str | None,
 ) -> bool:
     version: str = cfg["common"]["version"]
 
@@ -241,11 +240,11 @@ def main(args: argparse.Namespace) -> bool:
     if res and not args.dry:
         # Add a single record that records some metadata about this index run
         log.info("Adding indexer record.")
-        diamm_datetime: Optional[str] = (
+        diamm_datetime: str | None = (
             get_latest_diamm_datetime() if not args.skip_diamm else None
         )
 
-        cantus_datetime: Optional[str] = (
+        cantus_datetime: str | None = (
             get_latest_cantus_datetime() if not args.skip_cantus else None
         )
         res &= index_indexer(

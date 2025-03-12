@@ -111,3 +111,20 @@ def _get_external_resources_data(record: pymarc.Record) -> list | None:
         return None
 
     return [external_resource_data(f) for f in record.get_fields("856")]
+
+
+def _get_contributing_projects_data(record: pymarc.Record) -> list | None:
+    if "910" not in record:
+        return None
+
+    fields = record.get_fields("910")
+
+    return [
+        {
+            "type": "institution",
+            "name": f.get("a", "[Unknown name]"),
+            "institution_id": f"institution_{f['0']}",
+            "project_url": f["u"],
+        }
+        for f in fields
+    ]

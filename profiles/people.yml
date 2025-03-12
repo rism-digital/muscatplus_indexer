@@ -54,6 +54,11 @@ general_notes_sm:
   breaks: true
   sorted: false
 
+contributing_project_sm:
+  field: "910"
+  subfield: "a"
+  multiple: true
+
 related_people_json:
   processor: "_get_related_people_data"
   json: true
@@ -68,4 +73,8 @@ related_places_json:
 
 external_resources_json:
   processor: "_get_external_resources_data"
+  json: true
+
+contributing_projects_json:
+  processor: "_get_contributing_projects_data"
   json: true

@@ -34,7 +34,7 @@ def _empty_solr_core(cfg: dict, core: str) -> bool:
 
 def empty_project_records(project_identifier: str, cfg: dict) -> bool:
     solr_address = cfg["solr"]["server"]
-    idx_core = cfg["solr"]["indexing_core"]
+    idx_core = cfg["indexing_core"]
     solr_idx_server: str = f"{solr_address}/{idx_core}"
 
     res = httpx.post(
@@ -52,7 +52,7 @@ def empty_project_records(project_identifier: str, cfg: dict) -> bool:
 
 
 def submit_to_solr(records: list, cfg: dict) -> bool:
-    solr_idx_core = cfg["solr"]["indexing_core"]
+    solr_idx_core = cfg["indexing_core"]
     return _submit_to_solr(records, cfg, solr_idx_core)
 
 
@@ -86,7 +86,7 @@ def _submit_to_solr(records: list, cfg: dict, core: str) -> bool:
 
 
 def commit_changes(cfg: dict) -> bool:
-    solr_idx_core = cfg["solr"]["indexing_core"]
+    solr_idx_core = cfg["indexing_core"]
     return _commit_changes(cfg, solr_idx_core)
 
 
@@ -159,7 +159,7 @@ def reload_core(server_address: str, core_name: str) -> bool:
 
 def exists(document_id: str, cfg: dict) -> bool:
     solr_address = cfg["solr"]["server"]
-    solr_core = cfg["solr"]["indexing_core"]
+    solr_core = cfg["indexing_core"]
     solr_idx_server: str = f"{solr_address}/{solr_core}"
 
     res = httpx.get(

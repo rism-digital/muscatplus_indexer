@@ -3,6 +3,7 @@ import faulthandler
 import logging.config
 import os.path
 import sys
+import time
 import timeit
 import traceback
 from pathlib import Path
@@ -73,7 +74,7 @@ def only_diamm(cfg: dict) -> bool:
         res &= clean_diamm(cfg)
 
     res &= index_diamm(cfg)
-    res &= reload_core(cfg["solr"]["server"], cfg["solr"]["indexing_core"])
+    res &= reload_core(cfg["solr"]["server"], cfg["indexing_core"])
 
     if cfg["swap_cores"] and not cfg["dry"]:
         res &= swap_cores(
@@ -92,32 +93,9 @@ def only_cantus(cfg: dict) -> bool:
         res &= clean_cantus(cfg)
 
     res &= index_cantus(cfg)
-    res &= reload_core(cfg["solr"]["server"], cfg["solr"]["indexing_core"])
-
-    # if cfg["swap_cores"] and not cfg["dry"]:
-    #     res &= swap_cores(cfg['solr']['server'],
-    #                       cfg['solr']['indexing_core'],
-    #                       cfg['solr']['live_core'])
+    res &= reload_core(cfg["solr"]["server"], cfg["indexing_core"])
 
     return res
-
-
-# def only_cmo(cfg: dict) -> bool:
-#     res: bool = True
-#     if not cfg["dry"]:
-#         res &= clean_cmo(cfg)
-#
-#     res &= index_cmo(cfg)
-#     res &= reload_core(cfg['solr']['server'],
-#                        cfg['solr']['indexing_core'])
-#
-#     if cfg["swap_cores"] and not cfg["dry"]:
-#         res &= swap_cores(cfg['solr']['server'],
-#                           cfg['solr']['indexing_core'],
-#                           cfg['solr']['live_core'])
-#
-#     return res
-#
 
 
 @elapsedtime
@@ -146,8 +124,30 @@ def main(args: argparse.Namespace) -> bool:
     if version.startswith("v"):
         release = version[1:]
 
+    if args.live:
+        log.info("Indexing to the live core!")
+        for i in range(3, 0, -1):
+            print(
+                f"Waiting 3 seconds in case this is not correct. {i}",
+                end="\r",
+                flush=True,
+            )
+            time.sleep(1)
+
+        actual_indexing_core = idx_config["solr"]["live_core"]
+        swap_after_indexing = False
+    else:
+        actual_indexing_core = idx_config["solr"]["indexing_core"]
+        swap_after_indexing = args.swap_cores
+
     # Add a parameter indicating whether this is a dry run to the config.
-    idx_config.update({"dry": args.dry, "swap_cores": args.swap_cores})
+    idx_config.update(
+        {
+            "dry": args.dry,
+            "swap_cores": swap_after_indexing,
+            "indexing_core": actual_indexing_core,
+        }
+    )
 
     debug_mode: bool = idx_config["common"]["debug"]
     if debug_mode is False:
@@ -252,13 +252,11 @@ def main(args: argparse.Namespace) -> bool:
         )
 
         # force a core reload to ensure it's up-to-date
-        res &= reload_core(
-            idx_config["solr"]["server"], idx_config["solr"]["indexing_core"]
-        )
+        res &= reload_core(idx_config["solr"]["server"], idx_config["indexing_core"])
 
     # Finally, if all the previous statuses are True, we're supposed to swap the cores, and we're not in a dry run,
     # then consider that indexing was successful and swap the indexer core with the live core.
-    if res and args.swap_cores and not args.dry:
+    if res and idx_config["swap_cores"] and not args.dry:
         res &= swap_cores(
             idx_config["solr"]["server"],
             idx_config["solr"]["indexing_core"],
@@ -292,6 +290,15 @@ if __name__ == "__main__":
         action="store_false",
         help="Do not swap cores (default is to swap)",
     )
+    parser.add_argument(
+        "-L",
+        "--live",
+        dest="live",
+        action="store_true",
+        help="""Index directly to the live core. Does not swap. When used with empty it will delete
+                all records in the live core so it should be used with caution""",
+    )
+
     parser.add_argument(
         "-c",
         "--config",

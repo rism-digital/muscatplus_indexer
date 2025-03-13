@@ -18,11 +18,11 @@ def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT cts.id AS id, cts.shelfmark AS shelfmark, cts.date AS source_date, cts.summary AS source_summary,
-                    cts.description AS html_source_description, cts.image_link AS digital_images,
+                    cts.description AS html_source_description, cts.image_link AS digital_images, cts.name AS source_name,
                     cts.date_created AS created, cts.date_updated AS updated,
                     cti.name AS institution_name, cti.city AS institution_city, cti.country AS institution_country,
                     cti.siglum AS institution_siglum, cti.id AS institution_id,
-                   (SELECT string_agg(ctii.identifier, '\n') FROM main_app_institutionidentifier ctii
+                   (SELECT array_agg(ctii.identifier) FROM main_app_institutionidentifier ctii
                         WHERE ctii.institution_id = cti.id AND ctii.identifier_type = 1) AS institution_rism_ids,
                    (SELECT string_agg(ctc.name, ', ') FROM main_app_source_century ctsc
                         LEFT JOIN main_app_century ctc ON ctsc.century_id = ctc.id

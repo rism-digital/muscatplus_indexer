@@ -24,9 +24,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     else:
         country_code = "XX"
 
-    inst_identifiers: list[str] = (
-        rii.split("\n") if (rii := record.get("institution_rism_ids")) else []
-    )
+    inst_identifiers: list[str] = record.get("institution_rism_ids") or []
     source_date: str = record.get("source_century", "")
     source_summary: str | None = record.get("source_summary")
     general_note: str | None = record.get("html_source_description")
@@ -42,12 +40,13 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "content_types_sm": ["musical"],
         "material_source_types_sm": ["Manuscript copy"],
         "material_content_types_sm": ["Notated music"],
-        "num_physical_copies_i": 1,  # Only MSS in DIAMM!
+        "num_physical_copies_i": 1,  # Only MSS in Cantus!
         "is_contents_record_b": False,
         "is_collection_record_b": True,
         "is_composite_volume_b": False,
         "display_label_s": display_label,
         "shelfmark_s": record["shelfmark"],
+        "common_name_s": record["source_name"],
         "date_statements_sm": [source_date] if source_date else None,
         "date_ranges_im": _process_dates(source_date),
         "siglum_s": record["institution_siglum"],
@@ -104,9 +103,10 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 def _get_standard_titles_json(record) -> list[dict]:
     return [
         {
+            "title": n if (n := record.get("source_name")) else "[No title]",
             "holding_siglum": record["institution_siglum"],
             "holding_shelfmark": record["shelfmark"],
-            "source_type": "Manuscript",
+            "source_type": "Manuscript copy",
         }
     ]
 

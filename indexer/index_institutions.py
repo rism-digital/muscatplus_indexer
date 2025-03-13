@@ -88,6 +88,7 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     WHERE i.siglum IS NOT NULL OR
                         ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(ii.institution_b_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
+                         (SELECT COUNT(ii.institution_a_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id) > 0 OR
                          (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
                          (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0

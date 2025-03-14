@@ -47,8 +47,8 @@ def get_date_statement(record) -> str | None:
 
     if earliest_s or latest_s:
         return f"{earliest_s}{earliest_approx_s}—{latest_s}{latest_approx_s}"
-    else:
-        return None
+
+    return None
 
 
 def get_name(record) -> str:

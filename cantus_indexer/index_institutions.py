@@ -19,13 +19,13 @@ def _get_unlinked_cantus_institutions(
         curs = conn.cursor(row_factory=dict_row)
         # Only select institutions that have *published* sources attached to them.
         curs.execute("""SELECT DISTINCT cti.id AS id, cti.name AS name, cti.date_created AS created,
-                    cti.date_updated AS updated, cti.city AS city, cti.country AS country
-                    FROM main_app_institution AS cti
-                    LEFT JOIN main_app_institutionidentifier AS ctii ON cti.id = ctii.institution_id
-                    WHERE ctii.institution_id IS NULL AND
-                      (SELECT COUNT(cts.holding_institution_id)
-                       FROM main_app_source cts
-                       WHERE cts.holding_institution_id = cti.id AND cts.published is TRUE) > 0""")
+                        cti.date_updated AS updated, cti.city AS city, cti.country AS country
+                        FROM main_app_institution AS cti
+                        LEFT JOIN main_app_institutionidentifier AS ctii ON cti.id = ctii.institution_id
+                        WHERE ctii.institution_id IS NULL AND
+                          (SELECT COUNT(cts.holding_institution_id)
+                           FROM main_app_source cts
+                           WHERE cts.holding_institution_id = cti.id AND cts.published is TRUE) > 0""")
 
     while rows := curs.fetchmany(size=500):
         yield rows
@@ -37,12 +37,12 @@ def _get_linked_cantus_institutions(
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT cti.id AS id, ctii.identifier AS rism_id, cti.name AS name,
-                'institution' AS project_type,
-                (SELECT COUNT(*) FROM main_app_source AS s WHERE cti.id = s.holding_institution_id AND s.published IS TRUE) AS source_count
-                FROM main_app_institution AS cti
-                LEFT JOIN main_app_institutionidentifier AS ctii ON cti.id = ctii.institution_id
-                WHERE ctii.institution_id IS NOT NULL AND ctii.identifier_type = 1
-                ORDER BY cti.id""")
+                        'institution' AS project_type,
+                        (SELECT COUNT(*) FROM main_app_source AS s WHERE cti.id = s.holding_institution_id AND s.published IS TRUE) AS source_count
+                        FROM main_app_institution AS cti
+                        LEFT JOIN main_app_institutionidentifier AS ctii ON cti.id = ctii.institution_id
+                        WHERE ctii.institution_id IS NOT NULL AND ctii.identifier_type = 1
+                        ORDER BY cti.id""")
 
         while rows := curs.fetchmany(size=500):
             yield rows

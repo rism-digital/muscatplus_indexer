@@ -16,40 +16,48 @@ def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]], None, None]
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
-                        (SELECT string_agg(DISTINCT
-                                CONCAT(ddg1.name, '||',
-                                       ddg2.name, '||',
-                                       ddg2.id), '\n') AS location
+                        (SELECT jsonb_agg(DISTINCT
+                                jsonb_build_object(
+                                    'city', ddg1.name,
+                                    'country', ddg2.name,
+                                    'country_id', ddg2.id)
+                                )
                             FROM diamm_data_geographicarea ddg1
                             LEFT JOIN diamm_data_geographicarea ddg2 ON ddg1.parent_id = ddg2.id
-                            WHERE ddg1.id = ddo.location_id AND ddg1.type = 1) AS location,
-                        (SELECT string_agg(DISTINCT
-                                           CONCAT(ddoa.siglum, '||',
-                                                  ddos.shelfmark, '||',
-                                                  ddos.name, '||',
-                                                  ddsr.relationship_type_id, '||',
-                                                  ddsrt.name , '||',
-                                                  ddsr.uncertain, '||',
-                                                  ddos.id), '\n') AS sources
-                             FROM diamm_data_sourcerelationship ddsr
-                                      LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
-                                      LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
-                                      LEFT JOIN diamm_data_sourcerelationshiptype AS ddsrt ON ddsr.relationship_type_id = ddsrt.id
-                             WHERE ddsr.content_type_id = 52 AND ddsr.object_id = ddo.id) AS related_sources,
-                        (SELECT string_agg(DISTINCT
-                                   CONCAT(ddoa.siglum, '||',
-                                          ddos.shelfmark, '||',
-                                          ddos.name, '||',
-                                          '6', '||', '||',
-                                          ddsc.uncertain, '||',
-                                          ddos.id), '\n') AS sources
-                             FROM diamm_data_sourcecopyist ddsc
-                                      LEFT JOIN diamm_data_source AS ddos ON ddsc.source_id = ddos.id
-                                      LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
-                             WHERE ddsc.content_type_id = 52 AND ddsc.object_id = ddo.id) AS copied_sources
+                            WHERE ddg1.id = ddo.location_id AND ddg1.type = 1
+                        ) AS location,
+                        (SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                                            'id', ddos.id,
+                                            'siglum', ddoa.siglum,
+                                            'shelfmark', ddos.shelfmark,
+                                            'name', ddos.name,
+                                            'relationship_type_id', ddsr.relationship_type_id,
+                                            'relationship_type_name', ddsrt.name,
+                                            'relationship_uncertain', ddsr.uncertain
+                                           ))
+                            FROM diamm_data_sourcerelationship ddsr
+                            LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
+                            LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                            LEFT JOIN diamm_data_sourcerelationshiptype AS ddsrt ON ddsr.relationship_type_id = ddsrt.id
+                            WHERE ddsr.content_type_id = 37 AND ddsr.object_id = ddo.id
+                        ) AS related_sources,
+                        (SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                                                      'id', ddos.id,
+                                                      'siglum', ddoa.siglum,
+                                                      'shelfmark', ddos.shelfmark,
+                                                      'name', ddos.name,
+                                                      'relationship_type_id', '6',
+                                                      'relationship_type_name', '',
+                                                      'relationship_uncertain', ddsc.uncertain
+                                                  ))
+                            FROM diamm_data_sourcecopyist ddsc
+                            LEFT JOIN diamm_data_source AS ddos ON ddsc.source_id = ddos.id
+                            LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                            WHERE ddsc.content_type_id = 37 AND ddsc.object_id = ddo.id)
+                        AS copied_sources
                         FROM diamm_data_organization ddo
-                                 LEFT JOIN diamm_data_geographicarea ddg on ddo.location_id = ddg.id
-                                 LEFT JOIN diamm_data_organizationidentifier ddoi ON ddoi.organization_id = ddo.id
+                        LEFT JOIN diamm_data_geographicarea ddg on ddo.location_id = ddg.id
+                        LEFT JOIN diamm_data_organizationidentifier ddoi ON ddoi.organization_id = ddo.id
                         WHERE ddoi.organization_id IS NULL OR 1 NOT IN (
                             SELECT ddoi2.identifier_type FROM diamm_data_organizationidentifier ddoi2 WHERE ddoi2.organization_id = ddo.id
                         )

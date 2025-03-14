@@ -20,40 +20,45 @@ def _get_people(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddp.last_name AS last_name,
-                ddp.first_name AS first_name, ddp.earliest_year AS earliest_year,
-                ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,
-                ddp.latest_year_approximate AS latest_approx,
-                (SELECT string_agg(DISTINCT
-                                   CONCAT(ddoa.siglum, '||',
-                                          ddos.shelfmark, '||',
-                                          ddos.name, '||',
-                                          ddsr.relationship_type_id, '||',
-                                          ddsrt.name , '||',
-                                          ddsr.uncertain, '||',
-                                          ddos.id), '\n') AS sources
-                 FROM diamm_data_sourcerelationship ddsr
-                          LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
-                          LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
-                          LEFT JOIN diamm_data_sourcerelationshiptype AS ddsrt ON ddsr.relationship_type_id = ddsrt.id
-                 WHERE ddsr.content_type_id = 37 AND ddsr.object_id = ddp.id) AS related_sources,
-                (SELECT string_agg(DISTINCT
-                                   CONCAT(ddoa.siglum, '||',
-                                          ddos.shelfmark, '||',
-                                          ddos.name, '||',
-                                          '6', '||', '||',
-                                          ddsc.uncertain, '||',
-                                          ddos.id), '\n') AS sources
-                 FROM diamm_data_sourcecopyist ddsc
-                          LEFT JOIN diamm_data_source AS ddos ON ddsc.source_id = ddos.id
-                          LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
-                 WHERE ddsc.content_type_id = 37 AND ddsc.object_id = ddp.id) AS copied_sources
-FROM diamm_data_person ddp
-         LEFT JOIN diamm_data_personidentifier ddpi ON ddpi.person_id = ddp.id
-WHERE ddp.id != 4221 AND (ddpi.person_id IS NULL OR 1 NOT IN (
-    SELECT ddpi2.identifier_type FROM diamm_data_personidentifier ddpi2 WHERE ddpi2.person_id = ddp.id
-))
-GROUP BY ddp.id
-ORDER BY ddp.id;""")
+                        ddp.first_name AS first_name, ddp.earliest_year AS earliest_year,
+                        ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,
+                        ddp.latest_year_approximate AS latest_approx,
+                        (SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                                                      'id', ddos.id,
+                                                      'siglum', ddoa.siglum,
+                                                      'shelfmark', ddos.shelfmark,
+                                                      'name', ddos.name,
+                                                      'relationship_type_id', ddsr.relationship_type_id,
+                                                      'relationship_type_name', ddsrt.name,
+                                                      'relationship_uncertain', ddsr.uncertain
+                                                   ))
+                            FROM diamm_data_sourcerelationship ddsr
+                            LEFT JOIN diamm_data_source AS ddos ON ddsr.source_id = ddos.id
+                            LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                            LEFT JOIN diamm_data_sourcerelationshiptype AS ddsrt ON ddsr.relationship_type_id = ddsrt.id
+                            WHERE ddsr.content_type_id = 37 AND ddsr.object_id = ddp.id
+                        ) AS related_sources,
+                        (SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                                                      'id', ddos.id,
+                                                      'siglum', ddoa.siglum,
+                                                      'shelfmark', ddos.shelfmark,
+                                                      'name', ddos.name,
+                                                      'relationship_type_id', '6',
+                                                      'relationship_type_name', '',
+                                                      'relationship_uncertain', ddsc.uncertain
+                                                  ))
+                            FROM diamm_data_sourcecopyist ddsc
+                            LEFT JOIN diamm_data_source AS ddos ON ddsc.source_id = ddos.id
+                            LEFT JOIN diamm_data_archive AS ddoa ON ddos.archive_id = ddoa.id
+                            WHERE ddsc.content_type_id = 37 AND ddsc.object_id = ddp.id)
+                        AS copied_sources
+                        FROM diamm_data_person ddp
+                        LEFT JOIN diamm_data_personidentifier ddpi ON ddpi.person_id = ddp.id
+                        WHERE ddp.id != 4221 AND (ddpi.person_id IS NULL OR 1 NOT IN (
+                            SELECT ddpi2.identifier_type FROM diamm_data_personidentifier ddpi2 WHERE ddpi2.person_id = ddp.id
+                        ))
+                        GROUP BY ddp.id
+                        ORDER BY ddp.id;""")
 
         while rows := curs.fetchmany(size=500):
             yield rows

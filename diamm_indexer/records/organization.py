@@ -12,15 +12,14 @@ log = logging.getLogger("muscat_indexer")
 def create_organization_index_document(record, cfg: dict) -> list[dict]:
     log.debug("Indexing organization %s", record["name"])
     institution_id: str = f"diamm_organization_{record['id']}"
-    raw_locations: str | None = record.get("location")
+    locations: list | None = record.get("location")
     location_map: dict = {}
-    if raw_locations:
-        locs = raw_locations.split("\n")[0]
-        city, _country, country_id = locs.split("||")
-        siglum_pfx: str = COUNTRY_SIGLUM_MAP.get(country_id, "")
+    if locations:
+        locs = locations[0]
+        siglum_pfx: str = COUNTRY_SIGLUM_MAP.get(locs["country_id"], "")
         country_names: list = COUNTRY_CODE_MAPPING.get(siglum_pfx, [])
 
-        location_map["city_s"] = city
+        location_map["city_s"] = locs["city"]
         location_map["country_codes_sm"] = [siglum_pfx] if siglum_pfx else None
         location_map["country_names_sm"] = country_names if country_names else None
 

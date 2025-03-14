@@ -1,6 +1,8 @@
 import logging
 
+import orjson
 import yaml
+from psycopg.types.json import set_json_loads
 from psycopg_pool import ConnectionPool
 
 log = logging.getLogger("muscat_indexer")
@@ -23,3 +25,4 @@ else:
 postgres_pool = ConnectionPool(
     f"{server_connection} dbname={config['db']} user={config['user']} password={config['password']}"
 )
+set_json_loads(orjson.loads)

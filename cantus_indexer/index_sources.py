@@ -24,13 +24,13 @@ def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
                     cti.siglum AS institution_siglum, cti.id AS institution_id,
                    (SELECT array_agg(ctii.identifier) FROM main_app_institutionidentifier ctii
                         WHERE ctii.institution_id = cti.id AND ctii.identifier_type = 1) AS institution_rism_ids,
-                   (SELECT string_agg(ctc.name, ', ') FROM main_app_source_century ctsc
+                   (SELECT array_agg(ctc.name) FROM main_app_source_century ctsc
                         LEFT JOIN main_app_century ctc ON ctsc.century_id = ctc.id
                         WHERE ctsc.source_id = cts.id) AS source_century,
-                   (SELECT string_agg(ctn.name, ', ') FROM main_app_source_notation ctsn
+                   (SELECT array_agg(ctn.name) FROM main_app_source_notation ctsn
                         LEFT JOIN main_app_notation ctn ON ctsn.notation_id = ctn.id
                         WHERE ctsn.source_id = cts.id) AS source_notation,
-                   (SELECT string_agg(ctc.incipit, '\n') FROM main_app_chant ctc
+                   (SELECT array_agg(ctc.incipit) FROM main_app_chant ctc
                         WHERE ctc.source_id = cts.id) AS source_incipits
                     FROM main_app_source cts
                     LEFT JOIN main_app_institution cti ON cti.id = cts.holding_institution_id

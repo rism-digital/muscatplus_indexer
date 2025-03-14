@@ -25,7 +25,18 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         country_code = "XX"
 
     inst_identifiers: list[str] = record.get("institution_rism_ids") or []
-    source_date: str = record.get("source_century", "")
+    source_date: list = record.get("source_century") or []
+    date_ranges: list[tuple] = [_process_dates(cent) for cent in source_date]
+    flattened_centuries: list[int] = [
+        cent for pairs in date_ranges for cent in pairs if cent
+    ]
+    if flattened_centuries:
+        earliest = min(flattened_centuries)
+        latest = max(flattened_centuries)
+        date_range = [earliest, latest]
+    else:
+        date_range = []
+
     source_summary: str | None = record.get("source_summary")
     general_note: str | None = record.get("html_source_description")
 
@@ -47,8 +58,8 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "display_label_s": display_label,
         "shelfmark_s": record["shelfmark"],
         "common_name_s": record["source_name"],
-        "date_statements_sm": [source_date] if source_date else None,
-        "date_ranges_im": _process_dates(source_date),
+        "date_statements_sm": source_date if source_date else None,
+        "date_ranges_im": date_range,
         "siglum_s": record["institution_siglum"],
         "general_notes_sm": general_note if general_note else None,
         "source_general_notes_smni": general_note if general_note else None,

@@ -20,33 +20,40 @@ def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
                 dds.format AS book_format,
                 dds.created AS created, dds.updated AS updated, dda.id AS archive_id, dda.name AS archive_name, dda.siglum AS siglum,
                 ddg.name AS city_name, ddsa.identifier AS rism_id, ddai.identifier AS archive_rism_identifier,
-                (SELECT string_agg(DISTINCT CONCAT(ddoo.name, '||', ddoo.id), '\n') AS organizations
+                (SELECT jsonb_agg(DISTINCT jsonb_build_object('name', ddoo.name, 'id', ddoo.id)) AS organizations
                     FROM diamm_data_sourceprovenance ddop
                     LEFT JOIN diamm_data_organization AS ddoo ON ddop.object_id = ddoo.id
-                    WHERE ddop.content_type_id = 52 AND ddop.source_id = dds.id) AS related_organizations,
+                    WHERE ddop.content_type_id = 52 AND ddop.source_id = dds.id
+                ) AS related_organizations,
                 (EXISTS(
                     SELECT ddi2.id FROM diamm_data_page ddp2
                     LEFT JOIN public.diamm_data_image ddi2 on ddp2.id = ddi2.page_id
                     WHERE ddp2.source_id = dds.id AND ddi2.id IS NOT NULL)
                 ) AS has_images,
-                (SELECT string_agg(DISTINCT concat_ws('|', COALESCE(ddp.last_name, ''), COALESCE(ddp.first_name, ''),
-                                                          COALESCE(ddp.earliest_year, -1), COALESCE(ddp.earliest_year_approximate, FALSE),
-                                                          COALESCE(ddp.latest_year, -1), COALESCE(ddp.latest_year_approximate, FALSE), ddp.id), '$')
-                     FROM diamm_data_item ddi
-                              LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
-                              LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
-                              LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
-                     WHERE ddi.source_id = dds.id AND ddp.id IS NOT NULL
-                    ) AS composer_names,
-                (SELECT string_agg(DISTINCT concat_ws('|', ddpi.identifier), '$')
+                (SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                                            'id', ddp.id,
+                                            'last_name', ddp.last_name,
+                                            'first_name', ddp.first_name,
+                                            'earliest_year', ddp.earliest_year,
+                                            'earliest_year_approximate', ddp.earliest_year_approximate,
+                                            'latest_year', ddp.latest_year,
+                                            'latest_year_approximate', ddp.latest_year_approximate)
+                                    )
                     FROM diamm_data_item ddi
-                             LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
-                             LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
-                             LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
-                             LEFT JOIN diamm_data_personidentifier ddpi ON ddp.id = ddpi.person_id
+                    LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
+                    LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
+                    LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
+                    WHERE ddi.source_id = dds.id AND ddp.id IS NOT NULL
+                ) AS composer_names,
+                (SELECT array_agg(DISTINCT ddpi.identifier)
+                    FROM diamm_data_item ddi
+                     LEFT JOIN diamm_data_composition ddc on ddi.composition_id = ddc.id
+                     LEFT JOIN diamm_data_compositioncomposer ddcc on ddc.id = ddcc.composition_id
+                     LEFT JOIN diamm_data_person ddp ON ddcc.composer_id = ddp.id
+                     LEFT JOIN diamm_data_personidentifier ddpi ON ddp.id = ddpi.person_id
                     WHERE ddi.source_id = dds.id AND ddpi.identifier_type = 1 AND ddp.id IS NOT NULL
-                    ) AS composer_ids,
-                (SELECT string_agg(ddsn.note, '|:|')
+                ) AS composer_ids,
+                (SELECT array_agg(ddsn.note)
                     FROM diamm_data_sourcenote ddsn
                     WHERE ddsn.source_id = dds.id AND ddsn.type = 1
                 ) AS general_notes

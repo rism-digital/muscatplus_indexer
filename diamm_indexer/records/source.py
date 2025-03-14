@@ -15,32 +15,24 @@ log = logging.getLogger("muscat_indexer")
 def create_source_index_documents(record, cfg: dict) -> list[dict]:
     log.debug("Indexing %s", record["shelfmark"])
 
-    composer_names: list
-    if "composer_names" in record and record["composer_names"]:
-        composer_data = [f.strip() for f in record["composer_names"].split("$") if f]
-        composer_components = [x.split("|") for x in composer_data if x]
-        composer_names = _get_composer_names(composer_components)
-    else:
-        composer_names = []
+    composer_names = (
+        _get_composer_names(record["composer_names"])
+        if record["composer_names"]
+        else []
+    )
 
-    composer_ids: list
-    if "composer_ids" in record and record["composer_ids"]:
-        composer_data = [f.strip() for f in record["composer_ids"].split("$") if f]
-        composer_components = [x.split("|") for x in composer_data if x]
-        composer_ids = [
-            transform_rism_id(cid) for cmp in composer_components for cid in cmp
-        ]
-    else:
-        composer_ids = []
+    composer_ids = (
+        [transform_rism_id(cid) for cmp in record["composer_ids"] for cid in cmp]
+        if record["composer_ids"]
+        else []
+    )
 
     display_label = f"{record['siglum']} {record['shelfmark']}"
     if nm := record.get("name"):
         display_label = f"{display_label} ({nm})"
 
     general_description: list | None = (
-        _get_general_notes(record["general_notes"])
-        if record.get("general_notes")
-        else None
+        _get_general_notes(record["general_notes"]) if record["general_notes"] else None
     )
     holding_institution_id: str | None = transform_rism_id(
         record["archive_rism_identifier"]
@@ -146,22 +138,22 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 def _get_composer_names(composer_components: list) -> list:
     ret: list = []
     for c in composer_components:
-        (
-            lastn,
-            firstn,
-            earliest,
-            earliest_approx,
-            latest,
-            latest_approx,
-            composer_id,
-        ) = c
+        # (
+        #     lastn,
+        #     firstn,
+        #     earliest,
+        #     earliest_approx,
+        #     latest,
+        #     latest_approx,
+        #     composer_id,
+        # ) = c
 
-        lastn_s = f"{lastn}" if lastn else ""
-        firstn_s = f", {firstn}" if firstn else ""
-        earliest_approx_s = "?" if earliest_approx == "t" else ""
-        latest_approx_s = "?" if latest_approx == "t" else ""
-        earliest_s = f"{earliest}" if earliest and int(earliest) != -1 else ""
-        latest_s = f"{latest}" if latest and int(latest) != -1 else ""
+        lastn_s = c["last_name"] if c["last_name"] else ""
+        firstn_s = f", {c['first_name']}" if c["first_name"] else ""
+        earliest_approx_s = "?" if c["earliest_year_approximate"] else ""
+        latest_approx_s = "?" if c["latest_year_approximate"] else ""
+        earliest_s = f"{c['earliest_year']}" if c["earliest_year"] else ""
+        latest_s = f"{c['latest_year']}" if c["latest_year"] else ""
         dates_s = (
             f"({earliest_s}{earliest_approx_s}—{latest_s}{latest_approx_s})"
             if earliest_s or latest_s
@@ -183,9 +175,8 @@ def _get_standard_titles_json(record) -> list[dict]:
     ]
 
 
-def _get_general_notes(notes: str) -> list:
-    note_block: list = notes.split("|:|")
-    all_notes = [j for n in note_block for j in n.split("\r\n")]
+def _get_general_notes(notes: list[str]) -> list:
+    all_notes = [j for n in notes for j in n.split("\r\n")]
     return list(filter(None, all_notes))
 
 
@@ -216,37 +207,31 @@ def _get_external_institution_resource(record) -> list[dict]:
     ]
 
 
-def _get_related_institutions_names(orgs: str | None) -> list | None:
+def _get_related_institutions_names(orgs: list | None) -> list | None:
     if not orgs:
         return None
 
-    orgs_raw: list[str] = orgs.split("\n")
-    return [o.split("||")[0] for o in orgs_raw]
+    return [o["name"] for o in orgs]
 
 
-def _get_related_institutions_ids(orgs: str | None) -> list | None:
+def _get_related_institutions_ids(orgs: list | None) -> list | None:
     if not orgs:
         return None
 
-    orgs_raw: list[str] = orgs.split("\n")
-    return [f"diamm_organization_{o.split('||')[1]}" for o in orgs_raw]
+    return [f"diamm_organization_{o['id']}" for o in orgs]
 
 
-def _get_related_institutions_json(orgs: str | None) -> list[dict]:
+def _get_related_institutions_json(orgs: list[dict] | None) -> list[dict]:
     if not orgs:
         return []
 
-    orgs_raw: list[str] = orgs.split("\n")
-
     orgs_json: list = []
-    for org in orgs_raw:
-        org_name, org_id = org.split("||")
-
+    for org in orgs:
         d = {
-            "id": f"diamm_organization_{org_id}",
+            "id": f"diamm_organization_{org['id']}",
             "type": "institution",
             "project_type": "organizations",
-            "name": f"{org_name}",
+            "name": f"{org['name']}",
         }
 
         orgs_json.append(d)

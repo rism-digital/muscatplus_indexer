@@ -123,6 +123,7 @@ def _get_contributing_projects_data(record: pymarc.Record) -> list | None:
         {
             "type": "institution",
             "name": f.get("a", "[Unknown name]"),
+            "relationship": "contributing_project",
             "institution_id": f"institution_{f['0']}",
             "project_url": f["u"],
         }

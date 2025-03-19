@@ -59,6 +59,12 @@ contributing_project_sm:
   subfield: "a"
   multiple: true
 
+contributing_project_ids:
+  field: "910"
+  subfield: "0"
+  multiple: true
+  value_prefix: "institution_"
+
 related_people_json:
   processor: "_get_related_people_data"
   json: true

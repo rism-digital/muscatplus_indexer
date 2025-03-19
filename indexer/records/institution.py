@@ -47,6 +47,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     holdings_count: int = record.get("holdings_count", 0)
     other_count: int = record.get("other_count", 0)
     total_count: int = record.get("total_source_count", 0)
+    people_contribution_count: int = record.get("people_contribution_count", 0)
 
     now_in: list[dict] | None = None
     now_in_sigla: list | None = None
@@ -143,6 +144,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
         "total_sources_i": total_count if rism_id != "40009305" else 0,
+        "people_contribution_count_i": people_contribution_count,
         "num_sources_s": _get_num_sources_facet(total_count),
         "bibliographic_references_json": bibliographic_references_json,
         "bibliographic_references_sm": bibliographic_reference_titles,

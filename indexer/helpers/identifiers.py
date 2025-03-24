@@ -22,6 +22,8 @@ class RecordTypes(IntEnum):
     LIBRETTO_EDITION_CONTENT = 9
     THEORETICA_EDITION_CONTENT = 10
     COMPOSITE_VOLUME = 11
+    INVENTORY = 12
+    INVENTORY_EDITION = 13
     WORK = 99  # Special case, so we can index record types within Incipits
 
 
@@ -31,8 +33,10 @@ def get_record_type(record_type_id: int, is_single_item: bool) -> str:
         in (
             RecordTypes.SOURCE,
             RecordTypes.EDITION,
+            RecordTypes.INVENTORY,
             RecordTypes.THEORETICA_EDITION,
             RecordTypes.LIBRETTO_EDITION,
+            RecordTypes.INVENTORY_EDITION,
         )
         and is_single_item is True
     ):
@@ -60,6 +64,7 @@ def get_source_type(record_type_id: int) -> str:
         RecordTypes.THEORETICA_EDITION,
         RecordTypes.LIBRETTO_EDITION_CONTENT,
         RecordTypes.THEORETICA_EDITION_CONTENT,
+        RecordTypes.INVENTORY_EDITION,
     ):
         return "printed"
     elif record_type_id in (
@@ -67,6 +72,7 @@ def get_source_type(record_type_id: int) -> str:
         RecordTypes.SOURCE,
         RecordTypes.LIBRETTO_SOURCE,
         RecordTypes.THEORETICA_SOURCE,
+        RecordTypes.INVENTORY,
     ):
         return "manuscript"
     elif record_type_id == RecordTypes.COMPOSITE_VOLUME:
@@ -78,6 +84,7 @@ def get_source_type(record_type_id: int) -> str:
 
 
 def get_is_contents_record(record_type_id: int, parent_id: int | None) -> bool:
+    # Defaults to False if it doesn't pass these tests.
     return bool(
         record_type_id
         in (

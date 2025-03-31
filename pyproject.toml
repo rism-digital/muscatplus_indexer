@@ -1,36 +1,35 @@
 [project]
 name = "muscatplus_indexer"
-description = ""
 version = "v1.0.4"
-authors = [{name = "Andrew Hankinson", email = "andrew.hankinson@rism.digital"}]
-requires-python = '>=3.11,<4.0'
-dependencies = ['dbutils (>=3.0,<4.0)',
-    'mysqlclient (>=2.2.4,<3.0.0)', 'pyyaml (>=6.0.0,<7.0.0)',
-    'edtf @ git+https://github.com/rism-digital/python-edtf.git@performance-enhancements',
-    'httpx (>=0.28.0,<0.29.0)', 'verovio (>=4.4.0.dev118,<5.0.0)', 'sentry-sdk (>=2.0.0,<3.0.0)',
-    'orjson (>=3.10.3,<4.0.0)', 'pymarc @ git+https://gitlab.com/ahankinson/pymarc.git@optimize-fields',
-    'psycopg[pool] (==3.2.4)']
+description = ""
+authors = [{ name = "Andrew Hankinson", email = "andrew.hankinson@rism.digital" }]
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "dbutils (>=3.0,<4.0)",
+    "mysqlclient (>=2.2.4,<3.0.0)",
+    "pyyaml (>=6.0.0,<7.0.0)",
+    "edtf @ git+https://github.com/rism-digital/python-edtf.git@performance-enhancements",
+    "httpx (>=0.28.0,<0.29.0)",
+    "verovio (>=4.4.0.dev118,<5.0.0)",
+    "sentry-sdk (>=2.0.0,<3.0.0)",
+    "orjson (>=3.10.3,<4.0.0)",
+    "pymarc @ git+https://gitlab.com/ahankinson/pymarc.git@optimize-fields",
+    "psycopg[pool] (>=3.2.6)",
+]
 
-[tool.poetry]
-package-mode = false
-requires-poetry = '>=2.0,<3.0'
+[dependency-groups]
+dev = [
+    "ipython>=8.0.0,<9",
+    "mypy>=1.11.2,<2",
+]
 
-[tool.poetry.dependencies]
-verovio = {  allow-prereleases = true }
+[tool.uv]
+package = false
 
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "PyPI"
-priority = "primary"
-
-[[tool.poetry.source]]
-name = "testpypi"
-url = "https://test.pypi.org/simple/"
-priority = "supplemental"
-
-[tool.poetry.group.dev.dependencies]
-ipython = "^8.0.0"
-mypy = "^1.11.2"
+url = "https://pypi.org/simple/"
+default = true
 
 [tool.black]
 line-length = 121

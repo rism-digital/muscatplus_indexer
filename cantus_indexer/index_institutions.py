@@ -84,7 +84,7 @@ def update_linked_rism_institutions(cfg: dict) -> bool:
 
 
 def index_institutions(cfg: dict) -> bool:
-    res = True
+    res: bool = True
     res |= index_unlinked_cantus_institutions(cfg)
     res |= update_linked_rism_institutions(cfg)
 

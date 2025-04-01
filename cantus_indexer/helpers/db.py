@@ -2,6 +2,7 @@ import logging
 
 import yaml
 from psycopg_pool import ConnectionPool
+import atexit
 
 log = logging.getLogger("muscat_indexer")
 idx_config: dict = yaml.full_load(open("./index_config.yml"))  # noqa: SIM115
@@ -23,3 +24,5 @@ else:
 postgres_pool = ConnectionPool(
     f"{server_connection} dbname={config['db']} user={config['user']} password={config['password']}"
 )
+
+atexit.register(postgres_pool.close)

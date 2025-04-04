@@ -7,26 +7,21 @@ def _parse_field(line: str) -> pymarc.Field:
 
     # Control fields are those in the <010 range. They do not have
     # subfields, but have the data encoded in them directly.
-    if tag_value.isdigit() and int(tag_value) < 10:
+    if "000" <= tag_value < "010":
         return pymarc.Field(tag=tag_value, data=line[6:].rstrip("\r\n"))
 
     indicators: pymarc.Indicators = pymarc.Indicators(line[6], line[7])
-    sub_value: str = line[9:]
-    subf_list: list = sub_value.split("$") if sub_value else []
     subfields: list[pymarc.Subfield] = [
-        _parse_subf(itm) for itm in subf_list if itm != ""
+        _parse_subf(part)
+        for part in line[9:].split("$")
+        if part  # skips empty strings
     ]
     return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 
 def _parse_subf(subf_value: str) -> pymarc.Subfield:
-    code: str = subf_value[0]
-    value: str = subf_value[1:].strip()
-
-    if "_DOLLAR_" in value:
-        value = value.replace("_DOLLAR_", "$")
-
-    return pymarc.Subfield(code, value)
+    value: str = subf_value[1:].strip().replace("_DOLLAR_", "$")
+    return pymarc.Subfield(subf_value[0], value)
 
 
 def create_marc(record: str) -> pymarc.Record:
@@ -36,9 +31,8 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    lines: list = record.splitlines()
     fields: list[pymarc.Field] = [
-        _parse_field(line) for line in lines if line and line != ""
+        _parse_field(line) for line in record.splitlines() if line and line != ""
     ]
     return pymarc.Record(fields=fields)
 

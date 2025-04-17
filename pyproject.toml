@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "ipython>=9.0.0,<10",
     "mypy>=1.11.2,<2",
+    "types-pyyaml>=6.0.12.20250402",
 ]
 
 [tool.uv]

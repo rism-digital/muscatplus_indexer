@@ -22,17 +22,18 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
     # The published / unpublished state is ignored for holding records, so we just take any and all holding records.
     curs.execute(
         f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
-                        sources.std_title AS source_title, sources.composer AS creator_name,
-                        sources.record_type as record_type, sources.marc_source AS source_record_marc,
-                        (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc,
-                        (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc,
-                        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries
-                    FROM {dbname}.holdings AS holdings
-                    LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
-                    LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id
-                    LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
-                    WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause}
-                    GROUP BY holdings.id;"""  # noqa: S608
+                holdings.created_at AS created, holdings.updated_at AS updated,
+                sources.std_title AS source_title, sources.composer AS creator_name,
+                sources.record_type as record_type, sources.marc_source AS source_record_marc,
+                (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc,
+                (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc,
+                GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries
+                FROM {dbname}.holdings AS holdings
+                LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
+                LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id
+                LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
+                WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause}
+                GROUP BY holdings.id;"""  # noqa: S608
     )
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa

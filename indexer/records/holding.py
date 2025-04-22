@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict
+from typing import TypedDict, Any
 
 import orjson
 import pymarc
@@ -49,6 +49,8 @@ class HoldingIndexDocument(TypedDict):
     external_resources_json: str | None
     source_membership_order_i: int | None
     bibliographic_references_json: str | None
+    created: str
+    updated: str
 
 
 def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
@@ -57,6 +59,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
     marc_record: pymarc.Record = create_marc(record["marc_source"])
     source_marc_record: pymarc.Record = create_marc(record["source_record_marc"])
 
+
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]
 
@@ -64,11 +67,11 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
         "774" not in source_marc_record or "773" not in source_marc_record
     )
 
-    # For consistency it's better to store the creator name with the dates attached!
+    # For consistency, it's better to store the creator name with the dates attached!
     creator_name: str | None = get_creator_name(source_marc_record)
     record_type_id: int = record["record_type"]
 
-    idx_document: dict[str, object] = holding_index_document(
+    idx_document: dict[str, Any] = holding_index_document(
         marc_record,
         holding_id,
         membership_id,
@@ -118,6 +121,13 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
                 ).decode("utf-8")
             }
         )
+    if 'created' in record and 'updated' in record:
+        idx_document.update(
+            {
+                "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+        )
 
     return idx_document
 
@@ -141,7 +151,7 @@ def holding_index_document(
     record_type_id: int,
     source_single_item: bool,
     mss_profile: bool,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.

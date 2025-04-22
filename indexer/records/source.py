@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import orjson
 import pymarc
@@ -388,7 +389,7 @@ def _get_manuscript_holdings(
     # should result in a unique identifier for this holding record.
     holding_id: str = f"holding_{holding_institution_ident}-{source_id}"
 
-    idx_doc: dict[str, object] = holding_index_document(
+    idx_doc: dict[str, Any] = holding_index_document(
         record,
         holding_id,
         source_id,

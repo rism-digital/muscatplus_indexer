@@ -8,6 +8,7 @@ class PlaceIndexDocument(TypedDict):
     type: str
     name_s: str
     rism_id: str
+    full_rism_id: str
     country_s: str | None
     district_s: str | None
     alternate_terms_sm: list[str] | None
@@ -32,6 +33,7 @@ def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
     d: PlaceIndexDocument = {
         "id": f"place_{rism_id}",
         "rism_id": rism_id,
+        "full_rism_id": f"places/{rism_id}",
         "type": "place",
         "name_s": place["name"],
         "country_s": place.get("country"),

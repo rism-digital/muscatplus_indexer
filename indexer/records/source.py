@@ -273,6 +273,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         "id": source_id,
         "type": "source",
         "rism_id": rism_id,
+        "full_rism_id": f"sources/{rism_id}",
         "source_id": source_id,
         "has_external_record_b": False,
         # if the record is also in another external site (DIAMM, Cantus, etc.) then that indexer will set this to True.

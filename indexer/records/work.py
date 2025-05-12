@@ -16,7 +16,6 @@ work_profile: dict = yaml.full_load(open("profiles/works.yml"))  # noqa: SIM115
 def create_work_index_documents(record: dict, cfg: dict) -> list:
     work: str = record["marc_source"]
     marc_record: pymarc.Record = create_marc(work)
-
     rism_id: str = normalize_id(marc_record["001"].value())
     work_id: str = f"work_{rism_id}"
 
@@ -37,6 +36,8 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     work_core: dict = {
         "id": work_id,
         "type": "work",
+        "rism_id": rism_id,
+        "full_rism_id": f"works/{rism_id}",
         "sources_ids": list(source_entries),
         "source_count_i": record["source_count"],
         "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8")

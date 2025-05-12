@@ -32,6 +32,7 @@ from indexer.index_people import index_people
 from indexer.index_places import index_places
 from indexer.index_sources import index_sources
 from indexer.index_subjects import index_subjects
+from indexer.index_tombstones import index_tombstones
 from indexer.index_works import index_works
 
 faulthandler.enable()
@@ -172,11 +173,6 @@ def main(args: argparse.Namespace) -> bool:
         res &= only_cantus(idx_config)
         return res
 
-    # if args.only_cmo:
-    #     log.info("Only running the CMO indexer.")
-    #     res &= only_cmo(idx_config)
-    #     return res
-
     inc: list
     if not args.include:
         inc = [
@@ -189,6 +185,7 @@ def main(args: argparse.Namespace) -> bool:
             "festivals",
             "digital-objects",
             "works",
+            "tombstones"
         ]
     else:
         inc = args.include
@@ -222,6 +219,8 @@ def main(args: argparse.Namespace) -> bool:
             res &= index_digital_objects(idx_config)
         elif record_type == "works" and "works" not in args.exclude:
             res &= index_works(idx_config)
+        elif record_type == "tombstones" and "tombstones" not in args.exclude:
+            res &= index_tombstones(idx_config)
 
     if not args.skip_diamm:
         res &= index_diamm(idx_config)

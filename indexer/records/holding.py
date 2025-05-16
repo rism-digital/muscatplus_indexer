@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict, Any
+from typing import Any, TypedDict
 
 import orjson
 import pymarc
@@ -58,7 +58,6 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
     membership_id: str = f"source_{record['source_id']}"
     marc_record: pymarc.Record = create_marc(record["marc_source"])
     source_marc_record: pymarc.Record = create_marc(record["source_record_marc"])
-
 
     holding_id: str = f"holding_{record_id}"
     main_title: str = record["source_title"]

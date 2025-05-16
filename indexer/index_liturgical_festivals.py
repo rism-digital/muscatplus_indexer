@@ -22,12 +22,12 @@ def index_liturgical_festivals(cfg: dict) -> bool:
 
     curs.execute(
         f"""SELECT
-    id,
-    name,
-    alternate_terms,
-    notes
-    FROM {dbname}.liturgical_feasts
-    {id_where_clause};"""
+            id,
+            name,
+            alternate_terms,
+            notes
+            FROM {dbname}.liturgical_feasts
+            {id_where_clause};"""
     )
 
     all_festivals: list[dict] = curs._cursor.fetchall()

@@ -53,7 +53,6 @@ def parallelise(records: Iterable, func: Callable, *args, **kwargs) -> None:
 
     :param records: A list of records to be processed by `func`. Should be the first argument
     :param func: A function to process and index the records
-    :param func: A shared Solr connection object
     :return: None
     """
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -896,7 +895,7 @@ def update_rism_document(
 
     entry_s: str = orjson.dumps(entry).decode("utf-8")
 
-    update_document = {
+    update_document: dict = {
         "id": document_id,
         "has_external_record_b": {"set": True},
         "external_records_jsonm": {"add-distinct": entry_s},
@@ -905,7 +904,8 @@ def update_rism_document(
     if "source_count" in record and record.get("source_count", 0) > 0:
         amount: int = record["source_count"]
         update_document.update(
-            {"source_count_i": {"inc": amount}, "total_sources_i": {"inc": amount}}
+            {"source_count_i": {"inc": amount},
+             "total_sources_i": {"inc": amount}}
         )
     return update_document
 
@@ -930,7 +930,7 @@ def get_work_node(
         )
         return None
 
-    creator: pymarc.Field = record.get("100")
+    creator: pymarc.Field | None = record.get("100")
     composer_name: str | None = None
     composer_id: str | None = None
     work_title: str | None = None
@@ -960,3 +960,80 @@ def get_work_node(
     }
 
     return {k: v for k, v in d.items() if v}
+
+def process_related_institutions(institutions: list) -> dict:
+    inst_lookup: dict = {}
+
+    for inst in institutions:
+        try:
+            inst_id, siglum, name, place = inst.split("|:|")
+        except Exception:
+            print(inst)
+
+        d = {"name": name}
+
+        if siglum:
+            d["siglum"] = siglum
+
+        if place:
+            d["place"] = place
+
+        inst_lookup[inst_id] = d
+
+    return inst_lookup
+
+
+def get_related_json(
+        record: pymarc.Record, related_institutions: dict, this_id: str, this_type: str, tag_num: str
+) -> list[dict] | None:
+    if tag_num not in record:
+        return None
+
+    related_inst_fields: list[pymarc.Field] = record.get_fields(tag_num)
+    all_entries: list = []
+
+    for num, entry in enumerate(related_inst_fields, 1):
+        institution_id = entry.get("0")
+        if not institution_id:
+            log.warning(
+                "Got a field with no identifier, tag %s, record %s", tag_num, this_id
+            )
+            continue
+
+        if institution_id not in related_institutions:
+            log.warning(
+                "Could not find an related institution, tag %s for %s",
+                tag_num,
+                institution_id,
+            )
+            continue
+
+        if tag_num == "580":
+            relationship_code = "now-in"
+        elif "4" in entry:
+            relationship_code = entry["4"]
+        elif "i" in entry:
+            relationship_code = entry["i"]
+        else:
+            relationship_code = "xi"
+
+        institution_info: dict = related_institutions.get(institution_id, {})
+        now_in: dict = {
+            "id": f"{num}",
+            "type": "institution",
+            "institution_id": f"institution_{institution_id}",
+            "name": f"{institution_info.get('name')}",
+            "relationship": relationship_code,
+            "this_id": this_id,
+            "this_type": this_type,
+        }
+
+        if "siglum" in institution_info:
+            now_in["siglum"] = institution_info["siglum"]
+
+        if "place" in institution_info:
+            now_in["place"] = institution_info["place"]
+
+        all_entries.append(now_in)
+
+    return all_entries

@@ -62,17 +62,17 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                        FROM {dbname}.people_to_institutions AS pc
                        WHERE pc.institution_id = i.id AND pc.marc_tag = '910'
                     ) AS people_contribution_count,
-                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
-                        LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_b_id
+                        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
                         WHERE rela.institution_a_id = i.id AND rela.marc_tag = '580')
                         AS now_in_institutions,
-                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                     (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
-                        LEFT JOIN {dbname}.institutions AS reli ON  reli.id = rela.institution_a_id
+                        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_a_id
                         WHERE rela.institution_b_id = i.id AND rela.marc_tag = '580')
                         AS contains_institutions,
-                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
                         FROM {dbname}.institutions_to_institutions AS rela
                         LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
                         WHERE rela.institution_a_id = i.id AND rela.marc_tag = '710')
@@ -90,12 +90,12 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     LEFT JOIN {dbname}.institutions_to_publications ipt on ipt.institution_id = i.id
                     LEFT JOIN {dbname}.publications pub ON ipt.publication_id = pub.id
                     WHERE i.siglum IS NOT NULL OR
-                        ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
-                         (SELECT COUNT(ii.institution_b_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
-                         (SELECT COUNT(ii.institution_a_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id) > 0 OR
-                         (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
-                         (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
-                         (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
+                        (EXISTS (SELECT 1 FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) OR
+                         EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) OR
+                         EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id) OR
+                         EXISTS (SELECT 1 FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) OR
+                         EXISTS (SELECT 1 FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) OR
+                         EXISTS (SELECT 1 FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id)
                         ) {id_where_clause}
                     GROUP BY i.id
                     ORDER BY i.id ASC;"""  # noqa: S608

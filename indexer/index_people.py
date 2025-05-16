@@ -41,6 +41,11 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                         FROM {dbname}.digital_object_links AS do
                         WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id)
                         AS digital_objects,
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', reli.id, IFNULL(reli.siglum, ''), reli.corporate_name, IFNULL(reli.place, '')) SEPARATOR '\n')
+                        FROM {dbname}.people_to_institutions AS rela
+                        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
+                        WHERE rela.person_id = p.id AND rela.marc_tag = '510')
+                        AS related_institutions,
                      (SELECT GROUP_CONCAT(CONCAT_WS('|:|', scount, marc_source) SEPARATOR '|~|') AS work_nodes
                         FROM (SELECT COUNT(swn.source_id) AS scount, wn.marc_source AS marc_source, wn.title AS title
                                 FROM {dbname}.sources_to_work_nodes AS swn
@@ -52,13 +57,13 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                       ) AS work_nodes
                      FROM {dbname}.people AS p
                      WHERE
-                     ((SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) > 0 OR
-                     (SELECT COUNT(pp1.person_a_id) FROM {dbname}.people_to_people AS pp1 WHERE p.id = pp1.person_a_id) > 0 OR
-                     (SELECT COUNT(pp2.person_b_id) FROM {dbname}.people_to_people AS pp2 WHERE p.id = pp2.person_b_id) > 0 OR
-                     (SELECT COUNT(sp.person_id) FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) > 0 OR
-                     (SELECT COUNT(hp.person_id) FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) > 0 OR
-                     (SELECT COUNT(ip.person_id) FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) > 0 OR
-                     (SELECT COUNT(pubp.person_id) FROM {dbname}.people_to_publications AS pubp WHERE p.id = pubp.person_id) > 0)
+                        (EXISTS (SELECT 1 FROM {dbname}.people_to_institutions AS pi WHERE p.id = pi.person_id) OR
+                        EXISTS (SELECT 1 FROM {dbname}.people_to_people AS pp1 WHERE p.id = pp1.person_a_id) OR
+                        EXISTS (SELECT 1 FROM {dbname}.people_to_people AS pp2 WHERE p.id = pp2.person_b_id) OR
+                        EXISTS (SELECT 1 FROM {dbname}.sources_to_people AS sp WHERE p.id = sp.person_id) OR
+                        EXISTS (SELECT 1 FROM {dbname}.holdings_to_people AS hp WHERE p.id = hp.person_id) OR
+                        EXISTS (SELECT 1 FROM {dbname}.institutions_to_people AS ip WHERE p.id = ip.person_id) OR
+                        EXISTS (SELECT 1 FROM {dbname}.people_to_publications AS pubp WHERE p.id = pubp.person_id))
                      {id_where_clause};"""  # noqa: S608
 
     curs.execute(sql_statement)

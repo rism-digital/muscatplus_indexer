@@ -7,7 +7,12 @@ from orjson import orjson
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import get_work_node, normalize_id
+from indexer.helpers.utilities import (
+    get_related_json,
+    get_work_node,
+    normalize_id,
+    process_related_institutions,
+)
 from indexer.processors import person as person_processor
 
 log = logging.getLogger("muscat_indexer")
@@ -69,6 +74,17 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
             orjson.dumps(all_work_nodes).decode("utf-8") if all_work_nodes else None
         )
 
+    related = None
+    related_institutions: str | None = record.get("related_institutions")
+    if related_institutions:
+        all_related_institutions: list = related_institutions.split("\n")
+        related_institutions_lookup: dict = process_related_institutions(
+            all_related_institutions
+        )
+        related = get_related_json(
+            marc_record, related_institutions_lookup, person_id, "person", "510"
+        )
+
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
     core_person: dict = {
@@ -85,6 +101,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "total_sources_i": total_count if rism_id != "30004985" else 0,
         "work_node_ids": work_node_ids,
         "work_nodes_json": work_nodes_json,
+        "related_institutions_json": orjson.dumps(related).decode("utf-8"),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

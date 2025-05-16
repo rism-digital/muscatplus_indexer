@@ -33,10 +33,10 @@ def index_places(cfg: dict) -> bool:
                 (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
             FROM {dbname}.places AS p
             WHERE
-                (SELECT COUNT(sp.source_id) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) > 0 OR
-                (SELECT COUNT(pp.person_id) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) > 0 OR
-                (SELECT COUNT(ip.institution_id) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) > 0 OR
-                (SELECT COUNT(hp.holding_id) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) > 0
+                EXISTS (SELECT 1 FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) OR
+                EXISTS (SELECT 1 FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) OR
+                EXISTS (SELECT 1 FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) OR
+                EXISTS (SELECT 1 FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id)
                 {id_where_clause};"""  # noqa: S608
     )
 

@@ -69,10 +69,6 @@ related_people_json:
   processor: "_get_related_people_data"
   json: true
 
-related_institutions_json:
-  processor: "_get_related_institutions_data"
-  json: true
-
 related_places_json:
   processor: "_get_related_places_data"
   json: true

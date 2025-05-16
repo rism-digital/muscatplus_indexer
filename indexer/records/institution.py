@@ -153,7 +153,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "bibliographic_references_sm": bibliographic_reference_titles,
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
         "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
-        "related_institutions_json": orjson.dumps(related).decode("utf-8")
+        "related_institutions_json": orjson.dumps(related).decode("utf-8") if related else None
         if related
         else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),

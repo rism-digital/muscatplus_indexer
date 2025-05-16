@@ -101,7 +101,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "total_sources_i": total_count if rism_id != "30004985" else 0,
         "work_node_ids": work_node_ids,
         "work_nodes_json": work_nodes_json,
-        "related_institutions_json": orjson.dumps(related).decode("utf-8"),
+        "related_institutions_json": orjson.dumps(related).decode("utf-8") if related else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

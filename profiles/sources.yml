@@ -215,6 +215,14 @@ opus_numbers_sm:
   subfield: "b"
   multiple: true
 
+periodical_series_title_sm:
+  field: "490"
+  subfield: "a"
+
+periodical_series_json:
+  processor: "_get_periodical_series_data"
+  json: true
+
 # 500 is also indexed in material groups.
 # $p is deprecated and not included.
 general_notes_sm:

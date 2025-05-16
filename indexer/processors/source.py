@@ -611,3 +611,18 @@ def _reformat_notes(note_values: list[str]) -> list[str]:
         notes.append(note_links(note))
 
     return notes
+
+def _get_periodical_series_data(record: pymarc.Record) -> list | None:
+    if "490" not in record:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields("490")
+    ret = []
+
+    for field in fields:
+        ret.append({
+            "title": field.get("a"),
+            "number": field.get("v")
+        })
+
+    return ret

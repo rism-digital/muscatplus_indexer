@@ -126,15 +126,6 @@ def main(args: argparse.Namespace) -> bool:
         release = version[1:]
 
     if args.live:
-        log.info("Indexing to the live core!")
-        for i in range(3, 0, -1):
-            print(
-                f"Waiting 3 seconds in case this is not correct. {i}",
-                end="\r",
-                flush=True,
-            )
-            time.sleep(1)
-
         actual_indexing_core = idx_config["solr"]["live_core"]
         swap_after_indexing = False
     else:
@@ -349,6 +340,16 @@ if __name__ == "__main__":
     #                     help="Only index CMO into the indexing core. Does not swap afterwards.")
 
     input_args: argparse.Namespace = parser.parse_args()
+
+    log.info("Indexing to the live core!")
+    if input_args.live:
+        for i in range(3, 0, -1):
+            print(
+                f"Waiting 3 seconds for Ctrl-C in case this is not correct. {i}",
+                end="\r",
+                flush=True,
+            )
+            time.sleep(1)
 
     if input_args.include:
         input_args.skip_diamm = True

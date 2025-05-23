@@ -39,7 +39,6 @@ explicit = true
 
 [tool.uv.sources]
 pymarc = { git = "https://gitlab.com/pymarc/pymarc.git", rev = "main" }
-verovio = { index = "TestPyPI" }
 
 [tool.ruff.lint]
 select = [

@@ -135,7 +135,7 @@ def _parse_century_date_with_fraction(
     Some dates are fudged a bit, so '20.sc' just means '20th century', but we accept 'c' as the period, and 's' as the
     ordinal. This might get a bit tricky if we have overlapping meanings...
     :param century_start: e.g. 1500
-    :param ordinal: e.g first
+    :param ordinal: e.g. first
     :param period: e.g. quarter
     :return: A tuple corresponding to the correct span of years.
     """

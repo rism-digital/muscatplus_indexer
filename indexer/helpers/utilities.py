@@ -494,7 +494,7 @@ def get_related_institutions(
 
 BREAK_CONVERT: re.Pattern = re.compile(r"({{brk}})")
 URL_MATCH: re.Pattern = re.compile(
-    r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?+-=\\.&]*)", re.MULTILINE | re.UNICODE
+    r"((https?):((//)|(\\\\))+[\w:#@%/;$()~_?+-=\\.&]*)", re.MULTILINE | re.UNICODE
 )
 OPAC_LINK: re.Pattern = re.compile(
     r"https?://opac\.rism\.info/search\?id=(\d+)&View=rism", re.MULTILINE | re.UNICODE
@@ -812,6 +812,10 @@ def get_bibliographic_references_json(
     fields: list[pymarc.Field] = record.get_fields(field)
 
     for ff in fields:
+        if not ff.subfields:
+            log.warning("Empty field %s. Skipping: %s", field, record["001"].value())
+            continue
+
         fid: str | None = ff.get("0")
         if not fid:
             log.warning(
@@ -821,7 +825,7 @@ def get_bibliographic_references_json(
             )
             continue
 
-        literature_id: str = f"literature_{fid}"
+        literature_id: str = f"publication_{fid}"
         lit = {
             "id": literature_id,
             "formatted": refs[fid],
@@ -937,7 +941,7 @@ def get_work_node(
 
     if creator and "a" in creator:
         name: str = creator["a"].strip()
-        dates: str = f" ({d})" if (d := creator.get("d")) else ""
+        dates: str = f" ({date})" if (date := creator.get("d")) else ""
 
         composer_name = f"{name}{dates}"
         composer_id = f"person_{creator['0']}"
@@ -967,8 +971,9 @@ def process_related_institutions(institutions: list) -> dict:
     for inst in institutions:
         try:
             inst_id, siglum, name, place = inst.split("|:|")
-        except Exception:
-            print(inst)
+        except Exception:  # noqa
+            log.error("Could not process related institution %s", inst)
+            continue
 
         d = {"name": name}
 

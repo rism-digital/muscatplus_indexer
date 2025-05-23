@@ -33,7 +33,7 @@ from indexer.index_places import index_places
 from indexer.index_sources import index_sources
 from indexer.index_subjects import index_subjects
 from indexer.index_tombstones import index_tombstones
-from indexer.index_works import index_works
+from indexer.index_works import index_work_catalogues, index_works
 
 faulthandler.enable()
 
@@ -218,6 +218,7 @@ def main(args: argparse.Namespace) -> bool:
         elif record_type == "digital-objects" and "digital-objects" not in args.exclude:
             res &= index_digital_objects(idx_config)
         elif record_type == "works" and "works" not in args.exclude:
+            res &= index_work_catalogues(idx_config)
             res &= index_works(idx_config)
         elif record_type == "tombstones" and "tombstones" not in args.exclude:
             res &= index_tombstones(idx_config)

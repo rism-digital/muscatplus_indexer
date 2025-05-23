@@ -1,14 +1,41 @@
 import logging
-from collections import deque
 from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.work import create_work_index_documents
+from indexer.records.work import (
+    create_work_catalogue_index_document,
+    create_work_index_documents,
+)
 
 log = logging.getLogger("muscat_indexer")
+
+def _get_work_catalogues(cfg: dict) -> Generator[dict, None, None]:
+    log.info("Getting list of work catalogues to index")
+    conn = mysql_pool.connection()
+    curs = conn.cursor()
+    dbname: str = cfg["mysql"]["database"]
+
+    sql_query: str = f"""SELECT pub.id AS pub_id, pub.marc_source AS marc_source,
+                            GROUP_CONCAT(DISTINCT wpubs.work_id SEPARATOR '\n') AS work_ids,
+                            GROUP_CONCAT(wks.marc_source SEPARATOR '\n') AS works_marc
+                            FROM {dbname}.publications AS pub
+                            LEFT JOIN {dbname}.works_to_publications wpubs ON pub.id = wpubs.publication_id
+                            LEFT JOIN {dbname}.works wks ON wpubs.work_id = wks.id
+                            WHERE pub.work_catalogue = 1 AND pub.wf_stage = 1
+                            GROUP BY pub.id
+                            ORDER BY pub.id;"""  # noqa: S608
+
+    curs.execute(sql_query)
+
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
+        yield rows
+
+    curs.close()
+    conn.close()
+
 
 
 def _get_works(cfg: dict) -> Generator[dict, None, None]:
@@ -17,20 +44,21 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
 
-    sql_query: str = f"""SELECT work.id, work.marc_source,
-        COUNT(DISTINCT s.id) as source_count,
-        GROUP_CONCAT(DISTINCT s.id SEPARATOR '\n') as source_ids,
-        GROUP_CONCAT(DISTINCT s.marc_source SEPARATOR '\n') as source_marc,
-        GROUP_CONCAT(DISTINCT pub.marc_source SEPARATOR '\n') as publication_marc,
-        GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries
-        FROM {dbname}.works AS work
-        LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
-        LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
-        LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
-        LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
---         WHERE work.wf_stage = 1
-        GROUP BY work.id
-        ORDER BY work.id asc;"""  # noqa: S608
+    sql_query: str = f"""SELECT work.id, work.marc_source, peep.id AS person_id,
+                            COUNT(DISTINCT s.id) as source_count,
+                            GROUP_CONCAT(DISTINCT s.id SEPARATOR '\n') as source_ids,
+                            GROUP_CONCAT(DISTINCT s.marc_source SEPARATOR '\n') as source_marc,
+                            GROUP_CONCAT(DISTINCT pub.marc_source SEPARATOR '\n') as publication_marc,
+                            GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publications,
+                            CONCAT_WS('', peep.full_name, NULLIF( CONCAT(' (', peep.life_dates, ')'), '')) AS person_name
+                            FROM {dbname}.works AS work
+                            LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
+                            LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
+                            LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
+                            LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
+                            LEFT JOIN {dbname}.people peep ON work.person_id = peep.id
+                        GROUP BY work.id
+                        ORDER BY work.id;"""  # noqa: S608
 
     curs.execute(sql_query)
 
@@ -51,7 +79,7 @@ def index_works(cfg: dict) -> bool:
 
 def index_work_groups(works: list, cfg: dict) -> bool:
     log.info("Indexing Work Group")
-    records_to_index: deque = deque()
+    records_list: list = []
 
     for record in works:
         try:
@@ -61,13 +89,41 @@ def index_work_groups(works: list, cfg: dict) -> bool:
             continue
 
         log.debug("Appending work document")
-        records_to_index.extend(docs)
-
-    records_list: list = list(records_to_index)
+        records_list.extend(docs)
 
     check: bool = True if cfg["dry"] else submit_to_solr(records_list, cfg)
 
     if not check:
         log.error("There was an error submitting works to Solr")
+
+    return check
+
+
+def index_work_catalogues(cfg: dict) -> bool:
+    log.info("Indexing work catalogues")
+    work_catalogue_groups = _get_work_catalogues(cfg)
+
+    parallelise(work_catalogue_groups, index_work_catalogue_groups, cfg)
+
+    return True
+
+
+def index_work_catalogue_groups(catalogues: list, cfg: dict) -> bool:
+    log.info("Indexing work catalogue group")
+    records_list: list = []
+
+    for record in catalogues:
+        try:
+            doc = create_work_catalogue_index_document(record, cfg)
+        except RequiredFieldException:
+            log.critical("Could not index work catalogue %s", record["id"])
+            continue
+
+        records_list.append(doc)
+
+    check = True if cfg["dry"] else submit_to_solr(records_list, cfg)
+
+    if not check:
+        log.error("There was an error submitting work catalogues to Solr")
 
     return check

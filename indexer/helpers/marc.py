@@ -1,7 +1,7 @@
 import pymarc
 
 
-def _parse_field(line: str) -> pymarc.Field:
+def _parse_field(line: str) -> pymarc.Field | None:
     # General format: =TAG  ##$afoo$bbar
     tag_value: str = line[1:4]
 
@@ -10,14 +10,18 @@ def _parse_field(line: str) -> pymarc.Field:
     if "000" <= tag_value < "010":
         return pymarc.Field(tag=tag_value, data=line[6:].rstrip("\r\n"))
 
+    if len(line[8:]) <= 0:
+        return None
+
     indicators: pymarc.Indicators = pymarc.Indicators(line[6], line[7])
     subfields: list[pymarc.Subfield] = [
         _parse_subf(part)
+        # subfields start at 8, but skipping the first $ means we don't have an empty split.
         for part in line[9:].split("$")
         if part  # skips empty strings
     ]
-    return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
+    return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
 def _parse_subf(subf_value: str) -> pymarc.Subfield:
     value: str = subf_value[1:].strip().replace("_DOLLAR_", "$")
@@ -31,9 +35,14 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    fields: list[pymarc.Field] = [
-        _parse_field(line) for line in record.splitlines() if line and line != ""
-    ]
+    fields: list[pymarc.Field] = []
+
+    for line in record.splitlines():
+        if line and line != "":
+            f = _parse_field(line)
+            if f is not None:
+                fields.append(f)
+
     return pymarc.Record(fields=fields)
 
 

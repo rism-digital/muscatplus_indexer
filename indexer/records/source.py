@@ -29,7 +29,7 @@ from indexer.helpers.utilities import (
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
-from indexer.records.incipits import get_incipits
+from indexer.records.incipits import get_source_incipits
 
 log = logging.getLogger("muscat_indexer")
 with open("index_config.yml") as idx_cf:
@@ -342,18 +342,16 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # if faster indexing is needed.
 
     incipits: list = (
-        get_incipits(
+            get_source_incipits(
             marc_record,
             main_title,
             record_type_id,
-            rism_id,
-            source_id,
             country_codes,
             has_digitization,
             creator_name,
             source_dates,
         )
-        or []
+            or []
     )
 
     res: list = [source_core]
@@ -363,6 +361,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     del marc_record
     del parent_marc_record
     del record
+    del child_marc_records
 
     return res
 

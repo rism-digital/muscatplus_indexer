@@ -11,6 +11,7 @@ from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.utilities import (
     get_content_types,
     get_titles,
+    normalize_id,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -94,24 +95,59 @@ def _get_pae_features(pae: str) -> dict:
     # Verovio is set to render PAE to features
     return vrv_tk.getDescriptiveFeatures({})
 
+def _get_pae_feature_fields(pae_code: str) -> dict:
+    d = {
+        "original_pae_sni": pae_code
+    }
 
-def __incipit(
-    field: pymarc.Field,
-    record: pymarc.Record,
-    record_type_id: int,
-    parent_record_title: str,
-    num: int,
-    country_codes: list[str],
-    has_digitization: bool,
-    record_id,
-    record_ident,
-    creator,
-    source_dates,
-    standard_titles,
-) -> dict[str, object]:
-    # If a record has neither a 774 (parent -> child) nor a 773 (child -> parent) then it's a single item.
-    is_single_item: bool = "774" not in record or "773" not in record
+    feat: dict = _get_pae_features(pae_code)
+    intervals: list = feat.get("intervalsChromatic", [])
+    intervals_diat: list = feat.get("intervalsDiatonic", [])
+    pitches: list = feat.get("pitchesChromatic", [])
+    pitches_diat: list = feat.get("pitchesDiatonic", [])
+    interval_ids: list = feat.get("intervalsIds", [])
+    pitch_ids: list = feat.get("pitchesIds", [])
+    contour_gross: list = feat.get("intervalGrossContour", [])
+    contour_refined: list = feat.get("intervalRefinedContour", [])
 
+    # Index the 12 interval fields separately; used for scoring and ranking the document
+    # intvfields: dict = _get_intervals(intervals) if intervals else {}
+    # d.update(intvfields)
+
+    rend: dict = {
+        "intervals_bi": " ".join(intervals) if intervals else None,
+        "intervals_diat_bi": " ".join(intervals_diat) if intervals_diat else None,
+        "intervals_im": [int(i) for i in intervals] if intervals else None,
+        "intervals_diat_im": [int(i) for i in intervals_diat]
+        if intervals_diat
+        else None,
+        "intervals_len_i": len(intervals) if intervals else None,
+        "intervals_diat_len_i": len(intervals_diat) if intervals_diat else None,
+        "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8")
+        if interval_ids
+        else None,
+        "pitches_bi": " ".join(pitches) if pitches else None,
+        "pitches_diat_bi": " ".join(pitches_diat) if pitches_diat else None,
+        "pitches_sm": pitches if pitches else None,
+        "pitches_diat_sm": pitches_diat if pitches_diat else None,
+        "pitches_len_i": len(pitches) if pitches else None,
+        "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
+        "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8")
+        if pitch_ids
+        else None,
+        "contour_gross_sm": contour_gross if contour_gross else None,
+        "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
+        "contour_refined_sm": contour_refined if contour_refined else None,
+        "contour_refined_bi": " ".join(contour_refined)
+        if contour_refined
+        else None,
+    }
+    d.update(rend)
+    # update the record with the verovio features
+    return d
+
+
+def _process_incipit_data(field: pymarc.Field, document_id: str) -> dict:
     work_num = field.get("a", "x")
     mvt_num = field.get("b", "x")
     inc_num = field.get("c", "x")
@@ -119,7 +155,7 @@ def __incipit(
     if not work_num.isdigit() or not mvt_num.isdigit() or not inc_num.isdigit():
         log.error(
             "Incipit numbering is not correct for %s (%s.%s.%s)",
-            record_id,
+            document_id,
             work_num,
             mvt_num,
             inc_num,
@@ -130,11 +166,11 @@ def __incipit(
     )
 
     if work_number == "x.x.x":
-        log.warning("Bad incipit number for %s", record_ident)
+        log.warning("Bad incipit number for %s", document_id)
 
     clef: str | None = field.get("g")
 
-    log.debug("Creating incipits %s %s", record_ident, work_number)
+    log.debug("Creating incipits %s %s", document_id, work_number)
 
     is_mensural: bool = False
     if clef and "+" in clef:
@@ -157,7 +193,7 @@ def __incipit(
     # by splitting on space characters and then joining with a single space.
     if isinstance(time_signature_data, str) and time_signature_data.count(" ") > 2:
         log.warning(
-            "Excessive spaces in incipit for source %s. Collapsing them.", record_id
+            "Excessive spaces in incipit for source %s. Collapsing them.", document_id
         )
         time_signature_data = " ".join(time_signature_data.split())
 
@@ -177,23 +213,11 @@ def __incipit(
 
     norm_key_sig: str = key_sig.replace("[", "").replace("]", "")
 
-    d: dict = {
-        "id": f"{record_ident}_incipit_{num}",
-        "type": "incipit",
-        "source_id": record_ident,
-        "rism_id": record_id,  # index the raw source id to support incipit lookups by source
-        "record_type_s": get_record_type(record_type_id, is_single_item),
-        "source_type_s": get_source_type(record_type_id),
-        "content_types_sm": get_content_types(record),
-        # using 'main_title_s' allows us to later serialize this as a source record.
-        "main_title_s": parent_record_title,
-        "creator_name_s": creator,
-        "incipit_num_i": num,
+    d = {
         "music_incipit_s": music_incipit if incipit_len > 0 else None,
         "has_notation_b": incipit_len > 0,
         "incipit_len_i": incipit_len,
         "text_incipit_sm": field.get_subfields("t"),
-        "date_ranges_im": source_dates,
         "titles_sm": field.get_subfields("d"),
         "role_s": field.get("e"),
         "work_num_s": work_number,
@@ -206,74 +230,63 @@ def __incipit(
         "is_mensural_b": is_mensural,
         "general_notes_sm": field.get_subfields("q"),
         "scoring_sm": field.get_subfields("z"),
+    }
+
+    return d
+
+
+def __incipit(
+    field: pymarc.Field,
+    record_type_id: int,
+    parent_record_title: str,
+    num: int,
+    country_codes: list[str],
+    has_digitization: bool,
+    record_id,
+    record_ident,
+    creator,
+    source_dates,
+    standard_titles,
+    is_single_item: bool,
+    content_types: list[str]
+) -> dict[str, object]:
+    d: dict = {
+        "id": f"{record_ident}_incipit_{num}",
+        "type": "incipit",
+        "source_id": record_ident,
+        "rism_id": record_id,  # index the raw source id to support incipit lookups by source
+        "record_type_s": get_record_type(record_type_id, is_single_item),
+        "source_type_s": get_source_type(record_type_id),
+        "content_types_sm": content_types,
+        # using 'main_title_s' allows us to later serialize this as a source record.
+        "main_title_s": parent_record_title,
+        "creator_name_s": creator,
+        "incipit_num_i": num,
         "country_codes_sm": country_codes,
         "standard_titles_json": orjson.dumps(standard_titles).decode("utf-8")
         if standard_titles
         else None,
         "has_digitization_b": has_digitization,
+        "date_ranges_im": source_dates,
     }
+
+    incipit_data: dict = _process_incipit_data(field, record_id)
+    d.update(incipit_data)
 
     pae_code: str | None = _incipit_to_pae(d) if d["music_incipit_s"] else None
 
     # Run the PAE through Verovio
     if pae_code:
-        d["original_pae_sni"] = pae_code
-
-        feat: dict = _get_pae_features(pae_code)
-        intervals: list = feat.get("intervalsChromatic", [])
-        intervals_diat: list = feat.get("intervalsDiatonic", [])
-        pitches: list = feat.get("pitchesChromatic", [])
-        pitches_diat: list = feat.get("pitchesDiatonic", [])
-        interval_ids: list = feat.get("intervalsIds", [])
-        pitch_ids: list = feat.get("pitchesIds", [])
-        contour_gross: list = feat.get("intervalGrossContour", [])
-        contour_refined: list = feat.get("intervalRefinedContour", [])
-
-        # Index the 12 interval fields separately; used for scoring and ranking the document
-        # intvfields: dict = _get_intervals(intervals) if intervals else {}
-        # d.update(intvfields)
-
-        rend: dict = {
-            "intervals_bi": " ".join(intervals) if intervals else None,
-            "intervals_diat_bi": " ".join(intervals_diat) if intervals_diat else None,
-            "intervals_im": [int(i) for i in intervals] if intervals else None,
-            "intervals_diat_im": [int(i) for i in intervals_diat]
-            if intervals_diat
-            else None,
-            "intervals_len_i": len(intervals) if intervals else None,
-            "intervals_diat_len_i": len(intervals_diat) if intervals_diat else None,
-            "interval_ids_json": orjson.dumps(interval_ids).decode("utf-8")
-            if interval_ids
-            else None,
-            "pitches_bi": " ".join(pitches) if pitches else None,
-            "pitches_diat_bi": " ".join(pitches_diat) if pitches_diat else None,
-            "pitches_sm": pitches if pitches else None,
-            "pitches_diat_sm": pitches_diat if pitches_diat else None,
-            "pitches_len_i": len(pitches) if pitches else None,
-            "pitches_diat_len_i": len(pitches_diat) if pitches_diat else None,
-            "pitches_ids_json": orjson.dumps(pitch_ids).decode("utf-8")
-            if pitch_ids
-            else None,
-            "contour_gross_sm": contour_gross if contour_gross else None,
-            "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
-            "contour_refined_sm": contour_refined if contour_refined else None,
-            "contour_refined_bi": " ".join(contour_refined)
-            if contour_refined
-            else None,
-        }
-
-        # update the record with the verovio features
-        d.update(rend)
+        feats = _get_pae_feature_fields(pae_code)
+        d.update(feats)
 
     return d
 
 
-def get_incipits(
+def get_source_incipits(
     record: pymarc.Record,
     parent_record_title: str,
     record_type_id: int,
-    record_id,
-    record_ident,
     country_codes: list[str],
     has_digitization: bool,
     creator_name: str | None,
@@ -282,23 +295,87 @@ def get_incipits(
     if "031" not in record:
         return None
 
+    rism_id: str = normalize_id(record["001"].value())
+    source_id: str = f"source_{rism_id}"
+
     incipits: list = record.get_fields("031")
     standard_titles: list[dict] | None = get_titles(record, "240")
+    # If a record has neither a 774 (parent -> child) nor a 773 (child -> parent) then it's a single item.
+    is_single_item: bool = "774" not in record or "773" not in record
+    content_types: list[str] = get_content_types(record)
 
     return [
         __incipit(
             f,
-            record,
             record_type_id,
             parent_record_title,
             num,
             country_codes,
             has_digitization,
-            record_id,
-            record_ident,
+            rism_id,
+            source_id,
             creator_name,
             source_dates,
             standard_titles,
+            is_single_item,
+            content_types
         )
         for num, f in enumerate(incipits, 1)
     ]
+
+def __work_incipit(
+    field: pymarc.Field,
+    num: int,
+    work_title: str | None,
+    id_num: str,
+    document_id: str,
+    creator: str | None
+) -> dict:
+    d = {
+        "id": f"{document_id}_incipit_{num}",
+        "type": "incipit",
+        "rism_id": id_num,
+        "work_id": document_id,
+        "main_title_s": work_title,
+        "creator_name_s": creator,
+        "incipit_num_i": num,
+    }
+
+    incipit_data: dict = _process_incipit_data(field, document_id)
+    d.update(incipit_data)
+
+    pae_code: str | None = _incipit_to_pae(d) if d["music_incipit_s"] else None
+
+    # Run the PAE through Verovio
+    if pae_code:
+        feats = _get_pae_feature_fields(pae_code)
+        d.update(feats)
+
+    return d
+
+
+def get_work_incipits(
+    record: pymarc.Record,
+    work_title: str | None,
+    creator_name: str | None
+) -> list | None:
+    if "031" not in record:
+        return None
+
+    rism_id: str = normalize_id(record["001"].value())
+    work_id: str = f"work_{rism_id}"
+
+    incipits: list[pymarc.Field] = record.get_fields("031")
+    return [
+        __work_incipit(f,
+                       num,
+                       work_title,
+                       rism_id,
+                       work_id,
+                       creator_name)
+            for num, f in enumerate(incipits, 1)
+    ]
+
+
+
+

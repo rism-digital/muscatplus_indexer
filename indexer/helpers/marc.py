@@ -8,9 +8,10 @@ def _parse_field(line: str) -> pymarc.Field | None:
     # Control fields are those in the <010 range. They do not have
     # subfields, but have the data encoded in them directly.
     if "000" <= tag_value < "010":
-        return pymarc.Field(tag=tag_value, data=line[6:].rstrip("\r\n"))
+        return pymarc.Field(tag=tag_value, data=line[6:])
 
-    if len(line[8:]) <= 0:
+    if line[8:] == "":
+        # A bug in Muscat means some fields are empty.
         return None
 
     indicators: pymarc.Indicators = pymarc.Indicators(line[6], line[7])
@@ -35,13 +36,16 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
-    fields: list[pymarc.Field] = []
+    fields: list[pymarc.Field] = [
+        pf for line in record.splitlines() if line and line != "" for pf in [_parse_field(line.rstrip("\r\n"))] if pf is not None
+        # _parse_field(line.rstrip("\r\n")) for line in record.splitlines() if line and line != ""
+    ]
 
-    for line in record.splitlines():
-        if line and line != "":
-            f = _parse_field(line)
-            if f is not None:
-                fields.append(f)
+    # for line in record.splitlines():
+    #     if line and line != "":
+    #         f = _parse_field(line)
+    #         if f is not None:
+    #             fields.append(f)
 
     return pymarc.Record(fields=fields)
 

@@ -8,8 +8,6 @@ import edtf
 from edtf.parser.edtf_exceptions import EDTFParseException
 
 log = logging.getLogger("muscat_indexer")
-# assume European format dates
-edtf.appsettings.DAY_FIRST = True
 
 # The simplest single year match
 SIMPLE_SINGLE_YEAR_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})$")
@@ -60,6 +58,8 @@ EARLY_CENTURY_END_YEAR: int = 10
 LATE_CENTURY_START_YEAR: int = 90
 
 NO_DATES = {
+    None,
+    "",
     "[s.a.]",
     "[s. a.]",
     "s.a.",
@@ -207,7 +207,7 @@ def _parse_century_date_with_adjective(
 @functools.lru_cache(maxsize=2048)
 def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]:  # noqa: MC0001
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
-    if not date_statement or date_statement in NO_DATES:
+    if date_statement in NO_DATES:
         return None, None
 
     # Skip Año and any roman numerals:
@@ -236,7 +236,7 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
 
     # Slow path
     # First simplify known problems for the edtf parser
-    simplified_date_statement = date_statement.replace("(?)", "")
+    simplified_date_statement = date_statement.replace("(?)", "?")
 
     # Replace any dates that use dots instead of dashes to separate the parameters.
     if DOT_DIVIDED_REGEX.match(simplified_date_statement):
@@ -384,7 +384,6 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
         start_year: int | None = parsed_date.lower_strict()[0]
         end_year: int | None = parsed_date.upper_strict()[0]
     except AttributeError as e:
-        # todo: remove this once https://github.com/ixc/python-edtf/issues/32 is fixed
         log.debug("Unexpected error %s while parsing %s", e, date_statement)
         return None, None
 
@@ -417,57 +416,6 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
     return start_year, end_year
 
 
-def parse_date_metadata(
-    date_statements: list[str], start_year: int | None, end_year: int | None
-) -> tuple[int | None, int | None]:
-    """
-    Parse the date metadata we're given in mods/dc (usually some combination of date statements, start year and end year)
-    into start year and end year, with missing information filled in from the other date fields where possible
-    We need the start and end date information to judge if we should be parsing from date statements and to check ordering
-    If non-null, start year will always be <= end year
-    :param date_statements:
-    :param start_year:
-    :param end_year:
-    :return: (start_year, end_year, date_statements)
-    """
-    # we only try to parse start and end from the date statement if we have neither - otherwise we end up with
-    # inconsistencies
-    if not start_year and not end_year:
-        # parse from date statement
-        if not date_statements:
-            return None, None
-
-        if len(date_statements) == 1:
-            # parse the start and end from the date statment if possible
-            start_year, end_year = parse_date_statement(date_statements[0])
-        else:
-            # We don't know which of the date statements is the start or end, and sometimes they're ranges
-            # so we just take the earliest start and latest end
-            date_ranges_from_date_statements = [
-                parse_date_statement(d) for d in date_statements
-            ]
-            start_years = [
-                start
-                for start, _ in date_ranges_from_date_statements
-                if start is not None
-            ]
-            end_years = [
-                end for _, end in date_ranges_from_date_statements if end is not None
-            ]
-            if start_years:
-                start_year = min(start_years)
-            if end_years:
-                end_year = max(end_years)
-
-    if start_year is not None and end_year is not None and start_year > end_year:
-        log.warning(
-            "Error parsing date: start %s is greater than end %s", start_year, end_year
-        )
-        return None, None
-
-    return start_year, end_year
-
-
 EARLIEST_YEAR_IF_MISSING: int = -2000
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
 
@@ -479,7 +427,7 @@ def process_date_statements(
     latest_dates: list[int] = []
 
     for statement in date_statements:
-        if not statement or statement in NO_DATES:
+        if statement in NO_DATES:
             continue
 
         # Skip Año and any roman numerals:
@@ -524,11 +472,44 @@ def process_date_statements(
 
     # If neither date was parseable, don't pretend we have a date.
     if (
-        earliest_date == EARLIEST_YEAR_IF_MISSING
-        and latest_date == LATEST_YEAR_IF_MISSING
+        earliest_date <= EARLIEST_YEAR_IF_MISSING
+        and latest_date >= LATEST_YEAR_IF_MISSING
     ):
+        return None
+
+    if earliest_date > latest_date:
+        log.warning(
+            "Earliest date %s is greater than latest date %s for record %s", earliest_date, latest_date, record_id
+        )
         return None
 
     # If we don't have one but we do have the other, these will still be valid (but
     # improbable) integer values.
     return [earliest_date, latest_date]
+
+
+def convert_to_edtf(old_date: str) -> str:
+    if len(old_date) == 5:
+        if old_date.endswith("c"):
+            return f"{old_date[0:4]}~"
+        elif old_date.endswith("p"):
+            return f"{old_date[0:4]}/.."
+        elif old_date.endswith("a"):
+            return f"../{old_date[0:4]}"
+        else:
+            return old_date
+    elif len(old_date) > 5:
+        if old_date.endswith(".0"):
+            return f"{old_date[0:4]}"
+        elif old_date.startswith("ca. ") or old_date.startswith("um"):
+            return f"{old_date[-4:]}~"
+        elif old_date.startswith("nach"):
+            return f"{old_date[-4:]}/.."
+        else:
+            return old_date
+    else:
+        return old_date
+
+def convert_to_solr_daterange(value: str) -> str:
+    """Converts a date string to input suitable for storing in a Solr date range field."""
+    pass

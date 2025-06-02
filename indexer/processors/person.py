@@ -45,6 +45,17 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
     return process_date_statements(date_statements, record_id)
 
 
+def _get_earliest_latest_dates_dtr(record: pymarc.Record) -> str | None:
+    date_range: list[int] | None = _get_earliest_latest_dates(record)
+    if not date_range:
+        return None
+
+    first = date_range[0]
+    last = date_range[1]
+
+    return f"[{first} TO {last}]"
+
+
 def _get_name_variants(record: pymarc.Record) -> list[str] | None:
     name_variants: list[str] | None = to_solr_multi(record, "400", "a")
 

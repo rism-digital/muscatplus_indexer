@@ -25,22 +25,35 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     curs.execute(
         f"""SELECT i.id, i.marc_source, i.siglum,
                    i.created_at AS created, i.updated_at AS updated,
-                    GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '|~|') AS publication_entries,
-                    (SELECT COUNT(DISTINCT allids)
-                        FROM (
-                            SELECT DISTINCT ss.id AS allids
-                                FROM {dbname}.sources_to_institutions AS si
-                                LEFT JOIN {dbname}.sources AS ss on si.source_id = ss.id
-                                WHERE si.institution_id = i.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
-                            UNION SELECT DISTINCT hi.source_id AS allids
-                                  FROM {dbname}.holdings AS hi
-                                  LEFT JOIN {dbname}.sources AS hs ON hi.source_id = hs.id
-                                  WHERE hi.lib_siglum = i.siglum AND (hs.wf_stage IS NULL OR hs.wf_stage = 1)
-                            UNION SELECT DISTINCT hs.id AS allids
-                                FROM {dbname}.sources AS hs
-                                LEFT JOIN {dbname}.holdings AS hd ON hs.source_id = hd.source_id
-                                WHERE hd.lib_siglum = i.siglum AND (hs.wf_stage IS NULL OR hs.wf_stage = 1)
-                        ) AS derived) AS total_source_count,
+                   JSON_ARRAYAGG(DISTINCT
+                                 JSON_OBJECT('id', pub.id,
+                                             'author', pub.author,
+                                             'title', pub.title,
+                                             'journal', pub.journal,
+                                             'date', pub.date,
+                                             'place', pub.place,
+                                             'short_name', pub.short_name)) AS publication_entries,
+                    ((
+                        SELECT COUNT(DISTINCT ss.id)
+                        FROM {dbname}.sources_to_institutions AS si
+                        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
+                        WHERE si.institution_id = i.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+                      )
+                      +
+                      (
+                        SELECT COUNT(DISTINCT hi.source_id)
+                        FROM {dbname}.holdings AS hi
+                        LEFT JOIN {dbname}.sources AS hs1 ON hi.source_id = hs1.id
+                        WHERE hi.lib_siglum = i.siglum AND (hs1.wf_stage IS NULL OR hs1.wf_stage = 1)
+                      )
+                      +
+                      (
+                        SELECT COUNT(DISTINCT hs2.id)
+                        FROM {dbname}.sources AS hs2
+                        LEFT JOIN {dbname}.holdings AS hd ON hs2.source_id = hd.source_id
+                        WHERE hd.lib_siglum = i.siglum AND (hs2.wf_stage IS NULL OR hs2.wf_stage = 1)
+                      )
+                    ) AS total_source_count,
                     (SELECT COUNT(DISTINCT si.source_id)
                        FROM {dbname}.sources_to_institutions AS si
                        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
@@ -90,12 +103,12 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
                     LEFT JOIN {dbname}.institutions_to_publications ipt on ipt.institution_id = i.id
                     LEFT JOIN {dbname}.publications pub ON ipt.publication_id = pub.id
                     WHERE i.siglum IS NOT NULL OR
-                        (EXISTS (SELECT 1 FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) OR
-                         EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) OR
-                         EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id) OR
-                         EXISTS (SELECT 1 FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) OR
-                         EXISTS (SELECT 1 FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) OR
-                         EXISTS (SELECT 1 FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id)
+                        ((SELECT COUNT(hi.holding_id) FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(ii.institution_b_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id) > 0 OR
+                         (SELECT COUNT(ii.institution_a_id) FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id) > 0 OR
+                         (SELECT COUNT(pi.person_id) FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(bi.publication_id) FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id) > 0 OR
+                         (SELECT COUNT(si.source_id) FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id) > 0
                         ) {id_where_clause}
                     GROUP BY i.id
                     ORDER BY i.id ASC;"""  # noqa: S608

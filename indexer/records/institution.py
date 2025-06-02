@@ -114,7 +114,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     )
 
     publication_entries: list = (
-        list({n.strip() for n in d.split("|~|") if n and n.strip()})
+        orjson.loads(d)
         if (d := record.get("publication_entries"))
         else []
     )

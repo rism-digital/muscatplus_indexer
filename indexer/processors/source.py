@@ -150,6 +150,17 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
     return process_date_statements(date_statements, record_id)
 
 
+def _get_earliest_latest_dates_dtr(previously_computed: list[int] | None) -> str | None:
+    # Takes the output of the _get_earliest_latest_dates function and creates a Solr DateRange Statement.
+    if not previously_computed:
+        return None
+
+    first = previously_computed[0]
+    last = previously_computed[1]
+
+    return f"[{first} TO {last}]"
+
+
 def _get_rism_series_identifiers(record: pymarc.Record) -> list | None:
     if "510" not in record:
         return None
@@ -295,9 +306,10 @@ def _get_source_membership(record: pymarc.Record) -> list | None:
     return ret
 
 
-def _get_num_source_membership(record: pymarc.Record) -> int | None:
-    ret: list = _get_source_membership(record) or []
-    return len(ret) or None
+def _get_num_source_membership(previously_computed: list | None) -> int | None:
+    if not previously_computed:
+        return None
+    return len(previously_computed)
 
 
 def _get_country_code(record: pymarc.Record) -> str | None:

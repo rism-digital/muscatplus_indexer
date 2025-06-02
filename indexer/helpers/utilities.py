@@ -5,13 +5,13 @@ import re
 import timeit
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import TypedDict
 
 import orjson
 import pymarc
 
-from indexer.exceptions import MalformedIdentifierException, RequiredFieldException
+from indexer.exceptions import RequiredFieldException
 from indexer.helpers.identifiers import transform_rism_id
 from indexer.helpers.solr import exists
 
@@ -210,6 +210,7 @@ def to_solr_multi_required(
     return ret
 
 
+@lru_cache(maxsize=2048)
 def normalize_id(identifier: str) -> str:
     """
     Muscat IDs come in a wide variety of shapes and sizes, some with leading zeroes, others without.
@@ -221,14 +222,7 @@ def normalize_id(identifier: str) -> str:
     :return: A normalized identifier
     """
 
-    try:
-        idval: int = int(identifier)
-    except ValueError as err:
-        raise MalformedIdentifierException(
-            f"The identifier {identifier} is not well-formed."
-        ) from err
-
-    return f"{idval}"
+    return f"{int(identifier)}"
 
 
 def clean_multivalued(fields: dict, field_name: str) -> list[str] | None:
@@ -772,7 +766,7 @@ def get_parent_order_for_members(
 
 
 def get_bibliographic_reference_titles(
-    references: list[str] | None,
+    references: list[dict] | None,
 ) -> list[str] | None:
     if not references:
         return None
@@ -780,14 +774,13 @@ def get_bibliographic_reference_titles(
     ret: list = []
     for r in references:
         # |:| is a unique field delimiter
-        _, *rest = r.split("|:|")
-        ret.append(format_reference(rest))
+        ret.append(format_reference(r))
 
     return ret
 
 
 def get_bibliographic_references_json(
-    record: pymarc.Record, field: str, references: list[str] | None
+    record: pymarc.Record, field: str, references: list[dict] | None
 ) -> list[dict] | None:
     if not references:
         return None
@@ -798,10 +791,10 @@ def get_bibliographic_references_json(
     refs: dict = {}
     for ref in references:
         # |:| is a unique field delimiter
-        rid, *rest = ref.split("|:|")
+        rid = str(ref['id'])
 
         try:
-            refs[rid] = format_reference(rest)
+            refs[rid] = format_reference(ref)
         except ValueError:
             log.warning(
                 "Could not index references for record %s", record["001"].value()
@@ -810,7 +803,6 @@ def get_bibliographic_references_json(
 
     outp: list = []
     fields: list[pymarc.Field] = record.get_fields(field)
-
     for ff in fields:
         if not ff.subfields:
             log.warning("Empty field %s. Skipping: %s", field, record["001"].value())
@@ -838,29 +830,28 @@ def get_bibliographic_references_json(
     return outp
 
 
-def format_reference(ref: list) -> str:
-    author, description, journal, date, place, short = ref
+def format_reference(ref: dict) -> str:
     res: str = ""
 
-    if author:
-        res += f"{author.strip()}{' ' if author.endswith('.') else '. '}"
+    if a := ref.get("author"):
+        res += f"{a.strip()}{' ' if a.endswith('.') else '. '}"
 
-    if description:
-        res += f"{description.strip()}{' ' if description.endswith('.') else '. '}"
+    if d := ref.get("description"):
+        res += f"{d.strip()}{' ' if d.endswith('.') else '. '}"
 
-    if journal:
-        res += f"{journal.strip()}, "
+    if j := ref.get("journal"):
+        res += f"{j.strip()}, "
 
-    if date:
-        res += f"{date.strip()}. "
+    if dd := ref.get("date"):
+        res += f"{dd.strip()}. "
 
-    if place:
-        res += f"{place.strip()} "
+    if p := ref.get("place"):
+        res += f"{p.strip()} "
 
-    if short:
-        res += f"({short.strip()})."
+    if s := ref.get("short"):
+        res += f"({s.strip()})."
 
-    return res
+    return res.strip()
 
 
 def update_rism_document(

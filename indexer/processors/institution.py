@@ -32,12 +32,6 @@ def _get_external_ids(record: pymarc.Record) -> list | None:
     ]
 
 
-# This is a multivalued field with a single value so that we can use the same field name (country_codes_sm)
-# as sources.
-def _get_country_codes(record: pymarc.Record) -> list[str] | None:
-    return [c] if (c := _get_country_code(record)) else None
-
-
 def _get_country_code(record: pymarc.Record) -> str | None:
     if "094" not in record or "043" not in record:
         return None
@@ -56,6 +50,11 @@ def _get_country_code(record: pymarc.Record) -> str | None:
 
     # If the above fails, we can't assign a country.
     return None
+
+# This is a multivalued field with a single value so that we can use the same field name (country_codes_sm)
+# as sources.
+def _get_country_codes(record: pymarc.Record) -> list[str] | None:
+    return [c] if (c := _get_country_code(record)) else None
 
 
 def _get_country_names(record: pymarc.Record) -> list | None:

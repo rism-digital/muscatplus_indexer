@@ -1,7 +1,6 @@
 import logging
 import types
 from collections.abc import Callable
-from typing import Any
 
 import orjson
 import pymarc
@@ -33,6 +32,8 @@ def process_marc_profile(
         grouping: bool | None = field_config.get("grouping")
         sortout: bool = field_config.get("sorted", True)
         value_prefix = field_config.get("value_prefix")
+        validator_fn_name: str | None = field_config.get("validator")
+        value_from: str | None = field_config.get("value_from")
 
         if "value" in field_config:
             # If we have a static value, simply set the field to the static value
@@ -45,7 +46,7 @@ def process_marc_profile(
             fn_name: str = field_config["processor"]
 
             if not hasattr(processors, fn_name):
-                log.warning(
+                log.error(
                     "Could not process Solr field %s for record %s; %s is a function that does not exist.",
                     solr_field,
                     doc_id,
@@ -54,7 +55,16 @@ def process_marc_profile(
                 continue
 
             processor_fn: Callable = getattr(processors, fn_name)
-            field_result: Any = processor_fn(marc)
+
+            if value_from:
+                if input_value := solr_document.get(value_from):
+                    log.debug("The key %s was previously computed and is now available.", value_from)
+                    field_result = processor_fn(input_value)
+                else:
+                    log.debug("The key %s is not in the Solr document, so the previously computed value is not available.", value_from)
+                    continue
+            else:
+                field_result = processor_fn(marc)
 
             if field_result is None:
                 if required:
@@ -64,6 +74,14 @@ def process_marc_profile(
                         doc_id,
                     )
                 continue
+
+            # if validator_fn_name:
+            #     validator_fn: Callable = getattr(processors, validator_fn_name)
+            #     is_valid: bool = validator_fn(field_result, doc_id)
+            #
+            #     if not is_valid:
+            #         log.warning("%s did not pass validation for %s on %s. It will not be included.", field_result, solr_field, doc_id)
+            #         continue
 
             if to_json:
                 field_result = orjson.dumps(field_result).decode("utf-8")
@@ -99,6 +117,17 @@ def process_marc_profile(
             # document anyway, so we just skip any further processing or adding
             # this value to the result document.
             continue
+
+        # if validator_fn_name:
+        #     validator_fn = getattr(processors, validator_fn_name)
+        #     if multiple:
+        #         is_valid = any(validator_fn(r) for r in field_result)
+        #     else:
+        #         is_valid = validator_fn(field_result, doc_id, marc_field, marc_subfield)
+        #
+        #     if not is_valid:
+        #         log.error("\"%s\" did not pass validation for %s (%s $%s) on %s. It will not be included.", field_result, solr_field, marc_field, marc_subfield, doc_id)
+        #         continue
 
         if multiple and breaks:
             # a field *must* be multivalued to support processing

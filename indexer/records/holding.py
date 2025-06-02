@@ -108,7 +108,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
 
     if p := record.get("publication_entries"):
         publication_entries: list = (
-            list({n.strip() for n in p.split("|~|") if n and n.strip()}) if p else []
+            orjson.loads(p) if p else []
         )
         bibliographic_references: list[dict] | None = get_bibliographic_references_json(
             marc_record, "691", publication_entries

@@ -1,11 +1,29 @@
-import pymarc
+import logging
 
+import pymarc
+from edtf import is_valid_edtf
+
+from indexer.helpers.datelib import convert_to_edtf
 from indexer.helpers.utilities import (
     external_resource_data,
     get_related_people,
     normalize_id,
 )
 
+log = logging.getLogger("muscat_indexer")
+
+def _get_external_ids(record: pymarc.Record) -> list | None:
+    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later."""
+    if "024" not in record:
+        return None
+
+    ids: list = record.get_fields("024")
+
+    return [
+        f"{idf['2'].lower()}:{idf['a']}"
+        for idf in ids
+        if (idf and idf.get("2") and idf.get("a"))
+    ]
 
 def _get_has_incipits(record: pymarc.Record) -> bool:
     return "031" in record
@@ -55,3 +73,26 @@ def _get_external_resources_data(record: pymarc.Record) -> list | None:
     ]
 
     return resources if resources else None
+
+
+def _validate_edtf_date(value: str, doc_id: str, marc_field: str | None, marc_subfield: str | None) -> bool:
+    is_valid: bool = is_valid_edtf(value)
+    if is_valid:
+        return True
+
+    fixed_date = convert_to_edtf(value)
+    if fixed_date == value:
+        # couldn't be fixed.
+        log.warning("%s could not be fixed on %s", value, doc_id)
+        return False
+
+    now_is_valid: bool = is_valid_edtf(fixed_date)
+    if now_is_valid:
+        log.critical("\"%s\" was fixed to \"%s\" on \"%s\", \"%s\", \"%s\"", value, fixed_date, doc_id, marc_field, marc_subfield)
+        return True
+
+
+    log.warning("%s was fixed to %s on %s, but was still not valid EDTF.", value, fixed_date, doc_id)
+    return False
+
+

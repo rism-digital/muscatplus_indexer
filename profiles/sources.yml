@@ -40,6 +40,9 @@
 #  is not `None` if the `required` parameter is set.
 #
 # For ease of use fields should be kept in numeric order by MARC tag!
+#
+# Both processor functions and field definitions can have an optional "validator" function.
+#
 
 
 # Material Group indexing covers a lot of fields, so this is placed at the beginning.
@@ -176,6 +179,9 @@ date_statements_sm:
   multiple: true
 date_ranges_im:
   processor: "_get_earliest_latest_dates"
+date_ranges_dtr:
+  value_from: "date_ranges_im"
+  processor: "_get_earliest_latest_dates_dtr"
 printer_location_sm:
   field: "260"
   subfield: "e"
@@ -433,6 +439,7 @@ additional_titles_json:
 source_members_sm:  # 774
   processor: "_get_source_membership"
 num_source_members_i: # Number of 774 entries
+  value_from: "source_members_sm"
   processor: "_get_num_source_membership"
 
 # 775 is a strange beast. Not really sure what to do with it, but we

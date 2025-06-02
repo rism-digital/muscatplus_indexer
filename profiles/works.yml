@@ -1,4 +1,17 @@
 ---
+external_ids:  # 024
+  processor: "_get_external_ids"
+
+earliest_date_s:
+  field: "046"
+  subfield: "k"
+latest_date_s:
+  field: "046"
+  subfield: "l"
+date_note_s:
+  field: "046"
+  subfield: "z"
+
 has_incipits_b:
   processor: "_get_has_incipits"
 num_incipits_i:

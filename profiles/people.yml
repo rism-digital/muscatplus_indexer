@@ -13,6 +13,9 @@ date_statement_s:
   subfield: "d"
 date_ranges_im:  # process $d into earliest and latest years.
   processor: "_get_earliest_latest_dates"
+date_ranges_dtr:
+  value_from: "date_ranges_im"
+  processor: "_get_earliest_latest_dates_dtr"
 other_dates_s:
   field: "100"
   subfield: "y"

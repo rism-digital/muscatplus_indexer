@@ -45,20 +45,27 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
     dbname: str = cfg["mysql"]["database"]
 
     sql_query: str = f"""SELECT work.id, work.marc_source, peep.id AS person_id,
-                            COUNT(DISTINCT s.id) as source_count,
-                            GROUP_CONCAT(DISTINCT s.id SEPARATOR '\n') as source_ids,
-                            GROUP_CONCAT(DISTINCT s.marc_source SEPARATOR '\n') as source_marc,
-                            GROUP_CONCAT(DISTINCT pub.marc_source SEPARATOR '\n') as publication_marc,
-                            GROUP_CONCAT(DISTINCT CONCAT_WS('|:|', pub.id, pub.author, pub.title, pub.journal, pub.date, pub.place, pub.short_name) SEPARATOR '\n') AS publications,
-                            CONCAT_WS('', peep.full_name, NULLIF( CONCAT(' (', peep.life_dates, ')'), '')) AS person_name
-                            FROM {dbname}.works AS work
-                            LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
-                            LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
-                            LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
-                            LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
-                            LEFT JOIN {dbname}.people peep ON work.person_id = peep.id
-                        GROUP BY work.id
-                        ORDER BY work.id;"""  # noqa: S608
+                           COUNT(DISTINCT s.id) as source_count,
+                           JSON_ARRAYAGG(DISTINCT s.id) as source_ids,
+                           JSON_ARRAYAGG(DISTINCT s.marc_source) as source_marc,
+                           JSON_ARRAYAGG(DISTINCT pub.marc_source) as publication_marc,
+                           JSON_ARRAYAGG(DISTINCT
+                                         JSON_OBJECT('id', pub.id,
+                                                     'author', pub.author,
+                                                     'title', pub.title,
+                                                     'journal', pub.journal,
+                                                     'date', pub.date,
+                                                     'place', pub.place,
+                                                     'short_name', pub.short_name)) AS publications,
+                           JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name
+                    FROM {dbname}.works AS work
+                                                LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
+                        LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
+                        LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
+                        LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id
+                        LEFT JOIN {dbname}.people peep ON work.person_id = peep.id
+                    GROUP BY work.id
+                    ORDER BY work.id;"""  # noqa: S608
 
     curs.execute(sql_query)
 
@@ -109,7 +116,7 @@ def index_work_catalogues(cfg: dict) -> bool:
 
 
 def index_work_catalogue_groups(catalogues: list, cfg: dict) -> bool:
-    log.info("Indexing work catalogue group")
+    log.info("Indexing Work Catalogue Group")
     records_list: list = []
 
     for record in catalogues:

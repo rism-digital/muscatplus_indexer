@@ -53,7 +53,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     work_id: str = f"work_{rism_id}"
 
     publications: list = (
-        list({n.strip() for n in d.split("\n") if n and n.strip()})
+        orjson.loads(d)
         if (d := record.get("publications"))
         else []
     )

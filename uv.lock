@@ -215,7 +215,7 @@ requires-dist = [
     { name = "dbutils", specifier = ">=3.0,<4.0" },
     { name = "edtf", git = "https://github.com/rism-digital/python-edtf.git?rev=performance-enhancements" },
     { name = "httpx", specifier = ">=0.28.0,<0.29.0" },
-    { name = "mysqlclient", specifier = ">=2.2.4,<3.0.0" },
+    { name = "mysqlclient", specifier = ">=2.2.7" },
     { name = "orjson", specifier = ">=3.10.3,<4.0.0" },
     { name = "psycopg", extras = ["pool"], specifier = ">=3.2.6" },
     { name = "pymarc", git = "https://gitlab.com/pymarc/pymarc.git?rev=main" },

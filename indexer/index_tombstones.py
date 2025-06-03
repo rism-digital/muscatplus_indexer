@@ -27,6 +27,7 @@ def _get_tombstone_groups(cfg: dict) -> Generator[dict, None, None]:
 
 
 def index_tombstones(cfg: dict) -> bool:
+    log.info("Indexing Tombstones")
     tombstone_groups = _get_tombstone_groups(cfg)
     parallelise(tombstone_groups, index_tombstone_groups, cfg)
 
@@ -34,7 +35,7 @@ def index_tombstones(cfg: dict) -> bool:
 
 
 def index_tombstone_groups(tombstones: list, cfg: dict) -> bool:
-    log.info("Indexing Tombstones")
+    log.info("Indexing Tombstone Group")
     records_to_index: deque = deque()
 
     for record in tombstones:

@@ -248,6 +248,7 @@ def main(args: argparse.Namespace) -> bool:
     # Finally, if all the previous statuses are True, we're supposed to swap the cores, and we're not in a dry run,
     # then consider that indexing was successful and swap the indexer core with the live core.
     if res and idx_config["swap_cores"] and not args.dry:
+        log.info("Swapping cores")
         res &= swap_cores(
             idx_config["solr"]["server"],
             idx_config["solr"]["indexing_core"],
@@ -256,9 +257,8 @@ def main(args: argparse.Namespace) -> bool:
 
     if not res:
         log.error("Indexing failed.")
-    else:
-        log.info("Indexing successful.")
 
+    log.info("Indexing successful.")
     return res
 
 

@@ -48,8 +48,8 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     rism_id: str = normalize_id(marc_record["001"].value())
     person_id: str = f"person_{rism_id}"
     roles: list[str] = (
-        [s.strip() for s in record["source_relationships"].split(",") if s]
-        if record.get("source_relationships")
+        orjson.loads(s)
+        if (s := record.get("source_relationships"))
         else []
     )
 
@@ -58,8 +58,8 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     total_count: int = source_count + holdings_count
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
-        [f"dobject_{i}" for i in record["digital_objects"].split(",") if i]
-        if record.get("digital_objects")
+        orjson.loads(d)
+        if (d := record.get("digital_objects"))
         else []
     )
 

@@ -960,11 +960,10 @@ def process_related_institutions(institutions: list) -> dict:
     inst_lookup: dict = {}
 
     for inst in institutions:
-        try:
-            inst_id, siglum, name, place = inst.split("|:|")
-        except Exception:  # noqa
-            log.error("Could not process related institution %s", inst)
-            continue
+        inst_id = inst['id']
+        siglum = inst['siglum']
+        place = inst['place']
+        name = inst['name']
 
         d = {"name": name}
 
@@ -998,7 +997,7 @@ def get_related_json(
 
         if institution_id not in related_institutions:
             log.warning(
-                "Could not find an related institution, tag %s for %s",
+                "Could not find a related institution, tag %s for %s",
                 tag_num,
                 institution_id,
             )

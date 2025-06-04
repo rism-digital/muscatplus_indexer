@@ -55,7 +55,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     now_in_sigla: list | None = None
     now_in_institutions: str | None = record.get("now_in_institutions")
     if now_in_institutions:
-        all_now_in_institutions: list = now_in_institutions.split("\n")
+        all_now_in_institutions: list = orjson.loads(now_in_institutions)
         now_in_institution_lookup: dict = process_related_institutions(
             all_now_in_institutions
         )
@@ -73,7 +73,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     contains_sigla: list | None = None
     contains_institutions: str | None = record.get("contains_institutions")
     if contains_institutions:
-        all_contains_institutions: list = contains_institutions.split("\n")
+        all_contains_institutions: list = orjson.loads(contains_institutions)
         contains_institution_lookup: dict = process_related_institutions(
             all_contains_institutions
         )
@@ -88,7 +88,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     related_sigla = None
     related_institutions: str | None = record.get("related_institutions")
     if related_institutions:
-        all_related_institutions: list = related_institutions.split("\n")
+        all_related_institutions: list = orjson.loads(related_institutions)
         related_institutions_lookup: dict = process_related_institutions(
             all_related_institutions
         )
@@ -103,13 +103,13 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
 
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
-        [f"dobject_{i}" for i in record["digital_objects"].split(",") if i]
-        if record.get("digital_objects")
+        orjson.loads(d)
+        if (d := record.get("digital_objects"))
         else []
     )
     roles: list[str] = (
-        [s.strip() for s in record["source_relationships"].split(",") if s]
-        if record.get("source_relationships")
+        orjson.loads(s)
+        if (s := record.get("source_relationships"))
         else []
     )
 

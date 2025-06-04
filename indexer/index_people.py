@@ -44,12 +44,12 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                                    LEFT JOIN {dbname}.holdings_to_people hp ON ho.id = hp.holding_id
                                    WHERE hp.person_id = p.id
                                ) AS source_count,
-                               (SELECT GROUP_CONCAT(DISTINCT COALESCE(ssp.relator_code, 'cre') SEPARATOR ',')
+                               (SELECT JSON_ARRAYAGG(DISTINCT COALESCE(ssp.relator_code, 'cre'))
                                 FROM {dbname}.sources_to_people AS ssp
                                 LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
                                 WHERE p.id = ssp.person_id AND sss.wf_stage = 1)
                                    AS source_relationships,
-                               (SELECT GROUP_CONCAT(DISTINCT do.digital_object_id SEPARATOR ',')
+                               (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
                                 FROM {dbname}.digital_object_links AS do
                                 WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id)
                                    AS digital_objects,

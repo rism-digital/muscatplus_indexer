@@ -16,7 +16,51 @@ def _get_tombstone_groups(cfg: dict) -> Generator[dict, None, None]:
     dbname: str = cfg["mysql"]["database"]
 
     curs.execute(
-        f"""SELECT * FROM {dbname}.tombstones;"""  # noqa: S608
+        f"""SELECT v.item_type AS item_type, v.item_id AS item_id,
+                        v.created_at AS deleted,
+                        (SELECT TRIM(
+                            CASE
+                                WHEN v.object LIKE '%std_title:%' THEN
+                                    SUBSTRING_INDEX(
+                                            SUBSTRING_INDEX(v.object, 'std_title:', -1),
+                                            '\n',
+                                            1
+                                    )
+                                WHEN v.object LIKE '%source_id:%' THEN
+                                    SUBSTRING_INDEX(
+                                            CONCAT('sources/', SUBSTRING_INDEX(v.object, 'source_id: ', -1)),
+                                            '\n',
+                                            1
+                                    )
+                                WHEN v.object LIKE '%full_name:%' THEN
+                                    SUBSTRING_INDEX(
+                                            SUBSTRING_INDEX(v.object, 'full_name:', -1),
+                                            '\n',
+                                            1
+                                    )
+                                WHEN v.object LIKE '%title:%' THEN
+                                    SUBSTRING_INDEX(
+                                            SUBSTRING_INDEX(v.object, 'title:', -1),
+                                            '\n',
+                                            1
+                                    )
+
+                                WHEN v.object LIKE '%name:%' THEN
+                                    SUBSTRING_INDEX(
+                                            SUBSTRING_INDEX(v.object, 'name:', -1),
+                                            '\n',
+                                            1
+                                    )
+                                ELSE NULL
+                            END)) AS name,
+                            (TRIM(
+                                BOTH '"' FROM SUBSTRING_INDEX(SUBSTRING_INDEX(v.object, 'marc_source: ', -1),
+                                '\n',
+                                1))) AS marc_source
+                 FROM {dbname}.versions AS v
+                 WHERE v.event = 'destroy'
+                   AND v.item_type IN ('Source', 'Person', 'Institution', 'Holding')
+                 ORDER BY item_type DESC"""  # noqa: S608
     )
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa

@@ -63,6 +63,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                             OR EXISTS (SELECT 1 FROM {dbname}.holdings_to_people hp WHERE hp.person_id = p.id)
                             OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_people ip WHERE ip.person_id = p.id)
                             OR EXISTS (SELECT 1 FROM {dbname}.people_to_publications pubp WHERE pubp.person_id = p.id)
+                            OR EXISTS (SELECT 1 FROM {dbname}.publications_to_people ppub WHERE ppub.person_id = p.id)
                             {id_where_clause};"""  # noqa: S608
 
 

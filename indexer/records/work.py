@@ -8,25 +8,25 @@ from indexer.helpers.utilities import (
     get_bibliographic_references_json,
     normalize_id,
 )
+from indexer.processors import publication as publication_processor
 from indexer.processors import work as work_processor
-from indexer.processors import work_catalogue as work_catalogue_processor
 from indexer.records.incipits import get_work_incipits
 
 work_profile: dict = yaml.full_load(open("profiles/works.yml"))  # noqa: SIM115
-work_catalogues_profile: dict = yaml.full_load(open("profiles/work_catalogues.yml"))  # noqa: SIM115
+publications_profile: dict = yaml.full_load(open("profiles/publications.yml"))  # noqa: SIM115
 
 
 def create_work_catalogue_index_document(record: dict, cfg: dict) -> dict:
     catalogue: str = record["marc_source"]
     marc_record: pymarc.Record = create_marc(catalogue)
     rism_id: str = normalize_id(marc_record["001"].value())
-    work_catalogue_id: str = f"publication_{rism_id}"
+    publication_id: str = f"publication_{rism_id}"
 
     work_ids_raw: list = w.split("\n") if (w := record["work_ids"]) else []
     work_ids: list = [f"work_{wid}" for wid in work_ids_raw]
 
     catalogue_core: dict = {
-        "id": work_catalogue_id,
+        "id": publication_id,
         "type": "publication",
         "rism_id": rism_id,
         "full_rism_id": f"publications/{rism_id}",
@@ -36,7 +36,7 @@ def create_work_catalogue_index_document(record: dict, cfg: dict) -> dict:
     }
 
     additional_fields: dict = process_marc_profile(
-        work_catalogues_profile, work_catalogue_id, marc_record, work_catalogue_processor
+        publications_profile, publication_id, marc_record, publication_processor
     )
 
     catalogue_core.update(additional_fields)

@@ -1,0 +1,88 @@
+---
+# most of the non-search data for the 100 field is indexed in the JSON,
+# e.g., $j.
+creator_id:
+  field: "100"
+  subfield: "0"
+  value_prefix: "person_"
+creator_name_s:  # 100, but with optional dates added ($a and $d)
+  processor: "_get_creator_name"
+creator_json:
+  processor: "_get_creator_data"
+  json: true
+
+short_title_s:
+  field: "210"
+  subfield: "a"
+
+title_s:
+  field: "240"
+  subfield: "a"
+publication_category_s:
+  field: "240"
+  subfield: "g"
+publication_type_s:
+  field: "240"
+  subfield: "h"
+
+publication_place_sm:
+  field: "260"
+  subfield: "a"
+  multiple: true
+publisher_copyist_sm:
+  field: "260"
+  subfield: "b"
+  multiple: true
+date_statements_sm:
+  field: "260"
+  subfield: "c"
+  multiple: true
+date_ranges_im:
+  processor: "_get_earliest_latest_dates"
+date_ranges_dtr:
+  value_from: "date_ranges_im"
+  processor: "_get_earliest_latest_dates_dtr"
+
+media_type_sm:
+  field: "337"
+  subfield: "a"
+  multiple: true
+
+general_notes_sm:
+  field: "500"
+  subfield: "a"
+  multiple: true
+  sorted: false
+  breaks: true
+
+publication_general_notes_smni:
+  field: "500"
+  subfield: "a"
+  multiple: true
+  sorted: false
+  breaks: true
+  links: true
+
+related_people_json:
+  processor: "_get_related_people_data"
+  json: true
+
+related_institutions_ids:
+  field: "710"
+  subfield: "0"
+  multiple: true
+  value_prefix: "institution_"
+related_institutions_sm:
+  field: "710"
+  subfield: "a"
+  multiple: true
+related_institutions_json:
+  processor: "_get_related_institutions_data"
+  json: true
+
+external_resources_json:
+  processor: "_get_external_resources_data"
+  json: true
+
+iiif_manifest_uris_sm:
+  processor: "_get_iiif_manifest_uris"

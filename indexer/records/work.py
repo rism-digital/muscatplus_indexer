@@ -22,8 +22,7 @@ def create_work_catalogue_index_document(record: dict, cfg: dict) -> dict:
     rism_id: str = normalize_id(marc_record["001"].value())
     publication_id: str = f"publication_{rism_id}"
 
-    work_ids_raw: list = w.split("\n") if (w := record["work_ids"]) else []
-    work_ids: list = [f"work_{wid}" for wid in work_ids_raw]
+    work_ids: list = orjson.loads(w) if (w := record["work_ids"]) else []
 
     catalogue_core: dict = {
         "id": publication_id,
@@ -32,7 +31,9 @@ def create_work_catalogue_index_document(record: dict, cfg: dict) -> dict:
         "full_rism_id": f"publications/{rism_id}",
         "is_work_catalogue_b": True,
         "work_ids": work_ids,
-        "works_count_i": len(work_ids)
+        "works_count_i": len(work_ids),
+        "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
     additional_fields: dict = process_marc_profile(
@@ -82,7 +83,10 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         else None,
         "secondary_works_catalogue_json": orjson.dumps(secondary_works_catalogue).decode("utf-8")
         if secondary_works_catalogue
-        else None
+        else None,
+        "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+
     }
 
     additional_fields: dict = process_marc_profile(

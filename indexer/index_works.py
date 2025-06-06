@@ -18,9 +18,9 @@ def _get_work_catalogues(cfg: dict) -> Generator[dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
 
-    sql_query: str = f"""SELECT pub.id AS pub_id, pub.marc_source AS marc_source,
-                            GROUP_CONCAT(DISTINCT wpubs.work_id SEPARATOR '\n') AS work_ids,
-                            GROUP_CONCAT(wks.marc_source SEPARATOR '\n') AS works_marc
+    sql_query: str = f"""SELECT pub.id AS pub_id, pub.marc_source AS marc_source, pub.created_at AS created,
+                            pub.updated_at AS updated, 
+                            JSON_ARRAYAGG(DISTINCT CONCAT('work_', wpubs.work_id)) AS work_ids
                             FROM {dbname}.publications AS pub
                             LEFT JOIN {dbname}.works_to_publications wpubs ON pub.id = wpubs.publication_id
                             LEFT JOIN {dbname}.works wks ON wpubs.work_id = wks.id
@@ -45,7 +45,8 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
     dbname: str = cfg["mysql"]["database"]
 
     sql_query: str = f"""SELECT work.id, work.marc_source, peep.id AS person_id,
-                           COUNT(DISTINCT s.id) as source_count,
+                           COUNT(DISTINCT s.id) as source_count, work.created_at AS created, 
+                           work.updated_at AS updated,
                            JSON_ARRAYAGG(DISTINCT s.id) as source_ids,
                            JSON_ARRAYAGG(DISTINCT s.marc_source) as source_marc,
                            JSON_ARRAYAGG(DISTINCT pub.marc_source) as publication_marc,
@@ -58,8 +59,8 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
                                                      'place', pub.place,
                                                      'short_name', pub.short_name)) AS publications,
                            JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name
-                    FROM {dbname}.works AS work
-                                                LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
+                        FROM {dbname}.works AS work
+                        LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
                         LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
                         LEFT JOIN {dbname}.works_to_publications pw ON work.id = pw.work_id
                         LEFT JOIN {dbname}.publications pub ON pw.publication_id = pub.id

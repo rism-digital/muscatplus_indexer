@@ -253,6 +253,7 @@ def __incipit(
     d: dict = {
         "id": f"{record_ident}_incipit_{num}",
         "type": "incipit",
+        "parent_type_s": "source",
         "source_id": record_ident,
         "rism_id": record_id,  # index the raw source id to support incipit lookups by source
         "record_type_s": get_record_type(record_type_id, is_single_item),
@@ -334,6 +335,7 @@ def __work_incipit(
     d = {
         "id": f"{document_id}_incipit_{num}",
         "type": "incipit",
+        "parent_type_s": "work",
         "rism_id": id_num,
         "work_id": document_id,
         "main_title_s": work_title,

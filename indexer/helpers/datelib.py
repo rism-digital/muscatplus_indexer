@@ -14,6 +14,9 @@ SIMPLE_SINGLE_YEAR_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})$")
 # The simplest date range -- 1234-1256
 SIMPLE_RANGE_REGEX: re.Pattern = re.compile(r"^(?P<first>\d{4})-(?P<second>\d{4})$")
 
+# dd/mm/yyyy
+SLASH_DIVIDED_REGEX: re.Pattern = re.compile(r"^(?P<day>\d{2})/(?P<month>\d{2})/(?P<year>\d{4})")
+
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
 DOT_DIVIDED_REGEX: re.Pattern = re.compile(
     r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?"
@@ -233,6 +236,11 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
         second = int(simplest_range_match.group("second"))
 
         return first, second
+
+    if simplest_slash_match := SLASH_DIVIDED_REGEX.match(date_statement):
+        year = int(simplest_slash_match.group("year"))
+
+        return year, year
 
     # Slow path
     # First simplify known problems for the edtf parser

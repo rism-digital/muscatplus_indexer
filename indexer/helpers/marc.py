@@ -38,14 +38,7 @@ def create_marc(record: str) -> pymarc.Record:
     """
     fields: list[pymarc.Field] = [
         pf for line in record.splitlines() if line and line != "" for pf in [_parse_field(line.rstrip("\r\n"))] if pf is not None
-        # _parse_field(line.rstrip("\r\n")) for line in record.splitlines() if line and line != ""
     ]
-
-    # for line in record.splitlines():
-    #     if line and line != "":
-    #         f = _parse_field(line)
-    #         if f is not None:
-    #             fields.append(f)
 
     return pymarc.Record(fields=fields)
 

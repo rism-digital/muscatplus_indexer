@@ -24,6 +24,7 @@ def _parse_field(line: str) -> pymarc.Field | None:
 
     return pymarc.Field(tag=tag_value, indicators=indicators, subfields=subfields)
 
+
 def _parse_subf(subf_value: str) -> pymarc.Subfield:
     value: str = subf_value[1:].strip().replace("_DOLLAR_", "$")
     return pymarc.Subfield(subf_value[0], value)
@@ -36,8 +37,13 @@ def create_marc(record: str) -> pymarc.Record:
     :param record: A raw marc_source record from Muscat
     :return: an instance of a pymarc.Record
     """
+
     fields: list[pymarc.Field] = [
-        pf for line in record.splitlines() if line and line != "" for pf in [_parse_field(line.rstrip("\r\n"))] if pf is not None
+        pf
+        for line in record.splitlines()
+        if line and line != ""
+        for pf in [_parse_field(line.rstrip("\r\n"))]
+        if pf is not None
     ]
 
     return pymarc.Record(fields=fields)

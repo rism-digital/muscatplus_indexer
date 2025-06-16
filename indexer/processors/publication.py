@@ -102,3 +102,5 @@ def _get_iiif_manifest_uris(record: pymarc.Record) -> list | None:
     fields: list[pymarc.Field] = record.get_fields("856")
     return [f["u"] for f in fields if "x" in f and "IIIF" in f["x"]]
 
+def _get_has_external_resources(record: pymarc.Record) -> bool:
+    return "856" in record

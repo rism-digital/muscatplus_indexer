@@ -165,7 +165,9 @@ def main(args: argparse.Namespace) -> bool:
         return res
 
     inc: list
-    if not args.include:
+    if args.include:
+        inc = args.include
+    else:
         inc = [
             "sources",
             "people",
@@ -176,10 +178,8 @@ def main(args: argparse.Namespace) -> bool:
             "festivals",
             "digital-objects",
             "works",
-            "tombstones"
+            "tombstones",
         ]
-    else:
-        inc = args.include
 
     if args.empty and not args.dry:
         log.info("Emptying Solr indexing core")

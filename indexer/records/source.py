@@ -69,9 +69,10 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     is_single_item: bool = parent_id is None and child_count == 0
 
     log.debug("Indexing %s", source_id)
-    child_marc_records: list[pymarc.Record] = create_marc_list(
-        record.get("child_marc_records")
+    child_marc: list = (
+        orjson.loads(ch) if (ch := record.get("child_marc_records")) else []
     )
+    child_marc_records: list[pymarc.Record] = create_marc_list(child_marc)
     child_composers: set[str] = set()
     for child_record in child_marc_records:
         c: str | None = get_creator_name(child_record)
@@ -80,28 +81,41 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         child_composers.add(c)
 
     creator_name: str | None = get_creator_name(marc_record)
-    institution_places: list[str] = (
-        [s for s in record["institution_places"].split("|") if s]
-        if record.get("institution_places")
-        else []
+
+    holding_info: list[dict] = orjson.loads(m) if (m := record.get("holdings")) else []
+    parent_holding_info: list[dict] = (
+        orjson.loads(mp) if (mp := record.get("parent_holdings_marc")) else []
     )
 
-    holdings_marc: list[pymarc.Record] = create_marc_list(record.get("holdings_marc"))
+    holdings_marc: list[pymarc.Record] = create_marc_list(
+        [m["marc_source"] for m in holding_info]
+    )
 
     all_print_holding_records: list[pymarc.Record] = []
     all_print_holding_records += holdings_marc
-    all_print_holding_records += create_marc_list(record.get("parent_holdings_marc"))
+    all_print_holding_records += create_marc_list(
+        [pm["marc_source"] for pm in parent_holding_info]
+    )
 
     all_print_holding_sigla: list[str] = []
-    all_print_holding_sigla += _create_sigla_list_from_str(record.get("holdings_org"))
-    all_print_holding_sigla += _create_sigla_list_from_str(
-        record.get("parent_holdings_org")
-    )
+    all_print_holding_sigla += [m["lib_siglum"] for m in holding_info]
+    all_print_holding_sigla += [pm["lib_siglum"] for pm in parent_holding_info]
 
     all_marc_records: list[pymarc.Record] = []
     all_marc_records += [marc_record]
     all_marc_records += [parent_marc_record] if parent_marc_record else []
     all_marc_records += all_print_holding_records
+
+    related_institution_sigla = []
+    institution_places: list = []
+    ms_holding_institutions: list = (
+        orjson.loads(a) if (a := record.get("ms_holding_institutions")) else []
+    )
+    for inst in ms_holding_institutions:
+        if s := inst.get("siglum"):
+            related_institution_sigla.append(s)
+        if p := inst.get("place"):
+            institution_places.append(p)
 
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
@@ -133,9 +147,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         _get_country_codes(manuscript_holdings, all_print_holding_records) or []
     )
 
-    parent_record_type_id: int | None = record.get("parent_record_type")
     source_membership_data: dict | None = None
-    if parent_record_type_id:
+    if parent_record_type_id := record.get("parent_record_type"):
         parent_material_source_types: list[str] | None = to_solr_multi(
             parent_marc_record, "593", "a"
         )
@@ -167,20 +180,12 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         else None
     )
 
-    people_names: list = (
-        list({n.strip() for n in d.split("\n") if n})
-        if (d := record.get("people_names"))
-        else []
-    )
-    variant_people_names: list | None = _get_variant_people_names(
-        record.get("alt_people_names")
-    )
+    people: list = orjson.loads(d) if (d := record.get("people")) else []
+    people_names: list | None = _get_people_names(people)
 
-    source_people_ids: set[str] = (
-        {f"person_{n}" for n in d.split("\n") if n}
-        if (d := record.get("people_ids"))
-        else set()
-    )
+    variant_people_names: list | None = _get_variant_people_names(people)
+
+    source_people_ids: set[str] = {p["id"] for p in people}
     holding_people_ids: set[str] = _get_holding_people_ids(holdings_marc)
 
     # merge the two sets
@@ -188,12 +193,12 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     related_people_ids: list[str] = list(source_people_ids)
 
     variant_standard_terms: list | None = _get_variant_standard_terms(
-        record.get("alt_standard_terms")
+        orjson.loads(st) if (st := record.get("alt_standard_terms")) else []
     )
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
 
     publication_entries: list = (
-        orjson.loads(d)
+        [p for p in orjson.loads(d) if p]
         if (d := record.get("publication_entries"))
         else []
     )
@@ -203,7 +208,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     bibliographic_references_json = (
         orjson.dumps(bibliographic_references).decode("utf-8")
         if bibliographic_references
-        else None
+        else []
     )
     bibliographic_reference_titles: list[str] | None = (
         get_bibliographic_reference_titles(publication_entries)
@@ -218,20 +223,17 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
-        [f"dobject_{i}" for i in record["digital_objects"].split(",") if i]
-        if record.get("digital_objects")
-        else []
+        orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
 
-    work_ids: list = (
-        list({f"work_{n}" for n in record["work_ids"].split("\n") if n})
-        if record.get("work_ids")
-        else []
-    )
+    work_ids: list = orjson.loads(d) if (d := record.get("work_ids")) else []
 
     related_sources = None
     if t := record.get("related_sources"):
-        related_sources = _get_related_sources(t, related_source_fields, source_id)
+        source_list: list = orjson.loads(t)
+        related_sources = _get_related_sources(
+            source_list, related_source_fields, source_id
+        )
 
     related_sources_json = (
         orjson.dumps(related_sources).decode("utf-8") if related_sources else None
@@ -240,28 +242,13 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
         orjson.dumps(works_catalogue).decode("utf-8") if works_catalogue else None
     )
 
-    related_institution_sigla = []
-    if a := record.get("additional_institution_info"):
-        all_institutions: list = a.split("\n") or []
-
-        for inst in all_institutions:
-            inst_components: list = inst.split("|:|")
-            if len(inst_components) != 4:
-                log.error("Could not parse institution entry %s", inst)
-                continue
-
-            _, _, _, siglum = inst_components
-
-            if siglum:
-                related_institution_sigla.append(siglum)
-
     has_digitization: bool = _get_has_digitization(all_marc_records)
 
     work_node_json = None
     work_node_id = None
     if w := record.get("work_node"):
-        wnid, wn_marc_source = w.split("|:|")
-        wn_record: pymarc.Record = create_marc(wn_marc_source)
+        wndata = orjson.loads(w)
+        wn_record: pymarc.Record = create_marc(wndata["marc_source"])
         work_node: dict | None = get_work_node(wn_record, source_id, "source")
         if work_node and "external_id" in work_node:
             work_node_id = work_node["external_id"]
@@ -342,7 +329,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # if faster indexing is needed.
 
     incipits: list = (
-            get_source_incipits(
+        get_source_incipits(
             marc_record,
             main_title,
             record_type_id,
@@ -351,7 +338,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
             creator_name,
             source_dates,
         )
-            or []
+        or []
     )
 
     res: list = [source_core]
@@ -407,19 +394,34 @@ def _get_manuscript_holdings(
     return [idx_doc]
 
 
-def _get_variant_people_names(variant_names: str | None) -> list | None:
-    if not variant_names:
+def _get_people_names(names: list[dict] | None) -> list[str] | None:
+    if not names:
         return None
 
-    list_of_names: list = variant_names.split("\n")
-    return tokenize_variants(list_of_names)
+    out_l: list = []
+    for it in names:
+        name: str = it.get("name", "")
+        dates: str = f" ({d})" if (d := it.get("life_dates")) else ""
+        out_l.append(f"{name}{dates}")
+
+    return out_l
 
 
-def _get_variant_standard_terms(variant_terms: str | None) -> list | None:
+def _get_variant_people_names(people: list | None) -> list | None:
+    if not people:
+        return None
+
+    variant_names: list[str] = [
+        v for p in people for v in p["alternate_names"].splitlines() if p
+    ]
+    return tokenize_variants(variant_names)
+
+
+def _get_variant_standard_terms(variant_terms: list | None) -> list | None:
     if not variant_terms:
         return None
 
-    list_of_terms: list = variant_terms.split("\n")
+    list_of_terms: list[str] = [t for ts in variant_terms for t in ts.splitlines() if t]
     return tokenize_variants(list_of_terms)
 
 
@@ -552,16 +554,6 @@ def _get_digitization_notes(all_records: list[pymarc.Record]) -> list[str]:
     return list(all_project_notes)
 
 
-def _create_sigla_list_from_str(sigla: str | None) -> list[str]:
-    """
-    Returns a list of sigla for a source. This is a set, that is cast to a list.
-    Always returns a list.
-    :param sigla: A string of newline-separated sigla
-    :return: A list of sigla.
-    """
-    return list({s.strip() for s in sigla.split("\n") if s}) if sigla else []
-
-
 def _get_num_holdings_facet(num: int) -> str | None:
     if num == 0:
         return None
@@ -576,7 +568,7 @@ def _get_num_holdings_facet(num: int) -> str | None:
 
 
 def _get_related_sources(
-    related: str, relationship_fields: list[pymarc.Field], host_source_id: str
+    related: list, relationship_fields: list[pymarc.Field], host_source_id: str
 ) -> list[dict] | None:
     """
     Combines the MARC source from related sources and the 787 entries from a record to create a JSON
@@ -599,15 +591,15 @@ def _get_related_sources(
         if sid and snote:
             notes[sid] = snote
 
-    # The related sources are first separated by "|~|" delineations between records, and then
-    # "|:|" between fields in that record.
-    all_records: list[str] = related.split("|~|")
     related_entries: list = []
-    for relationship_id, individual_record in enumerate(all_records, 1):
-        relator_code, relmarc_source = individual_record.split("|:|")
+    for relationship_id, individual_record in enumerate(related, 1):
+        relator_code = individual_record["relator_code"]
+        relmarc_source = individual_record["marc_source"]
+
         rel_marc_record: pymarc.Record | None = (
             create_marc(relmarc_source) if relmarc_source else None
         )
+
         if not rel_marc_record:
             log.error("Could not load foreign MARC record")
             continue

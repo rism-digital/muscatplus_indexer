@@ -53,6 +53,8 @@ catalogue_s:
 number_page_s:
   field: "690"
   subfield: "n"
+number_page_ans:
+  value_from: "number_page_s"
 catalogue_id:
   field: "690"
   subfield: "0"

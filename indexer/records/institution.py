@@ -10,9 +10,7 @@ from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
     get_bibliographic_reference_titles,
     get_bibliographic_references_json,
-    get_related_json,
     normalize_id,
-    process_related_institutions,
 )
 from indexer.processors import institution as institution_processor
 
@@ -51,59 +49,70 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     total_count: int = record.get("total_source_count", 0)
     people_contribution_count: int = record.get("people_contribution_count", 0)
 
-    now_in: list[dict] | None = None
-    now_in_sigla: list | None = None
-    now_in_institutions: str | None = record.get("now_in_institutions")
-    if now_in_institutions:
-        all_now_in_institutions: list = orjson.loads(now_in_institutions)
-        now_in_institution_lookup: dict = process_related_institutions(
-            all_now_in_institutions
-        )
+    related_institutions: list = (
+        orjson.loads(ii) if (ii := record["institution_relationships"]) else []
+    )
 
-        now_in = get_related_json(
-            marc_record, now_in_institution_lookup, institution_id, "institution", "580"
-        )
-        now_in_sigla = [
-            s["siglum"]
-            for k, s in now_in_institution_lookup.items()
-            if s and "siglum" in s
-        ]
+    now_in: list[dict] = []
+    now_in_sigla: list = []
+    contains: list[dict] = []
+    contains_sigla: list = []
+    related: list = []
+    related_sigla: list = []
 
-    contains: list[dict] | None = None
-    contains_sigla: list | None = None
-    contains_institutions: str | None = record.get("contains_institutions")
-    if contains_institutions:
-        all_contains_institutions: list = orjson.loads(contains_institutions)
-        contains_institution_lookup: dict = process_related_institutions(
-            all_contains_institutions
-        )
-        contains = _get_contains_json(contains_institution_lookup, institution_id)
-        contains_sigla = [
-            s["siglum"]
-            for k, s in contains_institution_lookup.items()
-            if s and "siglum" in s
-        ]
+    for i, reli in enumerate(related_institutions, 1):
+        a_institution = {
+            "institution_id": f"{reli['a_id']}",
+            "type": "institution",
+            "name": f"{reli['a_name']}",
+            "place": f"{reli['a_place']}",
+            "siglum": f"{reli['a_siglum']}",
+            "this_id": institution_id,
+            "this_type": "institution",
+        }
 
-    related = None
-    related_sigla = None
-    related_institutions: str | None = record.get("related_institutions")
-    if related_institutions:
-        all_related_institutions: list = orjson.loads(related_institutions)
-        related_institutions_lookup: dict = process_related_institutions(
-            all_related_institutions
-        )
-        related = get_related_json(
-            marc_record,
-            related_institutions_lookup,
-            institution_id,
-            "institution",
-            "710",
-        )
-        related_sigla = [
-            s["siglum"]
-            for k, s in related_institutions_lookup.items()
-            if s and "siglum" in s
-        ]
+        b_institution = {
+            "institution_id": f"{reli['b_id']}",
+            "type": "institution",
+            "name": f"{reli['b_name']}",
+            "place": f"{reli['b_place']}",
+            "siglum": reli["b_siglum"],
+            "this_id": institution_id,
+            "this_type": "institution",
+        }
+
+        if bp := reli.get("b_place"):
+            b_institution["place"] = bp
+
+        marc_tag: str = reli["marc_tag"]
+        a_now_in_b: bool = reli["a_now_in_b"]
+        b_contains_a: bool = reli["b_contains_a"]
+        a_siglum = reli["a_siglum"]
+        b_siglum = reli["b_siglum"]
+
+        if marc_tag == "580" and a_now_in_b:
+            b_institution["id"] = f"{i}"
+            b_institution["relationship"] = "now-in"
+            now_in.append({k: v for k, v in b_institution.items() if v})
+            if b_siglum:
+                now_in_sigla.append(b_siglum)
+        elif marc_tag == "580" and b_contains_a:
+            a_institution["id"] = f"{i}"
+            a_institution["relationship"] = "contained-by"
+            contains.append({k: v for k, v in a_institution.items() if v})
+            if a_siglum:
+                contains_sigla.append(a_siglum)
+        # The query will pick up on bidirectional 710s (institutions that mention each other)
+        # so guarding it with the `a_now_in_b` flag will ensure only one of those two relationships
+        # are selected.
+        elif marc_tag == "710" and a_now_in_b:
+            b_institution["id"] = f"{i}"
+            b_institution["relationship"] = "xi"
+            related.append({k: v for k, v in b_institution.items() if v})
+            if b_siglum:
+                related_sigla.append(b_siglum)
+        else:
+            continue
 
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
@@ -155,8 +164,6 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
         "related_institutions_json": orjson.dumps(related).decode("utf-8")
         if related
-        else None
-        if related
         else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -168,31 +175,6 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     institution_core.update(additional_fields)
 
     return institution_core
-
-
-def _get_contains_json(contained_institutions: dict, this_id: str) -> list[dict] | None:
-    all_entries: list = []
-
-    for inst_id, inst_info in contained_institutions.items():
-        contained_by: dict = {
-            "id": f"{inst_id}",
-            "type": "institution",
-            "institution_id": f"institution_{inst_id}",
-            "name": inst_info["name"],
-            "relationship": "contained-by",
-            "this_id": this_id,
-            "this_type": "institution",
-        }
-
-        if "siglum" in inst_info:
-            contained_by["siglum"] = inst_info["siglum"]
-
-        if "place" in inst_info:
-            contained_by["place"] = inst_info["place"]
-
-        all_entries.append(contained_by)
-
-    return all_entries
 
 
 def _get_num_sources_facet(num: int) -> str | None:

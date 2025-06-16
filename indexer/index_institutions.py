@@ -28,25 +28,25 @@ SELECT i.id, i.marc_source, i.siglum,
     ((SELECT COUNT(DISTINCT si.source_id)
         FROM {dbname}.sources_to_institutions AS si
         LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-        WHERE si.institution_id = i.id 
-            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)) 
+        WHERE si.institution_id = i.id
+            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
     +
     (SELECT COUNT(DISTINCT hi.source_id)
         FROM {dbname}.holdings AS hi
         LEFT JOIN {dbname}.sources AS hs1 ON hi.source_id = hs1.id
-        WHERE hi.lib_siglum = i.siglum 
+        WHERE hi.lib_siglum = i.siglum
             AND (hs1.wf_stage IS NULL OR hs1.wf_stage = 1))
     +
     (SELECT COUNT(DISTINCT hs2.id)
         FROM {dbname}.sources AS hs2
         LEFT JOIN {dbname}.holdings AS hd ON hs2.source_id = hd.source_id
-        WHERE hd.lib_siglum = i.siglum 
+        WHERE hd.lib_siglum = i.siglum
             AND (hs2.wf_stage IS NULL OR hs2.wf_stage = 1))
     ) AS total_source_count,
     (SELECT COUNT(DISTINCT si.source_id)
         FROM {dbname}.sources_to_institutions AS si
         LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-        WHERE si.institution_id = i.id 
+        WHERE si.institution_id = i.id
             AND si.marc_tag = '852'
             AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
     ) AS source_count,
@@ -61,13 +61,13 @@ SELECT i.id, i.marc_source, i.siglum,
     (SELECT COUNT(DISTINCT si.source_id)
         FROM {dbname}.sources_to_institutions AS si
         LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-        WHERE si.institution_id = i.id 
+        WHERE si.institution_id = i.id
             AND si.marc_tag = '710'
             AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
     ) AS other_count,
     (SELECT COUNT(DISTINCT pc.id)
         FROM {dbname}.people_to_institutions AS pc
-        WHERE pc.institution_id = i.id 
+        WHERE pc.institution_id = i.id
             AND pc.marc_tag = '910'
     ) AS people_contribution_count,
     (SELECT JSON_ARRAYAGG(DISTINCT
@@ -82,39 +82,27 @@ SELECT i.id, i.marc_source, i.siglum,
         LEFT JOIN {dbname}.publications pub ON ipt2.publication_id = pub.id
         WHERE ipt2.institution_id = i.id
     ) AS publication_entries,
-    (SELECT JSON_ARRAYAGG(DISTINCT 
-                        JSON_OBJECT('id', CAST(reli.id AS CHAR), 
-                                    'siglum', reli.siglum, 
-                                    'name', reli.corporate_name, 
-                                    'place', reli.place))
-        FROM {dbname}.institutions_to_institutions AS rela
-        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
-        WHERE rela.institution_a_id = i.id 
-            AND rela.marc_tag = '580'
-    ) AS now_in_institutions,
-    (SELECT JSON_ARRAYAGG(DISTINCT 
-                            JSON_OBJECT('id', CAST(reli.id AS CHAR), 
-                                        'siglum', reli.siglum, 
-                                        'name', reli.corporate_name, 
-                                        'place', reli.place))
+    (SELECT JSON_ARRAYAGG(DISTINCT
+                             JSON_OBJECT('a_id', CONCAT('institution_', reli.id),
+                                         'b_id', CONCAT('institution_', relj.id),
+                                         'a_siglum', reli.siglum,
+                                         'b_siglum', relj.siglum,
+                                         'a_name', reli.corporate_name,
+                                         'b_name', relj.corporate_name,
+                                         'a_place', reli.place,
+                                         'b_place', relj.place,
+                                         'marc_tag', rela.marc_tag,
+                                         'a_now_in_b', (rela.institution_a_id = i.id),
+                                         'b_contains_a', (rela.institution_b_id = i.id)
+                             ))
         FROM {dbname}.institutions_to_institutions AS rela
         LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_a_id
-        WHERE rela.institution_b_id = i.id 
-            AND rela.marc_tag = '580'
-    ) AS contains_institutions,
-    (SELECT JSON_ARRAYAGG(DISTINCT 
-                            JSON_OBJECT('id', CAST(reli.id AS CHAR), 
-                                        'siglum', reli.siglum, 
-                                        'name', reli.corporate_name, 
-                                        'place', reli.place))
-        FROM {dbname}.institutions_to_institutions AS rela
-        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
-        WHERE rela.institution_a_id = i.id 
-            AND rela.marc_tag = '710'
-    ) AS related_institutions,
+        LEFT JOIN {dbname}.institutions AS relj ON relj.id = rela.institution_b_id
+        WHERE rela.institution_a_id = i.id OR rela.institution_b_id = i.id
+    ) AS institution_relationships,
     (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
         FROM {dbname}.digital_object_links AS do
-        WHERE do.object_link_type = 'Institution' 
+        WHERE do.object_link_type = 'Institution'
             AND do.object_link_id = i.id
     ) AS digital_objects,
     (SELECT JSON_ARRAYAGG(DISTINCT ssi.relator_code)
@@ -133,7 +121,7 @@ WHERE i.siglum IS NOT NULL OR
     ) {id_where_clause}
 GROUP BY i.id
 ORDER BY i.id ASC;
-"""
+"""  # noqa: S608
 
     curs.execute(sql)
 

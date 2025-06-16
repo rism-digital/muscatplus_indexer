@@ -791,7 +791,7 @@ def get_bibliographic_references_json(
     refs: dict = {}
     for ref in references:
         # |:| is a unique field delimiter
-        rid = str(ref['id'])
+        rid = str(ref["id"])
 
         try:
             refs[rid] = format_reference(ref)
@@ -799,7 +799,7 @@ def get_bibliographic_references_json(
             log.warning(
                 "Could not index references for record %s", record["001"].value()
             )
-            return None
+            continue
 
     outp: list = []
     fields: list[pymarc.Field] = record.get_fields(field)
@@ -814,6 +814,14 @@ def get_bibliographic_references_json(
                 "No field 0 for entry in record %s. Skipping: %s",
                 record["001"].value(),
                 str(ff),
+            )
+            continue
+
+        if fid not in refs:
+            log.warning(
+                "The publication ID %s was not available in the list of references. Skipping: %s",
+                str(fid),
+                record["001"].value(),
             )
             continue
 
@@ -836,7 +844,7 @@ def format_reference(ref: dict) -> str:
     if a := ref.get("author"):
         res += f"{a.strip()}{' ' if a.endswith('.') else '. '}"
 
-    if d := ref.get("description"):
+    if d := ref.get("title"):
         res += f"{d.strip()}{' ' if d.endswith('.') else '. '}"
 
     if j := ref.get("journal"):
@@ -899,8 +907,7 @@ def update_rism_document(
     if "source_count" in record and record.get("source_count", 0) > 0:
         amount: int = record["source_count"]
         update_document.update(
-            {"source_count_i": {"inc": amount},
-             "total_sources_i": {"inc": amount}}
+            {"source_count_i": {"inc": amount}, "total_sources_i": {"inc": amount}}
         )
     return update_document
 
@@ -956,14 +963,15 @@ def get_work_node(
 
     return {k: v for k, v in d.items() if v}
 
+
 def process_related_institutions(institutions: list) -> dict:
     inst_lookup: dict = {}
 
     for inst in institutions:
-        inst_id = inst['id']
-        siglum = inst['siglum']
-        place = inst['place']
-        name = inst['name']
+        inst_id = inst["id"]
+        siglum = inst["siglum"]
+        place = inst["place"]
+        name = inst["name"]
 
         d = {"name": name}
 
@@ -979,7 +987,11 @@ def process_related_institutions(institutions: list) -> dict:
 
 
 def get_related_json(
-        record: pymarc.Record, related_institutions: dict, this_id: str, this_type: str, tag_num: str
+    record: pymarc.Record,
+    related_institutions: dict,
+    this_id: str,
+    this_type: str,
+    tag_num: str,
 ) -> list[dict] | None:
     if tag_num not in record:
         return None

@@ -45,24 +45,15 @@ def create_work_catalogue_index_document(record: dict, cfg: dict) -> dict:
     return catalogue_core
 
 
-
-
 def create_work_index_documents(record: dict, cfg: dict) -> list:
     work: str = record["marc_source"]
     marc_record: pymarc.Record = create_marc(work)
     rism_id: str = normalize_id(marc_record["001"].value())
     work_id: str = f"work_{rism_id}"
 
-    publications: list = (
-        orjson.loads(d)
-        if (d := record.get("publications"))
-        else []
-    )
-    source_entries: set[str] = (
-        {f"source_{n}" for n in d.split("\n") if n and n.strip()}
-        if (d := record.get("source_ids"))
-        else set()
-    )
+    publications: list = orjson.loads(d) if (d := record.get("publications")) else []
+    attached_sources: list = orjson.loads(s) if (s := record["sources"]) else []
+    source_entries: list[str] = [ss["id"] for ss in attached_sources]
     works_catalogue: list[dict] | None = get_bibliographic_references_json(
         marc_record, "690", publications
     )
@@ -76,17 +67,18 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         "type": "work",
         "rism_id": rism_id,
         "full_rism_id": f"works/{rism_id}",
-        "sources_ids": list(source_entries),
+        "sources_ids": source_entries,
         "source_count_i": record["source_count"],
         "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8")
         if works_catalogue
         else None,
-        "secondary_works_catalogue_json": orjson.dumps(secondary_works_catalogue).decode("utf-8")
+        "secondary_works_catalogue_json": orjson.dumps(
+            secondary_works_catalogue
+        ).decode("utf-8")
         if secondary_works_catalogue
         else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
-
     }
 
     additional_fields: dict = process_marc_profile(

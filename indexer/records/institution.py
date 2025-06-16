@@ -93,7 +93,11 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
             all_related_institutions
         )
         related = get_related_json(
-            marc_record, related_institutions_lookup, institution_id, "institution", "710"
+            marc_record,
+            related_institutions_lookup,
+            institution_id,
+            "institution",
+            "710",
         )
         related_sigla = [
             s["siglum"]
@@ -103,18 +107,14 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
 
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
-        orjson.loads(d)
-        if (d := record.get("digital_objects"))
-        else []
+        orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
     roles: list[str] = (
-        orjson.loads(s)
-        if (s := record.get("source_relationships"))
-        else []
+        orjson.loads(s) if (s := record.get("source_relationships")) else []
     )
 
     publication_entries: list = (
-        orjson.loads(d)
+        [p for p in orjson.loads(d) if p]
         if (d := record.get("publication_entries"))
         else []
     )
@@ -153,7 +153,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "bibliographic_references_sm": bibliographic_reference_titles,
         "now_in_json": orjson.dumps(now_in).decode("utf-8") if now_in else None,
         "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
-        "related_institutions_json": orjson.dumps(related).decode("utf-8") if related else None
+        "related_institutions_json": orjson.dumps(related).decode("utf-8")
+        if related
+        else None
         if related
         else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),

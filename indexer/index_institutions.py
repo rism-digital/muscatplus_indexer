@@ -22,100 +22,120 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     if "id" in cfg:
         id_where_clause = f"AND i.id = {cfg['id']}"
 
-    curs.execute(
-        f"""SELECT i.id, i.marc_source, i.siglum,
-               i.created_at AS created, i.updated_at AS updated,
-               ((
-                    SELECT COUNT(DISTINCT ss.id)
-                    FROM {dbname}.sources_to_institutions AS si
-                                LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-                    WHERE si.institution_id = i.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
-                )
-                   +
-                (
-                    SELECT COUNT(DISTINCT hi.source_id)
-                    FROM {dbname}.holdings AS hi
-                                LEFT JOIN {dbname}.sources AS hs1 ON hi.source_id = hs1.id
-                    WHERE hi.lib_siglum = i.siglum AND (hs1.wf_stage IS NULL OR hs1.wf_stage = 1)
-                )
-                   +
-                (
-                    SELECT COUNT(DISTINCT hs2.id)
-                    FROM {dbname}.sources AS hs2
-                                LEFT JOIN {dbname}.holdings AS hd ON hs2.source_id = hd.source_id
-                    WHERE hd.lib_siglum = i.siglum AND (hs2.wf_stage IS NULL OR hs2.wf_stage = 1)
-                )
-                   ) AS total_source_count,
-               (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('id', pub.id,
-                                         'author', pub.author,
-                                         'title', pub.title,
-                                         'journal', pub.journal,
-                                         'date', pub.date,
-                                         'place', pub.place,
-                                         'short_name', pub.short_name))
-                FROM {dbname}.institutions_to_publications ipt2
-                LEFT JOIN {dbname}.publications pub ON ipt2.publication_id = pub.id
-                WHERE ipt2.institution_id = i.id
-                )
-               AS publication_entries,
-               (SELECT COUNT(DISTINCT si.source_id)
-                FROM {dbname}.sources_to_institutions AS si
-                LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-                WHERE si.institution_id = i.id AND si.marc_tag = '852'
-                  AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
-                   AS source_count,
-               (SELECT COUNT(DISTINCT hi.holding_id)
-                FROM {dbname}.holdings_to_institutions AS hi
-                                LEFT JOIN {dbname}.holdings AS hh ON hi.holding_id = hh.id
-                WHERE hi.institution_id = i.id)
-                   AS holdings_count,
-               (SELECT COUNT(DISTINCT si.source_id)
-                FROM {dbname}.sources_to_institutions AS si
-                               LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-                WHERE si.institution_id = i.id AND si.marc_tag = '710'
-                  AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
-                   AS other_count,
-               (SELECT COUNT(DISTINCT pc.id)
-                FROM {dbname}.people_to_institutions AS pc
-                WHERE pc.institution_id = i.id AND pc.marc_tag = '910'
-               ) AS people_contribution_count,
-               (SELECT JSON_ARRAYAGG(DISTINCT JSON_OBJECT('id', CAST(reli.id AS CHAR), 'siglum', reli.siglum, 'name', reli.corporate_name, 'place', reli.place))
-                FROM {dbname}.institutions_to_institutions AS rela
-                LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
-                WHERE rela.institution_a_id = i.id AND rela.marc_tag = '580')
-                   AS now_in_institutions,
-               (SELECT JSON_ARRAYAGG(DISTINCT JSON_OBJECT('id', CAST(reli.id AS CHAR), 'siglum', reli.siglum, 'name', reli.corporate_name, 'place', reli.place))
-                FROM {dbname}.institutions_to_institutions AS rela
-                                LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_a_id
-                WHERE rela.institution_b_id = i.id AND rela.marc_tag = '580')
-                   AS contains_institutions,
-               (SELECT JSON_ARRAYAGG(DISTINCT JSON_OBJECT('id', CAST(reli.id AS CHAR), 'siglum', reli.siglum, 'name', reli.corporate_name, 'place', reli.place))
-                FROM {dbname}.institutions_to_institutions AS rela
-                                LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
-                WHERE rela.institution_a_id = i.id AND rela.marc_tag = '710')
-                   AS related_institutions,
-               (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
-                FROM {dbname}.digital_object_links AS do
-                WHERE do.object_link_type = 'Institution' AND do.object_link_id = i.id)
-                   AS digital_objects,
-               (SELECT JSON_ARRAYAGG(DISTINCT ssi.relator_code)
-                FROM {dbname}.sources_to_institutions AS ssi
-                                LEFT JOIN {dbname}.sources AS sss ON ssi.source_id = sss.id
-                WHERE i.id = ssi.institution_id AND sss.wf_stage = 1)
-                   AS source_relationships
-        FROM {dbname}.institutions AS i
-        WHERE i.siglum IS NOT NULL OR
-            ((EXISTS (SELECT 1 FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id)
-           OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id)
-           OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id)
-           OR EXISTS (SELECT 1 FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id)
-           OR EXISTS (SELECT 1 FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id)
-           OR EXISTS (SELECT 1 FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id))
-            ) {id_where_clause}
-        GROUP BY i.id
-        ORDER BY i.id ASC;"""  # noqa: S608
-    )
+    sql: str = f"""
+SELECT i.id, i.marc_source, i.siglum,
+    i.created_at AS created, i.updated_at AS updated,
+    ((SELECT COUNT(DISTINCT si.source_id)
+        FROM {dbname}.sources_to_institutions AS si
+        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
+        WHERE si.institution_id = i.id 
+            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)) 
+    +
+    (SELECT COUNT(DISTINCT hi.source_id)
+        FROM {dbname}.holdings AS hi
+        LEFT JOIN {dbname}.sources AS hs1 ON hi.source_id = hs1.id
+        WHERE hi.lib_siglum = i.siglum 
+            AND (hs1.wf_stage IS NULL OR hs1.wf_stage = 1))
+    +
+    (SELECT COUNT(DISTINCT hs2.id)
+        FROM {dbname}.sources AS hs2
+        LEFT JOIN {dbname}.holdings AS hd ON hs2.source_id = hd.source_id
+        WHERE hd.lib_siglum = i.siglum 
+            AND (hs2.wf_stage IS NULL OR hs2.wf_stage = 1))
+    ) AS total_source_count,
+    (SELECT COUNT(DISTINCT si.source_id)
+        FROM {dbname}.sources_to_institutions AS si
+        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
+        WHERE si.institution_id = i.id 
+            AND si.marc_tag = '852'
+            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+    ) AS source_count,
+    (SELECT COUNT(DISTINCT hi.holding_id)
+        FROM {dbname}.holdings_to_institutions AS hi
+        LEFT JOIN {dbname}.holdings AS hh ON hi.holding_id = hh.id
+        LEFT JOIN {dbname}.sources AS ss ON hh.source_id = ss.id
+        WHERE hi.institution_id = i.id
+            AND hi.marc_tag = '852'
+            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+    ) AS holdings_count,
+    (SELECT COUNT(DISTINCT si.source_id)
+        FROM {dbname}.sources_to_institutions AS si
+        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
+        WHERE si.institution_id = i.id 
+            AND si.marc_tag = '710'
+            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+    ) AS other_count,
+    (SELECT COUNT(DISTINCT pc.id)
+        FROM {dbname}.people_to_institutions AS pc
+        WHERE pc.institution_id = i.id 
+            AND pc.marc_tag = '910'
+    ) AS people_contribution_count,
+    (SELECT JSON_ARRAYAGG(DISTINCT
+                 JSON_OBJECT('id', pub.id,
+                             'author', pub.author,
+                             'title', pub.title,
+                             'journal', pub.journal,
+                             'date', pub.date,
+                             'place', pub.place,
+                             'short_name', pub.short_name))
+        FROM {dbname}.institutions_to_publications ipt2
+        LEFT JOIN {dbname}.publications pub ON ipt2.publication_id = pub.id
+        WHERE ipt2.institution_id = i.id
+    ) AS publication_entries,
+    (SELECT JSON_ARRAYAGG(DISTINCT 
+                        JSON_OBJECT('id', CAST(reli.id AS CHAR), 
+                                    'siglum', reli.siglum, 
+                                    'name', reli.corporate_name, 
+                                    'place', reli.place))
+        FROM {dbname}.institutions_to_institutions AS rela
+        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
+        WHERE rela.institution_a_id = i.id 
+            AND rela.marc_tag = '580'
+    ) AS now_in_institutions,
+    (SELECT JSON_ARRAYAGG(DISTINCT 
+                            JSON_OBJECT('id', CAST(reli.id AS CHAR), 
+                                        'siglum', reli.siglum, 
+                                        'name', reli.corporate_name, 
+                                        'place', reli.place))
+        FROM {dbname}.institutions_to_institutions AS rela
+        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_a_id
+        WHERE rela.institution_b_id = i.id 
+            AND rela.marc_tag = '580'
+    ) AS contains_institutions,
+    (SELECT JSON_ARRAYAGG(DISTINCT 
+                            JSON_OBJECT('id', CAST(reli.id AS CHAR), 
+                                        'siglum', reli.siglum, 
+                                        'name', reli.corporate_name, 
+                                        'place', reli.place))
+        FROM {dbname}.institutions_to_institutions AS rela
+        LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_b_id
+        WHERE rela.institution_a_id = i.id 
+            AND rela.marc_tag = '710'
+    ) AS related_institutions,
+    (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
+        FROM {dbname}.digital_object_links AS do
+        WHERE do.object_link_type = 'Institution' 
+            AND do.object_link_id = i.id
+    ) AS digital_objects,
+    (SELECT JSON_ARRAYAGG(DISTINCT ssi.relator_code)
+        FROM {dbname}.sources_to_institutions AS ssi
+        LEFT JOIN {dbname}.sources AS sss ON ssi.source_id = sss.id
+        WHERE i.id = ssi.institution_id AND sss.wf_stage = 1
+    ) AS source_relationships
+FROM {dbname}.institutions AS i
+WHERE i.siglum IS NOT NULL OR
+    ((EXISTS (SELECT 1 FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id)
+    OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_a_id = i.id)
+    OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id)
+    OR EXISTS (SELECT 1 FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id)
+    OR EXISTS (SELECT 1 FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id)
+    OR EXISTS (SELECT 1 FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id))
+    ) {id_where_clause}
+GROUP BY i.id
+ORDER BY i.id ASC;
+"""
+
+    curs.execute(sql)
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
         yield rows

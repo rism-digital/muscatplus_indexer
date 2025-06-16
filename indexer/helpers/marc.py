@@ -49,18 +49,15 @@ def create_marc(record: str) -> pymarc.Record:
     return pymarc.Record(fields=fields)
 
 
-def create_marc_list(
-    marc_records: str | None, delimiter: str = "\n"
-) -> list[pymarc.Record]:
+def create_marc_list(marc_records: list[str] | None) -> list[pymarc.Record]:
     """
     Will always return a list, potentially an empty one.
 
     :param marc_records: A string of newline-separated MARC records
-    :param delimiter: A string that marks the separator between MARC records. Newline (\n) by default.
     :return: A list of pymarc.Record objects
     """
     return (
-        [create_marc(rec.strip()) for rec in marc_records.split(delimiter) if rec]
+        [create_marc(rec.strip()) for rec in marc_records if rec]
         if marc_records
         else []
     )

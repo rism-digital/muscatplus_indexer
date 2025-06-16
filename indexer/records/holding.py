@@ -107,9 +107,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
         idx_document.update(additional_institution_fields)
 
     if p := record.get("publication_entries"):
-        publication_entries: list = (
-            orjson.loads(p) if p else []
-        )
+        publication_entries: list = [d for d in orjson.loads(p) if d] if p else []
         bibliographic_references: list[dict] | None = get_bibliographic_references_json(
             marc_record, "691", publication_entries
         )
@@ -120,7 +118,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
                 ).decode("utf-8")
             }
         )
-    if 'created' in record and 'updated' in record:
+    if "created" in record and "updated" in record:
         idx_document.update(
             {
                 "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),

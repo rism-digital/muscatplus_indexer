@@ -21,39 +21,51 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
 
     sql_statement = f"""WITH person_work_nodes AS (
                             SELECT wnp.person_id AS person_id,
-                                   JSON_OBJECT('count', (SELECT COUNT(swn1.source_id) FROM {dbname}.sources_to_work_nodes AS swn1 WHERE swn1.work_node_id = wn.id),
+                                   JSON_OBJECT('count', (SELECT COUNT(swn1.source_id) 
+                                                            FROM {dbname}.sources_to_work_nodes AS swn1 
+                                                            WHERE swn1.work_node_id = wn.id),
                                                'marc_source', wn.marc_source) AS json_object
                             FROM {dbname}.sources_to_work_nodes AS swn
-                                LEFT JOIN {dbname}.work_nodes_to_people AS wnp ON swn.work_node_id = wnp.work_node_id
+                            LEFT JOIN {dbname}.work_nodes_to_people AS wnp ON swn.work_node_id = wnp.work_node_id
                             LEFT JOIN {dbname}.work_nodes AS wn ON wnp.work_node_id = wn.id
                         GROUP BY wn.id, wn.title
-                        ORDER BY wn.title ASC
-                            )
+                        ORDER BY wn.title ASC)
 
                         SELECT p.id AS id, p.marc_source AS marc_source,
                                p.created_at AS created, p.updated_at AS updated,
                                (SELECT COUNT(DISTINCT sp.source_id)
-                                FROM {dbname}.sources_to_people sp
-                                LEFT JOIN {dbname}.sources ss ON sp.source_id = ss.id
-                                WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
+                                    FROM {dbname}.sources_to_people sp
+                                    LEFT JOIN {dbname}.sources ss ON sp.source_id = ss.id
+                                    WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
                                )
-                                   +
-                               (
-                                   SELECT COUNT(DISTINCT ho.source_id)
-                                   FROM {dbname}.holdings ho
-                                   LEFT JOIN {dbname}.holdings_to_people hp ON ho.id = hp.holding_id
-                                   WHERE hp.person_id = p.id
+                               +
+                               (SELECT COUNT(DISTINCT ho.source_id)
+                                    FROM {dbname}.holdings ho
+                                    LEFT JOIN {dbname}.holdings_to_people hp ON ho.id = hp.holding_id
+                                    WHERE hp.person_id = p.id
                                ) AS source_count,
                                (SELECT JSON_ARRAYAGG(DISTINCT COALESCE(ssp.relator_code, 'cre'))
-                                FROM {dbname}.sources_to_people AS ssp
-                                LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
-                                WHERE p.id = ssp.person_id AND sss.wf_stage = 1)
-                                   AS source_relationships,
+                                    FROM {dbname}.sources_to_people AS ssp
+                                    LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
+                                    WHERE p.id = ssp.person_id AND sss.wf_stage = 1
+                               ) AS source_relationships,
                                (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
-                                FROM {dbname}.digital_object_links AS do
-                                WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id)
-                                   AS digital_objects,
-                               (SELECT JSON_ARRAYAGG(ww.json_object) FROM person_work_nodes ww WHERE ww.person_id = p.id) AS work_nodes
+                                    FROM {dbname}.digital_object_links AS do
+                                    WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id
+                               ) AS digital_objects,
+                               (SELECT JSON_ARRAYAGG(DISTINCT 
+                                                      JSON_OBJECT('institution_id', CONCAT('institution_', reli.id), 
+                                                                  'siglum', reli.siglum, 
+                                                                  'name', reli.corporate_name, 
+                                                                  'place', reli.place))
+                                    FROM {dbname}.people_to_institutions AS rela
+                                    LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
+                                    WHERE rela.person_id = p.id AND rela.marc_tag = '510'
+                               ) AS related_institutions,
+                               (SELECT JSON_ARRAYAGG(ww.json_object) 
+                                    FROM person_work_nodes ww 
+                                    WHERE ww.person_id = p.id
+                               ) AS work_nodes
                         FROM {dbname}.people AS p
                         WHERE
                             EXISTS (SELECT 1 FROM {dbname}.people_to_institutions pi WHERE pi.person_id = p.id)
@@ -65,7 +77,6 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                             OR EXISTS (SELECT 1 FROM {dbname}.people_to_publications pubp WHERE pubp.person_id = p.id)
                             OR EXISTS (SELECT 1 FROM {dbname}.publications_to_people ppub WHERE ppub.person_id = p.id)
                             {id_where_clause};"""  # noqa: S608
-
 
     curs.execute(sql_statement)
 

@@ -8,10 +8,8 @@ import yaml
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    get_related_json,
     get_work_node,
     normalize_id,
-    process_related_institutions,
 )
 from indexer.processors import person as person_processor
 
@@ -48,9 +46,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     rism_id: str = normalize_id(marc_record["001"].value())
     person_id: str = f"person_{rism_id}"
     roles: list[str] = (
-        orjson.loads(s)
-        if (s := record.get("source_relationships"))
-        else []
+        orjson.loads(s) if (s := record.get("source_relationships")) else []
     )
 
     source_count: int = record.get("source_count", 0)
@@ -58,9 +54,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     total_count: int = source_count + holdings_count
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
-        orjson.loads(d)
-        if (d := record.get("digital_objects"))
-        else []
+        orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
 
     work_nodes_json = None
@@ -74,16 +68,23 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
             orjson.dumps(all_work_nodes).decode("utf-8") if all_work_nodes else None
         )
 
-    related = None
-    related_institutions: str | None = record.get("related_institutions")
-    if related_institutions:
-        all_related_institutions: list = related_institutions.split("\n")
-        related_institutions_lookup: dict = process_related_institutions(
-            all_related_institutions
-        )
-        related = get_related_json(
-            marc_record, related_institutions_lookup, person_id, "person", "510"
-        )
+    related: list = []
+    related_institutions: list = (
+        orjson.loads(ii) if (ii := record.get("related_institutions")) else []
+    )
+    for i, reli in enumerate(related_institutions, 1):
+        institution_record: dict = {
+            "id": f"{i}",
+            "institution_id": f"{reli['institution_id']}",
+            "type": "institution",
+            "name": f"{reli['name']}",
+            "place": f"{reli['place']}",
+            "siglum": reli["siglum"],
+            "relationship": "xi",
+            "this_id": person_id,
+            "this_type": "person",
+        }
+        related.append({k: v for k, v in institution_record.items() if v})
 
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
@@ -101,7 +102,9 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "total_sources_i": total_count if rism_id != "30004985" else 0,
         "work_node_ids": work_node_ids,
         "work_nodes_json": work_nodes_json,
-        "related_institutions_json": orjson.dumps(related).decode("utf-8") if related else None,
+        "related_institutions_json": (
+            orjson.dumps(related).decode("utf-8") if related else None
+        ),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -125,7 +128,7 @@ def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
     record_data = orjson.loads(work_nodes_marc)
     work_nodes = []
     for r in record_data:
-        count, marc = r['count'], create_marc(r['marc_source'])
+        count, marc = r["count"], create_marc(r["marc_source"])
         work_node: dict | None = get_work_node(marc, person_id, "person", int(count))
         if work_node:
             work_nodes.append(work_node)

@@ -34,6 +34,7 @@ def process_marc_profile(
         value_prefix = field_config.get("value_prefix")
         validator_fn_name: str | None = field_config.get("validator")
         value_from: str | None = field_config.get("value_from")
+        processor: str | None = field_config.get("processor")
 
         if "value" in field_config:
             # If we have a static value, simply set the field to the static value
@@ -41,27 +42,43 @@ def process_marc_profile(
             solr_document[solr_field] = field_config["value"]
             continue
 
-        if "processor" in field_config:
-            # a processor function is configured for this field.
-            fn_name: str = field_config["processor"]
+        if value_from and not processor:
+            if field_result := solr_document.get(value_from):
+                solr_document[solr_field] = field_result
+            else:
+                log.error(
+                    "The key %s is not in the Solr document, so the previously computed value is not available.",
+                    value_from,
+                )
 
-            if not hasattr(processors, fn_name):
+            continue
+
+        if processor:
+            # a processor function is configured for this field.
+
+            if not hasattr(processors, processor):
                 log.error(
                     "Could not process Solr field %s for record %s; %s is a function that does not exist.",
                     solr_field,
                     doc_id,
-                    fn_name,
+                    processor,
                 )
                 continue
 
-            processor_fn: Callable = getattr(processors, fn_name)
+            processor_fn: Callable = getattr(processors, processor)
 
             if value_from:
                 if input_value := solr_document.get(value_from):
-                    log.debug("The key %s was previously computed and is now available.", value_from)
+                    log.debug(
+                        "The key %s was previously computed and is now available.",
+                        value_from,
+                    )
                     field_result = processor_fn(input_value)
                 else:
-                    log.debug("The key %s is not in the Solr document, so the previously computed value is not available.", value_from)
+                    log.debug(
+                        "The key %s is not in the Solr document, so the previously computed value is not available.",
+                        value_from,
+                    )
                     continue
             else:
                 field_result = processor_fn(marc)
@@ -135,13 +152,14 @@ def process_marc_profile(
             field_result = [
                 segment.strip()
                 for res in field_result
-                for segment in res.split("{{brk}}") if segment
+                for segment in res.split("{{brk}}")
+                if segment
             ]
 
         if links:
-            if multiple:
+            if isinstance(field_result, list) and multiple:
                 field_result = [note_links(res) for res in field_result]
-            else:
+            elif isinstance(field_result, str):
                 field_result = note_links(field_result)
 
         if value_prefix:
@@ -152,7 +170,9 @@ def process_marc_profile(
             else:
                 log.warning(
                     "A value prefix was configured for %s on %s, but %s cannot be prefixed!",
-                    solr_field, doc_id, type(field_result),
+                    solr_field,
+                    doc_id,
+                    type(field_result),
                 )
                 continue
 

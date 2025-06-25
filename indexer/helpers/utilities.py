@@ -671,6 +671,23 @@ def get_creator_name(record: pymarc.Record) -> str | None:
     return f"{creator_name}{creator_dates}"
 
 
+def get_people_names(names: list[dict] | None) -> list[str] | None:
+    if not names:
+        return None
+
+    out_l: list = []
+    for it in names:
+        out_l.append(get_person_name(it))
+
+    return out_l
+
+
+def get_person_name(name: dict) -> str:
+    nm: str = name.get("name", "")
+    dt: str = f" ({d})" if (d := name.get("life_dates")) else ""
+    return f"{nm}{dt}"
+
+
 @dataclasses.dataclass
 class ContentTypes:
     NOTATED_MUSIC = "Notated music"

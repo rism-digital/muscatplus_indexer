@@ -20,6 +20,7 @@ from indexer.helpers.utilities import (
     get_content_types,
     get_creator_name,
     get_parent_order_for_members,
+    get_people_names,
     get_titles,
     get_work_node,
     normalize_id,
@@ -181,7 +182,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     )
 
     people: list = orjson.loads(d) if (d := record.get("people")) else []
-    people_names: list | None = _get_people_names(people)
+    people_names: list | None = get_people_names(people)
 
     variant_people_names: list | None = _get_variant_people_names(people)
 
@@ -392,19 +393,6 @@ def _get_manuscript_holdings(
         idx_doc["city_s"] = institution_places[0]
 
     return [idx_doc]
-
-
-def _get_people_names(names: list[dict] | None) -> list[str] | None:
-    if not names:
-        return None
-
-    out_l: list = []
-    for it in names:
-        name: str = it.get("name", "")
-        dates: str = f" ({d})" if (d := it.get("life_dates")) else ""
-        out_l.append(f"{name}{dates}")
-
-    return out_l
 
 
 def _get_variant_people_names(people: list | None) -> list | None:

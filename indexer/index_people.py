@@ -21,8 +21,8 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
 
     sql_statement = f"""WITH person_work_nodes AS (
                             SELECT wnp.person_id AS person_id,
-                                   JSON_OBJECT('count', (SELECT COUNT(swn1.source_id) 
-                                                            FROM {dbname}.sources_to_work_nodes AS swn1 
+                                   JSON_OBJECT('count', (SELECT COUNT(swn1.source_id)
+                                                            FROM {dbname}.sources_to_work_nodes AS swn1
                                                             WHERE swn1.work_node_id = wn.id),
                                                'marc_source', wn.marc_source) AS json_object
                             FROM {dbname}.sources_to_work_nodes AS swn
@@ -53,17 +53,33 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
                                     FROM {dbname}.digital_object_links AS do
                                     WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id
                                ) AS digital_objects,
-                               (SELECT JSON_ARRAYAGG(DISTINCT 
-                                                      JSON_OBJECT('institution_id', CONCAT('institution_', reli.id), 
-                                                                  'siglum', reli.siglum, 
-                                                                  'name', reli.corporate_name, 
+                               (SELECT JSON_ARRAYAGG(DISTINCT
+                                                         JSON_OBJECT('id', CONCAT('publication_', pub.id),
+                                                                     'author', pub.author,
+                                                                     'title', pub.title,
+                                                                     'journal', pub.journal,
+                                                                     'date', pub.date,
+                                                                     'place', pub.place,
+                                                                     'short_name', pub.short_name,
+                                                                     'catalogue_type', pub.work_catalogue))
+                                    FROM {dbname}.publications_to_people ppt2
+                                    LEFT JOIN {dbname}.publications pub ON ppt2.publication_id = pub.id
+                                    WHERE ppt2.person_id = p.id
+                                      AND ppt2.marc_tag = '700'
+                                      AND ppt2.relator_code = 'att'
+                                      AND pub.work_catalogue IN (2, 3)
+                               ) AS work_catalogues,
+                               (SELECT JSON_ARRAYAGG(DISTINCT
+                                                      JSON_OBJECT('institution_id', CONCAT('institution_', reli.id),
+                                                                  'siglum', reli.siglum,
+                                                                  'name', reli.corporate_name,
                                                                   'place', reli.place))
                                     FROM {dbname}.people_to_institutions AS rela
                                     LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
                                     WHERE rela.person_id = p.id AND rela.marc_tag = '510'
                                ) AS related_institutions,
-                               (SELECT JSON_ARRAYAGG(ww.json_object) 
-                                    FROM person_work_nodes ww 
+                               (SELECT JSON_ARRAYAGG(ww.json_object)
+                                    FROM person_work_nodes ww
                                     WHERE ww.person_id = p.id
                                ) AS work_nodes
                         FROM {dbname}.people AS p

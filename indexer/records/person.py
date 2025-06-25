@@ -57,6 +57,12 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
 
+    work_catalogues: list = orjson.loads(w) if (w := record["work_catalogues"]) else []
+    formatted_catalogues = _get_work_catalogues(work_catalogues)
+    works_catalogue_json: str | None = None
+    if formatted_catalogues:
+        works_catalogue_json = orjson.dumps(formatted_catalogues).decode("utf-8")
+
     work_nodes_json = None
     work_node_ids = None
     if work_nodes := record.get("work_nodes"):
@@ -103,6 +109,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "total_sources_i": total_count if rism_id != "30004985" else 0,
         "work_node_ids": work_node_ids,
         "work_nodes_json": work_nodes_json,
+        "works_catalogue_json": works_catalogue_json,
         "related_institutions_json": (
             orjson.dumps(related).decode("utf-8") if related else None
         ),
@@ -135,3 +142,29 @@ def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
             work_nodes.append(work_node)
 
     return work_nodes
+
+
+def _get_work_catalogues(work_catalogues: list) -> list | None:
+    formatted_catalogues: list = []
+
+    for catalogue in work_catalogues:
+        publication_id = catalogue["id"]
+        catalogue_type_value = catalogue["catalogue_type"]
+        if catalogue_type_value == 3:
+            catalogue_status = "completed"
+        elif catalogue_type_value == 2:
+            catalogue_status = "in-progress"
+        else:
+            catalogue_status = "unknown"
+
+        formatted_catalogues.append(
+            {
+                "id": publication_id,
+                "title": catalogue["title"],
+                "creator": catalogue["author"],
+                "short_name": catalogue["short_name"],
+                "status": catalogue_status,
+            }
+        )
+
+    return formatted_catalogues

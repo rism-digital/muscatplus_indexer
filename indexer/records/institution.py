@@ -145,6 +145,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "institution_id": institution_id,
         "rism_id": rism_id,
         "full_rism_id": f"institutions/{rism_id}",
+        "legacy_id": f"ks{rism_id}",
         "roles_sm": roles,
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,

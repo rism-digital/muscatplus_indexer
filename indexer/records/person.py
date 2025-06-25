@@ -94,6 +94,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "person_id": person_id,
         "rism_id": rism_id,
         "full_rism_id": f"people/{rism_id}",
+        "legacy_id": f"pe{rism_id}",
         "roles_sm": roles,
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,

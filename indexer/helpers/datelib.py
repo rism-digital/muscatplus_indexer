@@ -15,7 +15,9 @@ SIMPLE_SINGLE_YEAR_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})$")
 SIMPLE_RANGE_REGEX: re.Pattern = re.compile(r"^(?P<first>\d{4})-(?P<second>\d{4})$")
 
 # dd/mm/yyyy
-SLASH_DIVIDED_REGEX: re.Pattern = re.compile(r"^(?P<day>\d{2})/(?P<month>\d{2})/(?P<year>\d{4})")
+SLASH_DIVIDED_REGEX: re.Pattern = re.compile(
+    r"^(?P<day>\d{2})/(?P<month>\d{2})/(?P<year>\d{4})"
+)
 
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
 DOT_DIVIDED_REGEX: re.Pattern = re.compile(
@@ -487,7 +489,10 @@ def process_date_statements(
 
     if earliest_date > latest_date:
         log.warning(
-            "Earliest date %s is greater than latest date %s for record %s", earliest_date, latest_date, record_id
+            "Earliest date %s is greater than latest date %s for record %s",
+            earliest_date,
+            latest_date,
+            record_id,
         )
         return None
 
@@ -517,7 +522,3 @@ def convert_to_edtf(old_date: str) -> str:
             return old_date
     else:
         return old_date
-
-def convert_to_solr_daterange(value: str) -> str:
-    """Converts a date string to input suitable for storing in a Solr date range field."""
-    pass

@@ -123,9 +123,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     )
 
     publication_entries: list = (
-        [p for p in orjson.loads(d) if p]
-        if (d := record.get("publication_entries"))
-        else []
+        orjson.loads(d) if (d := record.get("publication_entries")) else []
     )
     bibliographic_references: list[dict] | None = get_bibliographic_references_json(
         marc_record, "670", publication_entries

@@ -31,7 +31,7 @@ def _get_creator_data(record: pymarc.Record) -> list | None:
     if not creator:
         return None
 
-    creator[0]["relationship"] = "cre"
+    creator[0]["relationship"] = "aut"
     return creator
 
 
@@ -67,6 +67,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
 
     return people or None
 
+
 def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     if "710" not in record:
         return None
@@ -76,6 +77,23 @@ def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     )
 
     return institutions or None
+
+
+def _get_series_statement_data(record: pymarc.Record) -> list | None:
+    if "760" not in record:
+        return None
+
+    statements: list[pymarc.Field] = record.get_fields("760")
+    out: list = []
+
+    for stmt in statements:
+        d = {
+            "title": stmt.get("t"),
+            "volumes": ", ".join(vn for vn in stmt.get_subfields("g") if vn),
+        }
+        out.append({k: v for k, v in d.items() if v})
+
+    return out
 
 
 def _get_external_resources_data(record: pymarc.Record) -> list | None:
@@ -88,9 +106,7 @@ def _get_external_resources_data(record: pymarc.Record) -> list | None:
     if "856" not in record:
         return None
 
-    resources: list = [
-        external_resource_data(f) for f in record.get_fields("856") if f
-    ]
+    resources: list = [external_resource_data(f) for f in record.get_fields("856") if f]
 
     return resources if resources else None
 
@@ -101,6 +117,7 @@ def _get_iiif_manifest_uris(record: pymarc.Record) -> list | None:
 
     fields: list[pymarc.Field] = record.get_fields("856")
     return [f["u"] for f in fields if "x" in f and "IIIF" in f["x"]]
+
 
 def _get_has_external_resources(record: pymarc.Record) -> bool:
     return "856" in record

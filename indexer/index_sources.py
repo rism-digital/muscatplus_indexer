@@ -60,7 +60,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
             WHERE swn.source_id = child.id LIMIT 1
         ) AS work_node,
         (SELECT (JSON_ARRAYAGG(DISTINCT CONCAT('work_', sw.work_id))) 
-            FROM {dbname}.sources_to_works AS SW
+            FROM {dbname}.sources_to_works AS sw
             LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
             WHERE sw.source_id = child.id AND ss.wf_stage = 1 
         ) AS work_ids,

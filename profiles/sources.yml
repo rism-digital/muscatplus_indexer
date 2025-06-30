@@ -384,7 +384,6 @@ subjects_sm:
   field: "650"
   subfield: "a"
   multiple: true
-
 subjects_json:
   processor: "_get_subjects"
   json: true

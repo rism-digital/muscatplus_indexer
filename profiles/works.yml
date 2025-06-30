@@ -20,7 +20,7 @@ incipit_title_sm:
   field: "031"
   subfield: "d"
   multiple: true
-incipit_text_sm:
+text_incipit_sm:
   field: "031"
   subfield: "t"
   multiple: true
@@ -41,7 +41,21 @@ standard_title_s:
 key_mode_s:
   field: "130"
   subfield: "r"
+scoring_summary_sm:
+  field: "130"
+  subfield: "m"
+  multiple: "true"
+standard_titles_json:
+  processor: "_get_standard_titles_data"
+  json: true
 
+work_form_sm:
+  field: "380"
+  subfield: "a"
+  multiple: true
+work_form_json:
+  processor: "_get_work_form_data"
+  json: true
 
 opus_number_s:
   field: "393"

@@ -12,6 +12,7 @@ from indexer.helpers.utilities import (
 
 log = logging.getLogger("muscat_indexer")
 
+
 def _get_external_ids(record: pymarc.Record) -> list | None:
     """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later."""
     if "024" not in record:
@@ -25,12 +26,14 @@ def _get_external_ids(record: pymarc.Record) -> list | None:
         if (idf and idf.get("2") and idf.get("a"))
     ]
 
+
 def _get_has_incipits(record: pymarc.Record) -> bool:
     return "031" in record
 
 
 def _get_num_incipits(record: pymarc.Record) -> int:
     return len(record.get_fields("031"))
+
 
 def _get_creator_name(record: pymarc.Record) -> str | None:
     if "100" not in record:
@@ -56,6 +59,7 @@ def _get_creator_data(record: pymarc.Record) -> list | None:
     creator[0]["relationship"] = "cre"
     return creator
 
+
 def _get_external_resources_data(record: pymarc.Record) -> list | None:
     """
     Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
@@ -75,7 +79,9 @@ def _get_external_resources_data(record: pymarc.Record) -> list | None:
     return resources if resources else None
 
 
-def _validate_edtf_date(value: str, doc_id: str, marc_field: str | None, marc_subfield: str | None) -> bool:
+def _validate_edtf_date(
+    value: str, doc_id: str, marc_field: str | None, marc_subfield: str | None
+) -> bool:
     is_valid: bool = is_valid_edtf(value)
     if is_valid:
         return True
@@ -88,11 +94,55 @@ def _validate_edtf_date(value: str, doc_id: str, marc_field: str | None, marc_su
 
     now_is_valid: bool = is_valid_edtf(fixed_date)
     if now_is_valid:
-        log.critical("\"%s\" was fixed to \"%s\" on \"%s\", \"%s\", \"%s\"", value, fixed_date, doc_id, marc_field, marc_subfield)
+        log.critical(
+            '"%s" was fixed to "%s" on "%s", "%s", "%s"',
+            value,
+            fixed_date,
+            doc_id,
+            marc_field,
+            marc_subfield,
+        )
         return True
 
-
-    log.warning("%s was fixed to %s on %s, but was still not valid EDTF.", value, fixed_date, doc_id)
+    log.warning(
+        "%s was fixed to %s on %s, but was still not valid EDTF.",
+        value,
+        fixed_date,
+        doc_id,
+    )
     return False
 
 
+def _get_work_form_data(record: pymarc.Record) -> list[dict] | None:
+    if "380" not in record:
+        return None
+
+    work_form_fields: list[pymarc.Field] = record.get_fields("380")
+
+    # "Form of work" is tied to the subject headings, so we keep the same JSON structure for
+    # the JSON object as we have in the subjects_json in sources.
+    ret: list = []
+    for field in work_form_fields:
+        d = {"id": f"subject_{field['0']}", "subject": field.get("a")}
+        # Ensure we remove any None values
+        ret.append({k: v for k, v in d.items() if v})
+
+    return ret
+
+
+def _get_standard_titles_data(record: pymarc.Record) -> list[dict] | None:
+    if "130" not in record:
+        return None
+
+    titles: list[pymarc.Field] = record.get_fields("130")
+
+    out: list = []
+    for title in titles:
+        d = {
+            "title": title.get("a"),
+            "key_mode": title.get("r"),
+            "scoring_summary": title.get("m"),
+        }
+        out.append({k: v for k, v in d.items() if v})
+
+    return out

@@ -18,15 +18,22 @@ def _get_works(cfg: dict) -> Generator[dict, None, None]:
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
 
+    id_where_clause: str = ""
+    if "id" in cfg:
+        id_where_clause = f"AND work.id = {cfg['id']}"
+
     sql_query: str = f"""
 SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
-    COUNT(DISTINCT s.id) as source_count, work.created_at AS created,
-    work.updated_at AS updated,
-    JSON_ARRAYAGG(DISTINCT JSON_OBJECT('id', CONCAT('source_', s.id),
-                                       'marc_source', s.marc_source)
+    work.created_at AS created, work.updated_at AS updated,
+    (SELECT JSON_ARRAYAGG(DISTINCT 
+                JSON_OBJECT('id', CONCAT('source_', s.id),
+                            'marc_source', s.marc_source))
+        FROM {dbname}.sources_to_works AS sw ON sw.work_id = work.id
+        LEFT JOIN {dbname}.source AS ss ON sw.source_id = ss.id
+        WHERE ss.wf_stage = 1
     ) AS sources,
     (SELECT JSON_ARRAYAGG(DISTINCT
-                JSON_OBJECT('id', pub.id,
+                JSON_OBJECT('id', (CAST(pub.id AS CHAR)),
                      'author', pub.author,
                      'title', pub.title,
                      'journal', pub.journal,
@@ -34,21 +41,14 @@ SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
                      'place', pub.place,
                      'short_name', pub.short_name,
                      'marc_source', pub.marc_source))
-             FROM {dbname}.works_to_publications wpt
-             LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
-             WHERE wpt.work_id = work.id
+        FROM {dbname}.works_to_publications wpt
+        LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
+        WHERE wpt.work_id = work.id
     ) AS publication_entries,
-    JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name,
-    (SELECT pw2.publication_id
-        FROM {dbname}.works_to_publications pw2
-        LEFT JOIN {dbname}.publications pub2 ON pw2.publication_id = pub2.id
-        WHERE pw2.work_id = work.id AND pw2.marc_tag = '690'
-    ) AS catalogue_id
+    JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name
 FROM {dbname}.works AS work
-    LEFT JOIN {dbname}.sources_to_works sw ON work.id = sw.work_id
-    LEFT JOIN {dbname}.sources s ON sw.source_id = s.id
     LEFT JOIN {dbname}.people peep ON work.person_id = peep.id
-    WHERE work.wf_stage = 1
+    WHERE work.wf_stage = 1 {id_where_clause}
 GROUP BY work.id
 ORDER BY work.id;"""  # noqa: S608
 

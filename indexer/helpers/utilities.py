@@ -800,9 +800,11 @@ def get_bibliographic_references_json(
     record: pymarc.Record, field: str, references: list[dict] | None
 ) -> list[dict] | None:
     if not references:
+        log.debug("No bibliographic references, bailing.")
         return None
 
     if field not in record:
+        log.debug("Field %s is not in the record, bailing.", field)
         return None
 
     refs: dict = {}
@@ -842,9 +844,9 @@ def get_bibliographic_references_json(
             )
             continue
 
-        literature_id: str = f"publication_{fid}"
+        publication_id: str = f"publication_{fid}"
         lit = {
-            "id": literature_id,
+            "id": publication_id,
             "formatted": refs[fid],
         }
         if p := ff.get("n"):
@@ -852,6 +854,7 @@ def get_bibliographic_references_json(
 
         outp.append(lit)
 
+    log.debug("Success for field %s, record %s", field, record["001"].value())
     return outp
 
 

@@ -20,7 +20,11 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     rism_id: str = normalize_id(marc_record["001"].value())
     work_id: str = f"work_{rism_id}"
 
-    publications: list = orjson.loads(d) if (d := record.get("publications")) else []
+    source_count: int = len(record["sources"]) if record["sources"] else 0
+
+    publications: list = (
+        orjson.loads(d) if (d := record.get("publication_entries")) else []
+    )
     attached_sources: list = orjson.loads(s) if (s := record["sources"]) else []
     source_entries: list[str] = [ss["id"] for ss in attached_sources]
     works_catalogue: list[dict] | None = get_bibliographic_references_json(
@@ -37,8 +41,8 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         "rism_id": rism_id,
         "full_rism_id": f"works/{rism_id}",
         "sources_ids": source_entries,
-        "source_count_i": record["source_count"],
-        "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8")
+        "source_count_i": source_count,
+        "works_catalogue_json": orjson.dumps(works_catalogue[0]).decode("utf-8")
         if works_catalogue
         else None,
         "secondary_works_catalogue_json": orjson.dumps(

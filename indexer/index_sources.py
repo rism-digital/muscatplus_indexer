@@ -52,7 +52,6 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
             WHERE marc_tag = '787' AND source_a_id = child.id
         ) AS related_sources,
         (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id)) FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Source' AND do.object_link_id = child.id) AS digital_objects,
-        (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('work_', sw.work_id)) FROM {dbname}.sources_to_works AS sw WHERE sw.source_id = child.id) AS work_ids,
         -- NB: Only one work node is permitted on a source, even though this technically allows for more. To ensure we only have 0 or 1 record, a LIMIT clause is added.
         (SELECT JSON_OBJECT('id', CONCAT('work_node_', wn.id),
                            'marc_source', wn.marc_source)
@@ -60,6 +59,11 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
             LEFT JOIN {dbname}.work_nodes AS wn ON swn.work_node_id = wn.id
             WHERE swn.source_id = child.id LIMIT 1
         ) AS work_node,
+        (SELECT (JSON_ARRAYAGG(DISTINCT CONCAT('work_', sw.work_id))) 
+            FROM {dbname}.sources_to_works AS SW
+            LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
+            WHERE sw.source_id = child.id AND ss.wf_stage = 1 
+        ) AS work_ids,
         (SELECT JSON_ARRAYAGG(DISTINCT
                              JSON_OBJECT('lib_siglum', h2.lib_siglum,
                                          'marc_source', h2.marc_source))

@@ -151,3 +151,15 @@ def _get_standard_titles_data(record: pymarc.Record) -> list[dict] | None:
 
 def _get_alternative_titles_data(record: pymarc.Record) -> list | None:
     return get_titles(record, "430")
+
+
+def _get_related_people_data(record: pymarc.Record) -> list | None:
+    if "500" not in record:
+        return None
+
+    work_id: str = f"work_{normalize_id(record['001'].value())}"
+    people = get_related_people(
+        record, work_id, "work", fields=("500",), ungrouped=True
+    )
+
+    return people or None

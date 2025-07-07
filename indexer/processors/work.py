@@ -7,6 +7,7 @@ from indexer.helpers.datelib import convert_to_edtf
 from indexer.helpers.utilities import (
     external_resource_data,
     get_related_people,
+    get_titles,
     normalize_id,
 )
 
@@ -146,3 +147,7 @@ def _get_standard_titles_data(record: pymarc.Record) -> list[dict] | None:
         out.append({k: v for k, v in d.items() if v})
 
     return out
+
+
+def _get_alternative_titles_data(record: pymarc.Record) -> list | None:
+    return get_titles(record, "430")

@@ -49,6 +49,12 @@ standard_titles_json:
   processor: "_get_standard_titles_data"
   json: true
 
+creation_places_sm:
+  field: "370"
+  subfield: "g"
+  multiple: true
+
+
 work_form_sm:
   field: "380"
   subfield: "a"
@@ -60,6 +66,13 @@ work_form_json:
 opus_number_s:
   field: "393"
   subfield: "b"
+
+alternative_titles_sm:
+  field: "430"
+  subfield: "a"
+alternative_titles_json:
+  processor: "_get_alternative_titles_data"
+  json: true
 
 catalogue_s:
   field: "690"

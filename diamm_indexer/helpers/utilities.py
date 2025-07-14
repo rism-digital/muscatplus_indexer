@@ -29,7 +29,7 @@ def get_related_sources_json(sources: list[dict] | None) -> list[dict]:
             ],
             "relationship": relator_code,
             "qualifier": (
-                "Doubtful" if source["relationship_uncertain"] else "Ascertained"
+                "Alleged" if source["relationship_uncertain"] else "Ascertained"
             ),
             "note": source["relationship_type_name"],
         }

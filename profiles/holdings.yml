@@ -33,7 +33,7 @@ general_notes_sm:
 
 access_restrictions_sm:
   field: "506"
-  subfield: "f"
+  subfield: "a"
   multiple: true
   breaks: true
 

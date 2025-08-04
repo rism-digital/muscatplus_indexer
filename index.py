@@ -336,14 +336,10 @@ if __name__ == "__main__":
         help="Only index Cantus into the indexing core. Does not swap afterwards.",
     )
 
-    # parser.add_argument("--skip-cmo", dest="skip_cmo", action="store_true", help="Skip CMO indexing.")
-    # parser.add_argument("--only-cmo", dest="only_cmo", action="store_true",
-    #                     help="Only index CMO into the indexing core. Does not swap afterwards.")
-
     input_args: argparse.Namespace = parser.parse_args()
 
-    log.info("Indexing to the live core!")
     if input_args.live:
+        log.info("Indexing to the live core!")
         for i in range(3, 0, -1):
             print(
                 f"Waiting 3 seconds for Ctrl-C in case this is not correct. {i}",

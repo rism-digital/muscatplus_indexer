@@ -101,9 +101,12 @@ def _get_linked_diamm_archives(
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id, dda.name AS name,
                         'archives' AS project_type,
-                        (SELECT COUNT(*) FROM diamm_data_source AS dds WHERE dds.archive_id = ddai.id AND dds.public IS TRUE) AS source_count
+                        (SELECT COUNT(*) 
+                         FROM diamm_data_source AS dds 
+                         WHERE dds.archive_id = dda.id AND dds.public IS TRUE
+                        ) AS source_count
                         FROM diamm_data_archive dda
-                        LEFT JOIN diamm_data_archiveidentifier ddai on dda.id = ddai.archive_id
+                        LEFT JOIN diamm_data_archiveidentifier ddai ON dda.id = ddai.archive_id
                         WHERE ddai.archive_id IS NOT NULL AND ddai.identifier_type = 1
                         ORDER BY dda.id;""")
 

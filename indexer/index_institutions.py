@@ -25,23 +25,24 @@ def _get_institution_groups(cfg: dict) -> Generator[tuple, None, None]:
     sql: str = f"""
 SELECT i.id, i.marc_source, i.siglum,
     i.created_at AS created, i.updated_at AS updated,
-    ((SELECT COUNT(DISTINCT si.source_id)
-        FROM {dbname}.sources_to_institutions AS si
-        LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
-        WHERE si.institution_id = i.id
-            AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
-    +
-    (SELECT COUNT(DISTINCT hi.source_id)
-        FROM {dbname}.holdings AS hi
-        LEFT JOIN {dbname}.sources AS hs1 ON hi.source_id = hs1.id
-        WHERE hi.lib_siglum = i.siglum
-            AND (hs1.wf_stage IS NULL OR hs1.wf_stage = 1))
-    +
-    (SELECT COUNT(DISTINCT hs2.id)
-        FROM {dbname}.sources AS hs2
-        LEFT JOIN {dbname}.holdings AS hd ON hs2.source_id = hd.source_id
-        WHERE hd.lib_siglum = i.siglum
-            AND (hs2.wf_stage IS NULL OR hs2.wf_stage = 1))
+    (
+        (SELECT COUNT(DISTINCT si.source_id)
+            FROM {dbname}.sources_to_institutions AS si
+            LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
+            WHERE si.institution_id = i.id
+                AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
+        +
+        (SELECT COUNT(DISTINCT hi.source_id)
+            FROM {dbname}.holdings AS hi
+            LEFT JOIN {dbname}.sources AS hs1 ON hi.source_id = hs1.id
+            WHERE hi.lib_siglum = i.siglum
+                AND (hs1.wf_stage IS NULL OR hs1.wf_stage = 1))
+        +
+        (SELECT COUNT(DISTINCT hs2.id)
+            FROM {dbname}.sources AS hs2
+            LEFT JOIN {dbname}.holdings AS hd ON hs2.source_id = hd.source_id
+            WHERE hd.lib_siglum = i.siglum
+                AND (hs2.wf_stage IS NULL OR hs2.wf_stage = 1))
     ) AS total_source_count,
     (SELECT COUNT(DISTINCT si.source_id)
         FROM {dbname}.sources_to_institutions AS si

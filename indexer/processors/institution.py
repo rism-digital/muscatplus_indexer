@@ -33,7 +33,7 @@ def _get_external_ids(record: pymarc.Record) -> list | None:
 
 
 def _get_country_code(record: pymarc.Record) -> str | None:
-    if "094" not in record or "043" not in record:
+    if "094" not in record and "043" not in record:
         return None
 
     siglum: str | None = to_solr_single(record, "094", "a")
@@ -50,6 +50,7 @@ def _get_country_code(record: pymarc.Record) -> str | None:
 
     # If the above fails, we can't assign a country.
     return None
+
 
 # This is a multivalued field with a single value so that we can use the same field name (country_codes_sm)
 # as sources.

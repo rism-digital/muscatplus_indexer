@@ -33,16 +33,16 @@ def _get_people_groups(cfg: dict) -> Generator[dict, None, None]:
 
                         SELECT p.id AS id, p.marc_source AS marc_source,
                                p.created_at AS created, p.updated_at AS updated,
-                               (SELECT COUNT(DISTINCT sp.source_id)
-                                    FROM {dbname}.sources_to_people sp
-                                    LEFT JOIN {dbname}.sources ss ON sp.source_id = ss.id
-                                    WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1)
-                               )
-                               +
-                               (SELECT COUNT(DISTINCT ho.source_id)
-                                    FROM {dbname}.holdings ho
-                                    LEFT JOIN {dbname}.holdings_to_people hp ON ho.id = hp.holding_id
-                                    WHERE hp.person_id = p.id
+                               (
+                                   (SELECT COUNT(DISTINCT sp.source_id)
+                                        FROM {dbname}.sources_to_people sp
+                                        LEFT JOIN {dbname}.sources ss ON sp.source_id = ss.id
+                                        WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
+                                   +
+                                   (SELECT COUNT(DISTINCT ho.source_id)
+                                        FROM {dbname}.holdings ho
+                                        LEFT JOIN {dbname}.holdings_to_people hp ON ho.id = hp.holding_id
+                                        WHERE hp.person_id = p.id)
                                ) AS source_count,
                                (SELECT JSON_ARRAYAGG(DISTINCT COALESCE(ssp.relator_code, 'cre'))
                                     FROM {dbname}.sources_to_people AS ssp

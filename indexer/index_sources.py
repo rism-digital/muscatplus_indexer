@@ -51,7 +51,10 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
             LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id
             WHERE marc_tag = '787' AND source_a_id = child.id
         ) AS related_sources,
-        (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id)) FROM {dbname}.digital_object_links AS do WHERE do.object_link_type = 'Source' AND do.object_link_id = child.id) AS digital_objects,
+        (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id)) 
+                FROM {dbname}.digital_object_links AS do 
+                WHERE do.object_link_type = 'Source' AND do.object_link_id = child.id
+        ) AS digital_objects,
         -- NB: Only one work node is permitted on a source, even though this technically allows for more. To ensure we only have 0 or 1 record, a LIMIT clause is added.
         (SELECT JSON_OBJECT('id', CONCAT('work_node_', wn.id),
                            'marc_source', wn.marc_source)

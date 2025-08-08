@@ -118,6 +118,15 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
                 ).decode("utf-8")
             }
         )
+
+    if d := record.get("digital_objects"):
+        idx_document.update(
+            {
+                "has_digital_objects_b": True,
+                "digital_object_ids": orjson.loads(d),
+            }
+        )
+
     if "created" in record and "updated" in record:
         idx_document.update(
             {

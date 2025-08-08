@@ -38,7 +38,11 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
                              FROM {dbname}.holdings_to_publications hpt
                              LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
                              WHERE hpt.holding_id = holdings.id
-                ) AS publication_entries
+                ) AS publication_entries,
+                (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id)) 
+                    FROM {dbname}.digital_object_links AS do 
+                    WHERE do.object_link_type = 'Holding' AND do.object_link_id = holdings.id
+                ) AS digital_objects
                 FROM {dbname}.holdings AS holdings
                 LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
                 LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id

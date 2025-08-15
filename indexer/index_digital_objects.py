@@ -10,22 +10,55 @@ from indexer.records.digital_object import create_digital_object_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_digital_objects(cfg: dict) -> Generator[dict, None, None]:
+def _get_digital_objects(cfg: dict) -> Generator[dict]:
     log.info("Getting list of digital objects to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
 
-    id_where_clause: str = ""
-    if "id" in cfg:
-        id_where_clause = f"WHERE dol.digital_object_id = {cfg['id']}"
+    sql_query: str = f"""
+        SELECT d.digital_object_id AS dobject_id, s.id AS obj_id, d.object_link_type AS obj_type, s.std_title AS name,
+               do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
+            FROM {dbname}.digital_object_links AS d
+            JOIN {dbname}.sources AS s ON d.object_link_id = s.id
+            LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
+            WHERE d.object_link_type = 'Source'
 
-    sql_query: str = f"""SELECT dol.digital_object_id, dol.object_link_id,
-       do.description, do.attachment_content_type,
-       do.attachment_file_name, dol.object_link_type
-       FROM {dbname}.digital_object_links AS dol
-       LEFT JOIN {dbname}.digital_objects AS do ON do.id = dol.digital_object_id
-       {id_where_clause};"""  # noqa: S608
+        UNION ALL
+
+        SELECT d.id AS dobject_id, p.id AS obj_id, d.object_link_type AS obj_type, CONCAT(p.full_name, COALESCE(CONCAT(' (', p.life_dates, ')'), '')) AS name,
+               do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
+            FROM {dbname}.digital_object_links AS d
+            JOIN {dbname}.people AS p ON d.object_link_id = p.id
+            LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
+            WHERE d.object_link_type = 'Person'
+
+        UNION ALL
+
+        SELECT d.id AS dobject_id, h.id AS obj_id, d.object_link_type AS obj_type, h.shelf_mark AS name,
+               do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
+            FROM {dbname}.digital_object_links AS d
+            JOIN {dbname}.holdings AS h ON d.object_link_id = h.id
+            LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
+            WHERE d.object_link_type = 'Holding'
+
+        UNION ALL
+
+        SELECT d.id AS dobject_id, i.id AS obj_id, d.object_link_type AS obj_type, i.full_name AS name,
+               do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
+            FROM {dbname}.digital_object_links AS d
+            JOIN {dbname}.institutions AS i ON d.object_link_id = i.id
+            LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
+        WHERE d.object_link_type = 'Institution'
+
+        UNION ALL
+
+        SELECT d.id AS dobject_id, w.id AS obj_id, d.object_link_type AS obj_type, w.title AS name,
+               do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
+            FROM {dbname}.digital_object_links AS d
+            JOIN {dbname}.works AS w ON d.object_link_id = w.id
+            LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
+        WHERE d.object_link_type = 'Work'"""  # noqa: S608
 
     curs.execute(sql_query)
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa

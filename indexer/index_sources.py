@@ -12,7 +12,7 @@ from indexer.records.source import create_source_index_documents
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_sources(cfg: dict) -> Generator[dict, None, None]:
+def _get_sources(cfg: dict) -> Generator[dict]:
     log.info("Getting list of sources to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
@@ -31,7 +31,7 @@ def _get_sources(cfg: dict) -> Generator[dict, None, None]:
         COUNT(DISTINCT h.id) AS holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT JSON_ARRAYAGG(DISTINCT srm2.marc_source)
-            FROM {dbname}.sources AS srm2 
+            FROM {dbname}.sources AS srm2
             WHERE srm2.source_id IS NOT NULL AND srm2.source_id = child.id
         ) AS child_marc_records,
         (SELECT JSON_ARRAYAGG(DISTINCT

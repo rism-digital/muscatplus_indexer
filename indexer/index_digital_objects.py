@@ -17,7 +17,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
     dbname: str = cfg["mysql"]["database"]
 
     sql_query: str = f"""
-        SELECT d.digital_object_id AS dobject_id, s.id AS obj_id, d.object_link_type AS obj_type, s.std_title AS name,
+        SELECT do.id AS dobject_id, s.id AS obj_id, d.object_link_type AS obj_type, s.std_title AS name,
                do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.sources AS s ON d.object_link_id = s.id
@@ -26,7 +26,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
 
         UNION ALL
 
-        SELECT d.digital_object_id AS dobject_id, p.id AS obj_id, d.object_link_type AS obj_type, CONCAT(p.full_name, COALESCE(CONCAT(' (', p.life_dates, ')'), '')) AS name,
+        SELECT do.id AS dobject_id, p.id AS obj_id, d.object_link_type AS obj_type, CONCAT(p.full_name, COALESCE(CONCAT(' (', p.life_dates, ')'), '')) AS name,
                do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.people AS p ON d.object_link_id = p.id
@@ -35,7 +35,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
 
         UNION ALL
 
-        SELECT d.digital_object_id AS dobject_id, h.id AS obj_id, d.object_link_type AS obj_type, h.shelf_mark AS name,
+        SELECT do.id AS dobject_id, h.id AS obj_id, d.object_link_type AS obj_type, h.shelf_mark AS name,
                do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.holdings AS h ON d.object_link_id = h.id
@@ -44,7 +44,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
 
         UNION ALL
 
-        SELECT d.digital_object_id AS dobject_id, i.id AS obj_id, d.object_link_type AS obj_type, i.full_name AS name,
+        SELECT do.id AS dobject_id, i.id AS obj_id, d.object_link_type AS obj_type, i.full_name AS name,
                do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.institutions AS i ON d.object_link_id = i.id
@@ -53,7 +53,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
 
         UNION ALL
 
-        SELECT d.digital_object_id AS dobject_id, w.id AS obj_id, d.object_link_type AS obj_type, w.title AS name,
+        SELECT do.id AS dobject_id, w.id AS obj_id, d.object_link_type AS obj_type, w.title AS name,
                do.description AS description, do.attachment_content_type AS content_type, do.attachment_file_name AS file_name
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.works AS w ON d.object_link_id = w.id

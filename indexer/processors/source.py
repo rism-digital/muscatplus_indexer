@@ -13,7 +13,6 @@ from indexer.helpers.utilities import (
     get_related_people,
     get_related_places,
     get_titles,
-    normalize_id,
     note_links,
     related_institution,
     related_person,
@@ -47,7 +46,7 @@ def _get_creator_data(record: pymarc.Record) -> list | None:
     if "100" not in record:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     source_id: str = f"source_{record_id}"
     creator = get_related_people(record, source_id, "source", fields=("100",))
     if not creator:
@@ -145,7 +144,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
     if not date_statements:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
 
     return process_date_statements(date_statements, record_id)
 
@@ -226,7 +225,7 @@ def _get_location_performance_data(record: pymarc.Record) -> list | None:
     if "651" not in record:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     source_id: str = f"source_{record_id}"
     places = get_related_places(record, source_id, "source", fields=("651",))
 
@@ -259,7 +258,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
     if "700" not in record:
         return None
 
-    source_id: str = f"source_{normalize_id(record['001'].value())}"
+    source_id: str = f"source_{record['001'].value()}"
     people = get_related_people(
         record, source_id, "source", fields=("700",), ungrouped=True
     )
@@ -270,7 +269,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
 def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     if "710" not in record:
         return None
-    source_id: str = f"source_{normalize_id(record['001'].value())}"
+    source_id: str = f"source_{record['001'].value()}"
     institutions = get_related_institutions(
         record, source_id, "source", fields=("710",)
     )
@@ -299,9 +298,7 @@ def _get_source_membership(record: pymarc.Record) -> list | None:
 
         member_type: str | None = tag.get("4")
         # Create an ID like "holding_12345" or "source_4567" (default)
-        ret.append(
-            f"{member_type if member_type else 'source'}_{normalize_id(member_id)}"
-        )
+        ret.append(f"{member_type if member_type else 'source'}_{member_id}")
 
     return ret
 
@@ -537,7 +534,7 @@ def _get_material_groups(record: pymarc.Record) -> list[dict] | None:
     :return: A list of MaterialGroupIndexDocument instances
     """
     log.debug("Indexing material groups")
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     source_id: str = f"source_{record_id}"
 
     # Set the mapping between the MARC field and a function to handle processing that field
@@ -624,6 +621,7 @@ def _reformat_notes(note_values: list[str]) -> list[str]:
 
     return notes
 
+
 def _get_periodical_series_data(record: pymarc.Record) -> list | None:
     if "490" not in record:
         return None
@@ -632,9 +630,6 @@ def _get_periodical_series_data(record: pymarc.Record) -> list | None:
     ret = []
 
     for field in fields:
-        ret.append({
-            "title": field.get("a"),
-            "number": field.get("v")
-        })
+        ret.append({"title": field.get("a"), "number": field.get("v")})
 
     return ret

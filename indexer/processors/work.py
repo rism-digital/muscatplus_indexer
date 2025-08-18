@@ -8,7 +8,6 @@ from indexer.helpers.utilities import (
     external_resource_data,
     get_related_people,
     get_titles,
-    normalize_id,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -51,7 +50,7 @@ def _get_creator_data(record: pymarc.Record) -> list | None:
     if "100" not in record:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     source_id: str = f"source_{record_id}"
     creator = get_related_people(record, source_id, "source", fields=("100",))
     if not creator:
@@ -157,7 +156,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
     if "500" not in record:
         return None
 
-    work_id: str = f"work_{normalize_id(record['001'].value())}"
+    work_id: str = f"work_{record['001'].value()}"
     people = get_related_people(
         record, work_id, "work", fields=("500",), ungrouped=True
     )

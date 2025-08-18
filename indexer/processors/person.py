@@ -10,7 +10,6 @@ from indexer.helpers.utilities import (
     get_related_institutions,
     get_related_people,
     get_related_places,
-    normalize_id,
     to_solr_multi,
     tokenize_variants,
 )
@@ -40,7 +39,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
     if not date_statements:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
 
     return process_date_statements(date_statements, record_id)
 
@@ -85,7 +84,7 @@ def _get_name_variant_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_people_data(record: pymarc.Record) -> list | None:
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     person_id: str = f"person_{record_id}"
     people: list | None = get_related_people(
         record, person_id, "person", ungrouped=True
@@ -95,7 +94,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> list | None:
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     person_id: str = f"person_{record_id}"
     institutions: list | None = get_related_institutions(
         record, person_id, "person", ungrouped=True
@@ -105,7 +104,7 @@ def _get_related_institutions_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_places_data(record: pymarc.Record) -> list | None:
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     person_id: str = f"person_{record_id}"
     places: list | None = get_related_places(record, person_id, "person")
 

@@ -11,7 +11,6 @@ from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.utilities import (
     get_content_types,
     get_titles,
-    normalize_id,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -89,16 +88,15 @@ def _incipit_to_pae(incipit: dict) -> str:
 
 def _get_pae_features(pae: str) -> dict:
     load_success: bool = vrv_tk.loadData(pae)
-    if load_success is False:
+    if not load_success:
         log.warning("Verovio could not load PAE %s", pae)
         return {}
     # Verovio is set to render PAE to features
     return vrv_tk.getDescriptiveFeatures({})
 
+
 def _get_pae_feature_fields(pae_code: str) -> dict:
-    d = {
-        "original_pae_sni": pae_code
-    }
+    d = {"original_pae_sni": pae_code}
 
     feat: dict = _get_pae_features(pae_code)
     intervals: list = feat.get("intervalsChromatic", [])
@@ -138,9 +136,7 @@ def _get_pae_feature_fields(pae_code: str) -> dict:
         "contour_gross_sm": contour_gross if contour_gross else None,
         "contour_gross_bi": " ".join(contour_gross) if contour_gross else None,
         "contour_refined_sm": contour_refined if contour_refined else None,
-        "contour_refined_bi": " ".join(contour_refined)
-        if contour_refined
-        else None,
+        "contour_refined_bi": " ".join(contour_refined) if contour_refined else None,
     }
     d.update(rend)
     # update the record with the verovio features
@@ -248,7 +244,7 @@ def __incipit(
     source_dates,
     standard_titles,
     is_single_item: bool,
-    content_types: list[str]
+    content_types: list[str],
 ) -> dict[str, object]:
     d: dict = {
         "id": f"{record_ident}_incipit_{num}",
@@ -296,7 +292,7 @@ def get_source_incipits(
     if "031" not in record:
         return None
 
-    rism_id: str = normalize_id(record["001"].value())
+    rism_id: str = record["001"].value()
     source_id: str = f"source_{rism_id}"
 
     incipits: list = record.get_fields("031")
@@ -319,10 +315,11 @@ def get_source_incipits(
             source_dates,
             standard_titles,
             is_single_item,
-            content_types
+            content_types,
         )
         for num, f in enumerate(incipits, 1)
     ]
+
 
 def __work_incipit(
     field: pymarc.Field,
@@ -330,7 +327,7 @@ def __work_incipit(
     work_title: str | None,
     id_num: str,
     document_id: str,
-    creator: str | None
+    creator: str | None,
 ) -> dict:
     d = {
         "id": f"{document_id}_incipit_{num}",
@@ -357,27 +354,16 @@ def __work_incipit(
 
 
 def get_work_incipits(
-    record: pymarc.Record,
-    work_title: str | None,
-    creator_name: str | None
+    record: pymarc.Record, work_title: str | None, creator_name: str | None
 ) -> list | None:
     if "031" not in record:
         return None
 
-    rism_id: str = normalize_id(record["001"].value())
+    rism_id: str = record["001"].value()
     work_id: str = f"work_{rism_id}"
 
     incipits: list[pymarc.Field] = record.get_fields("031")
     return [
-        __work_incipit(f,
-                       num,
-                       work_title,
-                       rism_id,
-                       work_id,
-                       creator_name)
-            for num, f in enumerate(incipits, 1)
+        __work_incipit(f, num, work_title, rism_id, work_id, creator_name)
+        for num, f in enumerate(incipits, 1)
     ]
-
-
-
-

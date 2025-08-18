@@ -12,7 +12,6 @@ from indexer.helpers.utilities import (
     get_related_institutions,
     get_related_people,
     get_related_places,
-    normalize_id,
     to_solr_single,
 )
 
@@ -90,7 +89,7 @@ def _get_location(record: pymarc.Record) -> str | None:
 
 
 def _get_related_people_data(record: pymarc.Record) -> list | None:
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     institution_id: str = f"institution_{record_id}"
     people: list | None = get_related_people(
         record, institution_id, "institution", ungrouped=True
@@ -100,7 +99,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> list | None:
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     institution_id: str = f"institution_{record_id}"
     institutions: list | None = get_related_institutions(
         record, institution_id, "institution", fields=("710",)
@@ -110,7 +109,7 @@ def _get_related_institutions_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_places_data(record: pymarc.Record) -> list | None:
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     institution_id: str = f"institution_{record_id}"
     places: list | None = get_related_places(record, institution_id, "institution")
 

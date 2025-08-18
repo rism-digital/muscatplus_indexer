@@ -5,7 +5,7 @@ import re
 import timeit
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
-from functools import lru_cache, wraps
+from functools import wraps
 from typing import TypedDict
 
 import orjson
@@ -104,7 +104,7 @@ def to_solr_single_required(
     )
 
     if not values:
-        record_id: str = normalize_id(record["001"].value())
+        record_id: str = record["001"].value()
         log.error(
             "%s requires a value, but one was not found for %s.", field, record_id
         )
@@ -196,7 +196,7 @@ def to_solr_multi_required(
     ret: list[str] | None = to_solr_multi(record, field, subfield, ungrouped, sortout)
 
     if ret is None:
-        record_id: str = normalize_id(record["001"].value())
+        record_id: str = record["001"].value()
         log.error(
             "%s, %s requires a value, but one was not found for %s",
             field,
@@ -208,21 +208,6 @@ def to_solr_multi_required(
         )
 
     return ret
-
-
-@lru_cache(maxsize=2048)
-def normalize_id(identifier: str) -> str:
-    """
-    Muscat IDs come in a wide variety of shapes and sizes, some with leading zeroes, others without.
-
-    This method ensures any identifier is consistent by stripping any leading zeroes off a string. This is done
-    by parsing it as an integer, and then returning it as a string again.
-
-    :param identifier: An identifier to normalize
-    :return: A normalized identifier
-    """
-
-    return f"{int(identifier)}"
 
 
 def clean_multivalued(fields: dict, field_name: str) -> list[str] | None:
@@ -766,7 +751,7 @@ def get_parent_order_for_members(
         subf_id = subf[0]
         if not subf_id:
             log.warning(
-                f"Problem when searching the membership of {this_id} in {normalize_id(parent_record['001'].value())}."
+                f"Problem when searching the membership of {this_id} in {parent_record['001'].value()}."
             )
             continue
 
@@ -774,7 +759,7 @@ def get_parent_order_for_members(
         if "4" in field and field["4"] == "holding":
             pfx = "holding_"
 
-        idxs.append(f"{pfx}{normalize_id(subf_id)}")
+        idxs.append(f"{pfx}{subf_id}")
 
     if this_id in idxs:
         return idxs.index(this_id)

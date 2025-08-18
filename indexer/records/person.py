@@ -9,7 +9,6 @@ from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
     get_work_node,
-    normalize_id,
 )
 from indexer.processors import person as person_processor
 
@@ -43,7 +42,7 @@ class PersonIndexDocument(TypedDict):
 
 def create_person_index_document(record: dict, cfg: dict) -> dict:
     marc_record: pymarc.Record = create_marc(record["marc_source"])
-    rism_id: str = normalize_id(marc_record["001"].value())
+    rism_id: str = marc_record["001"].value()
     person_id: str = f"person_{rism_id}"
     roles: list[str] = (
         orjson.loads(s) if (s := record.get("source_relationships")) else []

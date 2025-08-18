@@ -4,7 +4,7 @@ import yaml
 
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import get_person_name, normalize_id
+from indexer.helpers.utilities import get_person_name
 from indexer.processors import publication as publication_processor
 
 publications_profile: dict = yaml.full_load(open("profiles/publications.yml"))  # noqa: SIM115
@@ -13,7 +13,7 @@ publications_profile: dict = yaml.full_load(open("profiles/publications.yml"))  
 def create_publication_index_document(record: dict, cfg: dict) -> dict:
     catalogue: str = record["marc_source"]
     marc_record: pymarc.Record = create_marc(catalogue)
-    rism_id: str = normalize_id(marc_record["001"].value())
+    rism_id: str = marc_record["001"].value()
     publication_id: str = f"publication_{rism_id}"
 
     work_ids: list = orjson.loads(w) if (w := record["work_ids"]) else []

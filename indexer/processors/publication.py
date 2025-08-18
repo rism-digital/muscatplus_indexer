@@ -5,7 +5,6 @@ from indexer.helpers.utilities import (
     external_resource_data,
     get_related_institutions,
     get_related_people,
-    normalize_id,
     to_solr_multi,
 )
 
@@ -25,7 +24,7 @@ def _get_creator_data(record: pymarc.Record) -> list | None:
     if "100" not in record:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
     publication_id: str = f"publication_{record_id}"
     creator = get_related_people(record, publication_id, "publication", fields=("100",))
     if not creator:
@@ -40,7 +39,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
     if not date_statements:
         return None
 
-    record_id: str = normalize_id(record["001"].value())
+    record_id: str = record["001"].value()
 
     return process_date_statements(date_statements, record_id)
 

@@ -6,7 +6,6 @@ from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
     get_bibliographic_references_json,
-    normalize_id,
 )
 from indexer.processors import work as work_processor
 from indexer.records.incipits import get_work_incipits
@@ -17,7 +16,7 @@ work_profile: dict = yaml.full_load(open("profiles/works.yml"))  # noqa: SIM115
 def create_work_index_documents(record: dict, cfg: dict) -> list:
     work: str = record["marc_source"]
     marc_record: pymarc.Record = create_marc(work)
-    rism_id: str = normalize_id(marc_record["001"].value())
+    rism_id: str = marc_record["001"].value()
     work_id: str = f"work_{rism_id}"
 
     publications: list = (

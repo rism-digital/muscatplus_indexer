@@ -6,7 +6,6 @@ from indexer.helpers.utilities import (
     get_related_institutions,
     get_related_people,
     get_titles,
-    normalize_id,
     to_solr_single,
 )
 
@@ -20,7 +19,7 @@ def _get_country_code(marc_record: pymarc.Record) -> str | None:
 
 
 def _get_related_people_data(record: pymarc.Record) -> list | None:
-    rism_id: str = normalize_id(record["001"].value())
+    rism_id: str = record["001"].value()
     holding_id: str = f"holding_{rism_id}"
     return get_related_people(
         record, holding_id, "holding", fields=("700",), ungrouped=True
@@ -28,7 +27,7 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_institutions_data(record: pymarc.Record) -> list | None:
-    rism_id: str = normalize_id(record["001"].value())
+    rism_id: str = record["001"].value()
     holding_id: str = f"holding_{rism_id}"
     return get_related_institutions(record, holding_id, "holding", fields=("710",))
 

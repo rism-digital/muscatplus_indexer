@@ -23,7 +23,6 @@ from indexer.helpers.utilities import (
     get_people_names,
     get_titles,
     get_work_node,
-    normalize_id,
     to_solr_multi,
     to_solr_single,
     tokenize_variants,
@@ -61,7 +60,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list:
     # all the 'children' will have a different ID. This is why the field is not called
     # 'parent_id', since it can gather all members of the group, *including* the parent.
     membership_id: int = m if (m := parent_id) else record["id"]
-    rism_id: str = normalize_id(marc_record["001"].value())
+    rism_id: str = marc_record["001"].value()
     source_id: str = f"source_{rism_id}"
     num_holdings: int = record.get("holdings_count", 0)
     main_title: str = record["std_title"]
@@ -592,7 +591,7 @@ def _get_related_sources(
             log.error("Could not load foreign MARC record")
             continue
 
-        record_id = normalize_id(rel_marc_record["001"].value())
+        record_id = rel_marc_record["001"].value()
 
         source_id: str = f"source_{record_id}"
         title: list[dict[str, object]] | None = get_titles(rel_marc_record, "240")

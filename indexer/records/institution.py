@@ -10,7 +10,6 @@ from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
     get_bibliographic_reference_titles,
     get_bibliographic_references_json,
-    normalize_id,
 )
 from indexer.processors import institution as institution_processor
 
@@ -40,7 +39,7 @@ class InstitutionIndexDocument(TypedDict):
 
 def create_institution_index_document(record: dict, cfg: dict) -> dict[str, object]:
     marc_record: pymarc.Record = create_marc(record["marc_source"])
-    rism_id: str = normalize_id(marc_record["001"].value())
+    rism_id: str = marc_record["001"].value()
     institution_id: str = f"institution_{rism_id}"
 
     source_count: int = record.get("source_count", 0)

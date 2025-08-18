@@ -44,7 +44,7 @@ def create_digital_object_index_document(record: dict, cfg: dict) -> dict:
         "linked_type_s": linked_record_type.lower(),
         "linked_name_s": linked_record_name,
         "description_s": record.get("description"),
-        "media_type_s": record.get("attachment_content_type"),
+        "media_type_s": media_type,
         **urls,
     }
 

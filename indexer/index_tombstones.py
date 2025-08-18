@@ -10,7 +10,7 @@ from indexer.records.tombstone import create_tombstone_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_tombstone_groups(cfg: dict) -> Generator[dict, None, None]:
+def _get_tombstone_groups(cfg: dict) -> Generator[dict]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]

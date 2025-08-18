@@ -10,7 +10,7 @@ from indexer.records.publication import create_publication_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_publications(cfg: dict) -> Generator[dict, None, None]:
+def _get_publications(cfg: dict) -> Generator[dict]:
     log.info("Getting list of publications to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()

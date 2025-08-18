@@ -13,7 +13,7 @@ from indexer.records.institution import (
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_institution_groups(cfg: dict) -> Generator[tuple]:
+def _get_institution_groups(cfg: dict) -> Generator[dict]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]

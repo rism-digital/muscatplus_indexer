@@ -10,7 +10,7 @@ from indexer.records.holding import create_holding_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_holdings_groups(cfg: dict) -> Generator[dict, None, None]:
+def _get_holdings_groups(cfg: dict) -> Generator[dict]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]

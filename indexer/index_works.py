@@ -12,7 +12,7 @@ from indexer.records.work import (
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_works(cfg: dict) -> Generator[dict, None, None]:
+def _get_works(cfg: dict) -> Generator[dict]:
     log.info("Getting list of works to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()

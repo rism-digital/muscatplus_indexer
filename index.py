@@ -27,6 +27,7 @@ from indexer.helpers.utilities import elapsedtime
 from indexer.index_digital_objects import index_digital_objects
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
+from indexer.index_inventory_items import index_inventory_items
 from indexer.index_liturgical_festivals import index_liturgical_festivals
 from indexer.index_people import index_people
 from indexer.index_places import index_places
@@ -180,6 +181,7 @@ def main(args: argparse.Namespace) -> bool:
             "digital-objects",
             "works",
             "tombstones",
+            "inventory-items",
         ]
 
     if args.empty and not args.dry:
@@ -212,6 +214,8 @@ def main(args: argparse.Namespace) -> bool:
         elif record_type == "works" and "works" not in args.exclude:
             res &= index_publications(idx_config)
             res &= index_works(idx_config)
+        elif record_type == "inventory-items" and "inventory-items" not in args.exclude:
+            res &= index_inventory_items(idx_config)
         elif record_type == "tombstones" and "tombstones" not in args.exclude:
             res &= index_tombstones(idx_config)
 

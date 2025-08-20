@@ -1,0 +1,180 @@
+---
+# 031 is indexed as separate incipit documents, but we can save an extra
+# lookup for sources that don't have incipits by indicating whether this
+# source has any 031 fields attached.
+has_incipits_b:
+  processor: "_get_has_incipits"
+num_incipits_i:
+  processor: "_get_num_incipits"
+incipit_title_sm:
+  field: "031"
+  subfield: "d"
+  multiple: true
+incipit_text_sm:
+  field: "031"
+  subfield: "t"
+  multiple: true
+
+language_text_sm:
+  field: "041"
+  subfield: "a"
+  multiple: true
+
+language_original_sm:
+  field: "041"
+  subfield: "h"
+  multiple: true
+
+# most of the non-search data for the 100 field is indexed in the JSON,
+# e.g., $j.
+creator_id:
+  field: "100"
+  subfield: "0"
+  value_prefix: "person_"
+creator_name_s:  # 100, but with optional dates added ($a and $d)
+  processor: "_get_creator_name"
+creator_json:
+  processor: "_get_creator_data"
+  json: true
+creator_anonymous_b:
+  processor: "_is_anonymous_creator"
+
+standard_title_s:
+  field: "240"
+  subfield: "a"
+subheading_s:
+  field: "240"
+  subfield: "k"
+scoring_summary_sm:
+  field: "240"
+  subfield: "m"
+  multiple: true
+  sorted: false
+
+# $n is deprecated and is omitted.
+arrangement_s:
+  field: "240"
+  subfield: "o"
+is_arrangement_b:
+  processor: "_get_is_arrangement"
+key_mode_s:
+  field: "240"
+  subfield: "r"
+
+# See the note in the processor function about why we index this here, even though
+# it's not technically part of the 240 field.
+catalogue_numbers_sm:
+  processor: "_get_catalogue_numbers"
+standard_titles_json:
+  processor: "_get_standard_titles_data"
+  json: true
+
+source_title_s:
+  field: "245"
+  subfield: "a"
+  required: true
+
+variant_title_s:
+  field: "246"
+  subfield: "a"
+
+# 300 is also indexed in material groups
+format_extent_sm:
+  field: "300"
+  subfield: "a"
+  multiple: true
+physical_details_sm:
+  field: "300"
+  subfield: "b"
+  multiple: true
+physical_dimensions_sm:
+  field: "300"
+  subfield: "c"
+  multiple: true
+
+opus_numbers_sm:
+  field: "383"
+  subfield: "b"
+  multiple: true
+
+general_notes_sm:
+  field: "500"
+  subfield: "a"
+  multiple: true
+  sorted: false
+  breaks: true
+
+# For notes directly defined on the source we store them. We do not
+# need to index them since they will be caught in the field above,
+# so we just need a separate field for display.
+source_general_notes_smni:
+  field: "500"
+  subfield: "a"
+  multiple: true
+  grouping: false
+  sorted: false
+  breaks: true
+  links: true
+
+material_source_types_sm:
+  field: "593"
+  subfield: "a"
+  multiple: true
+
+material_content_types_sm:
+  field: "593"
+  subfield: "b"
+  multiple: true
+
+scoring_sm:
+  field: "594"
+  subfield: "b"
+  multiple: true
+scoring_json:  # $c (number) is included in the json data.
+  processor: "_get_scoring_data"
+  json: true
+
+subjects_sm:
+  field: "650"
+  subfield: "a"
+  multiple: true
+subjects_json:
+  processor: "_get_subjects"
+  json: true
+
+related_people_json:
+  processor: "_get_related_people_data"
+  json: true
+
+related_institutions_ids:
+  field: "710"
+  subfield: "0"
+  multiple: true
+  value_prefix: "institution_"
+related_institutions_sm:
+  field: "710"
+  subfield: "a"
+  multiple: true
+related_institutions_json:
+  processor: "_get_related_institutions_data"
+  json: true
+
+additional_titles_sm:
+  field: "730"
+  subfield: "a"
+additional_titles_json:
+  processor: "_get_additional_titles_data"
+  json: true
+
+identified_source_json:
+  processor: "_get_identified_source_data"
+  json: true
+has_identified_source_b:
+  processor: "_has_identified_source"
+
+external_resources_json:
+  processor: "_get_external_resources_data"
+  json: true
+
+iiif_manifest_uris_sm:
+  processor: "_get_iiif_manifest_uris"

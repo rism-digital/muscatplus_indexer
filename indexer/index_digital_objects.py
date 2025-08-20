@@ -11,7 +11,6 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_digital_objects(cfg: dict) -> Generator[dict]:
-    log.info("Getting list of digital objects to index")
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
@@ -76,6 +75,7 @@ def index_digital_objects(cfg: dict) -> bool:
 
 
 def index_dobject_groups(dobjects: list, cfg: dict) -> bool:
+    log.info("Indexing Digital Objects")
     records_to_index: deque = deque()
 
     for record in dobjects:

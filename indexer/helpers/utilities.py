@@ -13,6 +13,7 @@ import pymarc
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.identifiers import transform_rism_id
+from indexer.helpers.marc import create_marc
 from indexer.helpers.solr import exists
 
 log = logging.getLogger("muscat_indexer")
@@ -967,3 +968,64 @@ def get_work_node(
     }
 
     return {k: v for k, v in d.items() if v}
+
+def get_related_sources(
+        related: list, relationship_fields: list[pymarc.Field], host_source_id: str
+) -> list[dict] | None:
+    """
+    Combines the MARC source from related sources and the 787 entries from a record to create a JSON
+    field for the related sources.
+
+    :param related: A string containing the record IDs and MARC entries, delimited by "|~|" between the related sources
+        and by "|:|" between the ID and MARC.
+    :param relationship_fields: A list of 787 fields from the source MARC. Needed because this is the only place any
+        notes about the relationship are stored.
+    :return: A list of related sources in JSON format.
+    """
+    # =787  0#$nT p: Solo and Chorus ... From Cantata of
+    # "Daniel" ... Copied from the Sabbath Bell by / S[amuel] F[rederick] Van Vleck.
+    # organist / Nov. 22 1878.$w1001125501$4rdau:P60311
+    notes: dict = {}
+
+    for relfield in relationship_fields:
+        sid = relfield.get("w")
+        snote = relfield.get("n")
+        if sid and snote:
+            notes[sid] = snote
+
+    related_entries: list = []
+    for relationship_id, individual_record in enumerate(related, 1):
+        relator_code = individual_record["relator_code"]
+        relmarc_source = individual_record["marc_source"]
+
+        rel_marc_record: pymarc.Record | None = (
+            create_marc(relmarc_source) if relmarc_source else None
+        )
+
+        if not rel_marc_record:
+            log.error("Could not load foreign MARC record")
+            continue
+
+        record_id = rel_marc_record["001"].value()
+
+        source_id: str = f"source_{record_id}"
+        title: list[dict[str, object]] | None = get_titles(rel_marc_record, "240")
+
+        note: str | None = None
+        if record_id in notes:
+            note = notes[record_id]
+
+        d = {
+            "id": f"{relationship_id}",
+            "type": "source",
+            "source_id": source_id,
+            "relationship": relator_code,
+            "title": title,
+            "note": note,
+            "this_id": host_source_id,
+            "this_type": "source",
+        }
+
+        related_entries.append({k: v for k, v in d.items() if v})
+
+    return related_entries

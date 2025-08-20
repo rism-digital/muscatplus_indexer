@@ -1,5 +1,5 @@
 import logging
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from typing import TypedDict
 
 import orjson
@@ -61,6 +61,44 @@ class IncipitIndexDocument(TypedDict):
     is_mensural_b: bool
     general_notes_sm: list[str] | None
     scoring_sm: list[str] | None
+
+
+def check_unique_identifiers(
+    fields: list[pymarc.Field], document_id: str, check_format: bool = True
+) -> bool:
+    """Ensures the identifiers combine to create a unique incipit ident."""
+    work_numbers = set()
+    for incipit in fields:
+        work_number = _get_work_number(incipit, document_id, check_format)
+        if work_number in work_numbers:
+            log.error("Duplicate work number: %s for %s", work_number, document_id)
+            return False
+        work_numbers.add(work_number)
+    return True
+
+
+def fix_unique_identifiers(
+    fields: list[pymarc.Field], document_id: str
+) -> list[pymarc.Field]:
+    work_fields = defaultdict(list)
+
+    fixed_fields = []
+    for incipit in fields:
+        work_number = _get_work_number(incipit, document_id)
+        work_fields[work_number].append(incipit)
+
+    for _, inclist in work_fields.items():
+        if len(inclist) == 1:
+            fixed_fields.append(inclist[0])
+        else:
+            fixed_fields.append(inclist[0])
+            for f in inclist[1:]:
+                c_value = f["c"]
+                new_value = f"{c_value}a"
+                f["c"] = new_value
+                fixed_fields.append(f)
+
+    return fixed_fields
 
 
 def _incipit_to_pae(incipit: dict) -> str:
@@ -143,12 +181,16 @@ def _get_pae_feature_fields(pae_code: str) -> dict:
     return d
 
 
-def _process_incipit_data(field: pymarc.Field, document_id: str) -> dict:
+def _get_work_number(
+    field: pymarc.Field, document_id: str, check_format: bool = True
+) -> str:
     work_num = field.get("a", "x")
     mvt_num = field.get("b", "x")
     inc_num = field.get("c", "x")
 
-    if not work_num.isdigit() or not mvt_num.isdigit() or not inc_num.isdigit():
+    if check_format and (
+        not work_num.isdigit() or not mvt_num.isdigit() or not inc_num.isdigit()
+    ):
         log.error(
             "Incipit numbering is not correct for %s (%s.%s.%s)",
             document_id,
@@ -157,14 +199,17 @@ def _process_incipit_data(field: pymarc.Field, document_id: str) -> dict:
             inc_num,
         )
 
-    work_number: str = (
-        f"{field.get('a', 'x')}.{field.get('b', 'x')}.{field.get('c', 'x')}"
-    )
+    work_number: str = f"{work_num}.{mvt_num}.{inc_num}"
 
     if work_number == "x.x.x":
         log.warning("Bad incipit number for %s", document_id)
 
+    return work_number
+
+
+def _process_incipit_data(field: pymarc.Field, document_id: str) -> dict:
     clef: str | None = field.get("g")
+    work_number: str = _get_work_number(field, document_id)
 
     log.debug("Creating incipits %s %s", document_id, work_number)
 
@@ -216,7 +261,6 @@ def _process_incipit_data(field: pymarc.Field, document_id: str) -> dict:
         "text_incipit_sm": field.get_subfields("t"),
         "titles_sm": field.get_subfields("d"),
         "role_s": field.get("e"),
-        "work_num_s": work_number,
         "key_mode_s": field.get("r"),
         "key_s": key_sig,
         "norm_key_s": norm_key_sig,
@@ -246,8 +290,10 @@ def __incipit(
     is_single_item: bool,
     content_types: list[str],
 ) -> dict[str, object]:
+    work_number = _get_work_number(field, record_ident)
+
     d: dict = {
-        "id": f"{record_ident}_incipit_{num}",
+        "id": f"{record_ident}_incipit_{work_number}",
         "type": "incipit",
         "parent_type_s": "source",
         "source_id": record_ident,
@@ -255,6 +301,7 @@ def __incipit(
         "record_type_s": get_record_type(record_type_id, is_single_item),
         "source_type_s": get_source_type(record_type_id),
         "content_types_sm": content_types,
+        "work_num_s": work_number,
         # using 'main_title_s' allows us to later serialize this as a source record.
         "main_title_s": parent_record_title,
         "creator_name_s": creator,
@@ -296,6 +343,10 @@ def get_source_incipits(
     source_id: str = f"source_{rism_id}"
 
     incipits: list = record.get_fields("031")
+    all_unique: bool = check_unique_identifiers(incipits, source_id)
+    if not all_unique:
+        incipits = fix_unique_identifiers(incipits, source_id)
+
     standard_titles: list[dict] | None = get_titles(record, "240")
     # If a record has neither a 774 (parent -> child) nor a 773 (child -> parent) then it's a single item.
     is_single_item: bool = "774" not in record or "773" not in record
@@ -329,12 +380,14 @@ def __work_incipit(
     document_id: str,
     creator: str | None,
 ) -> dict:
+    work_number: str = _get_work_number(field, document_id)
     d = {
-        "id": f"{document_id}_incipit_{num}",
+        "id": f"{document_id}_incipit_{work_number}",
         "type": "incipit",
         "parent_type_s": "work",
         "rism_id": id_num,
         "work_id": document_id,
+        "work_num_s": work_number,
         "main_title_s": work_title,
         "creator_name_s": creator,
         "incipit_num_i": num,
@@ -363,7 +416,81 @@ def get_work_incipits(
     work_id: str = f"work_{rism_id}"
 
     incipits: list[pymarc.Field] = record.get_fields("031")
+    all_unique: bool = check_unique_identifiers(incipits, work_id)
+    if not all_unique:
+        # Generate a new list of identifiers.
+        log.warning("Attempting to automatically fix the incipit identifiers.")
+        incipits = fix_unique_identifiers(incipits, work_id)
+
     return [
         __work_incipit(f, num, work_title, rism_id, work_id, creator_name)
         for num, f in enumerate(incipits, 1)
     ]
+
+
+def get_inventory_item_incipits(
+    record: pymarc.Record,
+    source_id: str,
+    inventory_item_title: str | None,
+    creator_name: str | None,
+) -> list | None:
+    if "031" not in record:
+        return None
+
+    rism_id: str = record["001"].value()
+    inventory_item_id: str = f"inventory_item_{rism_id}"
+    incipits: list[pymarc.Field] = record.get_fields("031")
+    all_unique: bool = check_unique_identifiers(incipits, inventory_item_id)
+    if not all_unique:
+        incipits = fix_unique_identifiers(incipits, inventory_item_id)
+
+    return [
+        __inventory_incipit(
+            f,
+            source_id,
+            num,
+            inventory_item_title,
+            rism_id,
+            inventory_item_id,
+            creator_name,
+        )
+        for num, f in enumerate(incipits, 1)
+    ]
+
+
+def __inventory_incipit(
+    field: pymarc.Field,
+    source_id: str,
+    num: int,
+    item_title: str | None,
+    id_num: str,
+    document_id: str,
+    creator: str | None,
+) -> dict:
+    work_number: str = _get_work_number(field, document_id)
+
+    item_data = {
+        "id": f"{document_id}_incipit_{work_number}",
+        "type": "incipit",
+        "parent_type_s": "inventory_item",
+        "rism_id": id_num,
+        "source_id": source_id,
+        "inventory_item_id": document_id,
+        "main_title_s": item_title,
+        "creator_name_s": creator,
+        "incipit_num_i": num,
+    }
+
+    incipit_data: dict = _process_incipit_data(field, document_id)
+    item_data.update(incipit_data)
+
+    pae_code: str | None = (
+        _incipit_to_pae(item_data) if item_data["music_incipit_s"] else None
+    )
+
+    # Run the PAE through Verovio
+    if pae_code:
+        feats = _get_pae_feature_fields(pae_code)
+        item_data.update(feats)
+
+    return item_data

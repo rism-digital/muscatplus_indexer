@@ -4,6 +4,10 @@
 external_ids:  # 024
   processor: "_get_external_ids"
 
+authentication_code_s:
+  field: "042"
+  subfield: "a"
+
 name_s:
   field: "100"
   subfield: "a"

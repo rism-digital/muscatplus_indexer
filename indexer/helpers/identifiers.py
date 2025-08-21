@@ -2,6 +2,15 @@ import re
 from enum import IntEnum, unique
 
 
+@unique
+class WorkPublicationStatusIdentifiers(IntEnum):
+    ALTERNATE = 4
+    COMPLETED = 3
+    PARTIALLY_COMPLETED = 2
+    ELIGIBLE = 1
+    NOT_A_CATALOG = 0
+
+
 class ProjectIdentifiers:
     DIAMM = "diamm"
     CANTUS = "cantus"

@@ -3,6 +3,7 @@ from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
+from indexer.helpers.identifiers import WorkPublicationStatusIdentifiers
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.publication import create_publication_index_document
@@ -37,7 +38,7 @@ SELECT pub.id AS pub_id, pub.marc_source AS marc_source, pub.created_at AS creat
 FROM {dbname}.publications AS pub
     LEFT JOIN {dbname}.works_to_publications wpubs ON pub.id = wpubs.publication_id
     LEFT JOIN {dbname}.works wks ON wpubs.work_id = wks.id
-WHERE pub.work_catalogue IN (2, 3)
+WHERE pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED})
 GROUP BY pub.id
 ORDER BY pub.id;"""  # noqa: S608
 

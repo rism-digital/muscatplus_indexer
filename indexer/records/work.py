@@ -61,6 +61,18 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     work_title: str | None = additional_fields.get("standard_title_s")
 
     incipits: list = get_work_incipits(marc_record, work_title, creator_name) or []
+    if incipits:
+        # Store the first incipit on the work record so we can render it without needing to
+        # look it up.
+        first_one = incipits[0]
+        ext = {
+            "work_num_s": first_one.get("work_num_s"),
+            "has_notation_b": first_one.get("has_notation_b", False),
+            "original_pae_sni": first_one.get("original_pae_sni"),
+            "is_mensural_b": first_one.get("is_mensural_b", False),
+        }
+        work_core.update(ext)
+
     res = [work_core]
     res.extend(incipits)
 

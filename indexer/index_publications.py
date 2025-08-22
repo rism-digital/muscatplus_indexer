@@ -19,7 +19,7 @@ def _get_publications(cfg: dict) -> Generator[dict]:
 
     sql_query: str = f"""
 SELECT pub.id AS pub_id, pub.marc_source AS marc_source, pub.created_at AS created,
-        pub.updated_at AS updated,
+        pub.updated_at AS updated, pub.work_catalogue AS work_catalogue_status,
         (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('work_', wks.id))
             FROM {dbname}.works_to_publications AS wtp
             LEFT JOIN {dbname}.works AS wks ON wtp.work_id = wks.id
@@ -38,7 +38,7 @@ SELECT pub.id AS pub_id, pub.marc_source AS marc_source, pub.created_at AS creat
 FROM {dbname}.publications AS pub
     LEFT JOIN {dbname}.works_to_publications wpubs ON pub.id = wpubs.publication_id
     LEFT JOIN {dbname}.works wks ON wpubs.work_id = wks.id
-WHERE pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED})
+WHERE pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED}, {WorkPublicationStatusIdentifiers.ALTERNATE})
 GROUP BY pub.id
 ORDER BY pub.id;"""  # noqa: S608
 

@@ -2,10 +2,9 @@ import orjson
 import pymarc
 import yaml
 
-from indexer.helpers.identifiers import WorkPublicationStatusIdentifiers
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import get_person_name
+from indexer.helpers.utilities import convert_work_catalogue_status, get_person_name
 from indexer.processors import publication as publication_processor
 
 publications_profile: dict = yaml.full_load(open("profiles/publications.yml"))  # noqa: SIM115
@@ -23,18 +22,6 @@ def create_publication_index_document(record: dict, cfg: dict) -> dict:
     composer_name = get_person_name(composer_json) if composer_json else None
 
     work_catalogue_status: int = record["work_catalogue_status"]
-    status: str
-    if work_catalogue_status == WorkPublicationStatusIdentifiers.COMPLETED:
-        status = "completed"
-    elif work_catalogue_status == WorkPublicationStatusIdentifiers.ALTERNATE:
-        status = "alternate"
-    elif work_catalogue_status == WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED:
-        status = "partial"
-    elif work_catalogue_status == WorkPublicationStatusIdentifiers.ELIGIBLE:
-        status = "eligible"
-    else:
-        # This should not happen, but just in case...
-        status = "not-a-work-catalogue"
 
     catalogue_core: dict = {
         "id": publication_id,
@@ -44,7 +31,7 @@ def create_publication_index_document(record: dict, cfg: dict) -> dict:
         "is_work_catalogue_b": True,
         "work_ids": work_ids,
         "works_count_i": len(work_ids),
-        "work_catalogue_status_s": status,
+        "work_catalogue_status_s": convert_work_catalogue_status(work_catalogue_status),
         "composer_json": composer,
         "composer_name_s": composer_name,
         "composer_name_ans": composer_name,

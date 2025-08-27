@@ -40,7 +40,8 @@ SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
                      'date', pub.date,
                      'place', pub.place,
                      'short_name', pub.short_name,
-                     'marc_source', pub.marc_source))
+                     'marc_source', pub.marc_source,
+                     'work_catalogue_status', pub.work_catalogue))
         FROM {dbname}.works_to_publications wpt
         LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
         WHERE wpt.work_id = work.id

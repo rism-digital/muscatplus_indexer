@@ -12,7 +12,10 @@ import orjson
 import pymarc
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.identifiers import transform_rism_id
+from indexer.helpers.identifiers import (
+    WorkPublicationStatusIdentifiers,
+    transform_rism_id,
+)
 from indexer.helpers.marc import create_marc
 from indexer.helpers.solr import exists
 
@@ -793,18 +796,13 @@ def get_bibliographic_references_json(
         log.debug("Field %s is not in the record, bailing.", field)
         return None
 
-    refs: dict = {}
+    refs: dict[str, str] = {}
+    wcs: dict[str, str] = {}
     for ref in references:
-        # |:| is a unique field delimiter
         rid = str(ref["id"])
-
-        try:
-            refs[rid] = format_reference(ref)
-        except ValueError:
-            log.warning(
-                "Could not index references for record %s", record["001"].value()
-            )
-            continue
+        refs[rid] = format_reference(ref)
+        if status := ref.get("work_catalogue_status"):
+            wcs[rid] = convert_work_catalogue_status(status)
 
     outp: list = []
     fields: list[pymarc.Field] = record.get_fields(field)
@@ -837,6 +835,9 @@ def get_bibliographic_references_json(
         }
         if p := ff.get("n"):
             lit["pages"] = p
+
+        if w := wcs.get(fid):
+            lit["work_catalogue_status"] = w
 
         outp.append(lit)
 
@@ -969,8 +970,9 @@ def get_work_node(
 
     return {k: v for k, v in d.items() if v}
 
+
 def get_related_sources(
-        related: list, relationship_fields: list[pymarc.Field], host_source_id: str
+    related: list, relationship_fields: list[pymarc.Field], host_source_id: str
 ) -> list[dict] | None:
     """
     Combines the MARC source from related sources and the 787 entries from a record to create a JSON
@@ -1029,3 +1031,17 @@ def get_related_sources(
         related_entries.append({k: v for k, v in d.items() if v})
 
     return related_entries
+
+
+def convert_work_catalogue_status(work_catalogue_status: int) -> str:
+    if work_catalogue_status == WorkPublicationStatusIdentifiers.COMPLETED:
+        return "completed"
+    elif work_catalogue_status == WorkPublicationStatusIdentifiers.ALTERNATE:
+        return "alternate"
+    elif work_catalogue_status == WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED:
+        return "partial"
+    elif work_catalogue_status == WorkPublicationStatusIdentifiers.ELIGIBLE:
+        return "eligible"
+    else:
+        # This should not happen, but just in case...
+        return "not-a-work-catalogue"

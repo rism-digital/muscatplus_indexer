@@ -822,9 +822,8 @@ def get_bibliographic_references_json(
 
         if fid not in refs:
             log.warning(
-                "The publication ID %s was not available in the list of references. Skipping: %s",
+                "The publication ID %s was not available in the list of references. Skipping it.",
                 str(fid),
-                record["001"].value(),
             )
             continue
 

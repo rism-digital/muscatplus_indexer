@@ -3,6 +3,7 @@ from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
+from indexer.helpers.identifiers import WorkPublicationStatusIdentifiers
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.work import (
@@ -44,7 +45,7 @@ SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
                      'work_catalogue_status', pub.work_catalogue))
         FROM {dbname}.works_to_publications wpt
         LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
-        WHERE wpt.work_id = work.id
+        WHERE wpt.work_id = work.id AND pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED}, {WorkPublicationStatusIdentifiers.ALTERNATE})
     ) AS publication_entries,
     JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name
 FROM {dbname}.works AS work

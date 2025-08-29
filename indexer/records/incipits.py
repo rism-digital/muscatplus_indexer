@@ -71,7 +71,7 @@ def check_unique_identifiers(
     for incipit in fields:
         work_number = _get_work_number(incipit, document_id, check_format)
         if work_number in work_numbers:
-            log.error("Duplicate work number: %s for %s", work_number, document_id)
+            log.error("Duplicate incipit number: %s for %s", work_number, document_id)
             return False
         work_numbers.add(work_number)
     return True

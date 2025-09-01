@@ -796,13 +796,11 @@ def get_bibliographic_references_json(
         log.debug("Field %s is not in the record, bailing.", field)
         return None
 
-    refs: dict[str, str] = {}
+    refs: dict[str, dict] = {}
     wcs: dict[str, str] = {}
     for ref in references:
         rid = str(ref["id"])
-        refs[rid] = format_reference(ref)
-        if status := ref.get("work_catalogue_status"):
-            wcs[rid] = convert_work_catalogue_status(status)
+        refs[rid] = ref
 
     outp: list = []
     fields: list[pymarc.Field] = record.get_fields(field)
@@ -827,18 +825,24 @@ def get_bibliographic_references_json(
             )
             continue
 
+        ref = refs[fid]
+
         publication_id: str = f"publication_{fid}"
         lit = {
             "id": publication_id,
-            "formatted": refs[fid],
+            "formatted": format_reference(ref),
+            "work_catalogue_status": (
+                convert_work_catalogue_status(t)
+                if (t := ref.get("work_catalogue_status"))
+                else None
+            ),
+            "short_name": ref.get("short_name"),
+            "title": ref.get("title"),
         }
         if p := ff.get("n"):
             lit["pages"] = p
 
-        if w := wcs.get(fid):
-            lit["work_catalogue_status"] = w
-
-        outp.append(lit)
+        outp.append({k: v for k, v in lit.items() if v})
 
     log.debug("Success for field %s, record %s", field, record["001"].value())
     return outp

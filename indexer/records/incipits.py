@@ -1,5 +1,5 @@
 import logging
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from typing import TypedDict
 
 import orjson
@@ -16,26 +16,8 @@ from indexer.helpers.utilities import (
 log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml"))  # noqa: SIM115
 
-RenderedPAE = namedtuple("RenderedPAE", ["svg", "midi", "features"])
 verovio.enableLog(False)  # noqa
 VEROVIO_OPTIONS = {
-    # "paeFeatures": True,
-    "footer": "none",
-    "header": "none",
-    "breaks": "auto",
-    "pageMarginTop": 0,
-    "pageMarginBottom": 25,  # Artificially inflate the bottom margin until rism-digital/verovio#1960 is fixed.
-    "pageMarginLeft": 0,
-    "pageMarginRight": 0,
-    # "adjustPageWidth": "true",
-    "pageWidth": 2200,
-    "spacingStaff": 1,
-    "scale": 40,
-    "adjustPageHeight": True,
-    # "svgHtml5": "true",
-    "svgFormatRaw": True,
-    "svgRemoveXlink": True,
-    "svgViewBox": True,
     "xmlIdChecksum": True,
 }
 vrv_tk = verovio.toolkit()

@@ -797,7 +797,6 @@ def get_bibliographic_references_json(
         return None
 
     refs: dict[str, dict] = {}
-    wcs: dict[str, str] = {}
     for ref in references:
         rid = str(ref["id"])
         refs[rid] = ref

@@ -12,7 +12,7 @@ from indexer.helpers.utilities import parallelise, update_rism_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
+def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
@@ -70,7 +70,7 @@ def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]], None, None]
 
 def _get_linked_diamm_organizations(
     cfg: dict,
-) -> Generator[list[dict[str, Any]], None, None]:
+) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddoi.identifier AS rism_id, ddo.name AS name,
@@ -96,13 +96,13 @@ def index_organizations(cfg: dict) -> bool:
 
 def _get_linked_diamm_archives(
     cfg: dict,
-) -> Generator[list[dict[str, Any]], None, None]:
+) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id, dda.name AS name,
                         'archives' AS project_type,
-                        (SELECT COUNT(*) 
-                         FROM diamm_data_source AS dds 
+                        (SELECT COUNT(*)
+                         FROM diamm_data_source AS dds
                          WHERE dds.archive_id = dda.id AND dds.public IS TRUE
                         ) AS source_count
                         FROM diamm_data_archive dda

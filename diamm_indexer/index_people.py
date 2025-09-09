@@ -16,7 +16,7 @@ from indexer.helpers.utilities import parallelise, update_rism_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_people(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
+def _get_people(cfg: dict) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddp.last_name AS last_name,
@@ -64,7 +64,7 @@ def _get_people(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
             yield rows
 
 
-def _get_linked_diamm_people(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
+def _get_linked_diamm_people(cfg: dict) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddpi.identifier AS rism_id,ddp.last_name AS last_name,

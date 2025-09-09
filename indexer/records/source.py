@@ -97,6 +97,10 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         [pm["marc_source"] for pm in parent_holding_info]
     )
 
+    print_holding_relationships: list[str] = (
+        _get_print_holding_institution_relationships(all_print_holding_records)
+    )
+
     all_print_holding_sigla: list[str] = []
     all_print_holding_sigla += [m["lib_siglum"] for m in holding_info]
     all_print_holding_sigla += [pm["lib_siglum"] for pm in parent_holding_info]
@@ -287,6 +291,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         "holding_institutions_identifiers_sm": holding_orgs_identifiers,
         "holding_institutions_ids": holding_orgs_ids,
         "holding_institutions_places_sm": institution_places,
+        "holding_institutions_relationships_ids": print_holding_relationships,
         "country_codes_sm": country_codes,
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
@@ -320,6 +325,21 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         source_profile, source_id, marc_record, source_processor
     )
     source_core.update(additional_fields)
+
+    # Combine all the institution ids into a single list for an easier lookup.
+    related_institution_ids: list[str] = additional_fields.get(
+        "related_institutions_ids", []
+    )
+
+    # 710 (ms), 852 (pr & ms), 710 (holding for pr.)
+    all_related_institutions: list[str] = (
+        related_institution_ids + holding_orgs_ids + print_holding_relationships
+    )
+    # remove duplicates with a set.
+    # NB: This field should only be used on sources, since we will dynamically calculate the
+    # number of related institutions based on the number of occurrences of that institution id
+    # in this field.
+    source_core["all_related_institutions_ids"] = list(set(all_related_institutions))
 
     source_dates: list[int] | None = additional_fields.get("date_ranges_im")
     creator_name = additional_fields.get("creator_name_s")
@@ -563,3 +583,15 @@ def _get_holding_people_ids(records: list[pymarc.Record]) -> set[str]:
             ids.update(p_ids)
 
     return ids
+
+
+def _get_print_holding_institution_relationships(
+    print_records: list[pymarc.Record],
+) -> list[str]:
+    ids: set[str] = set()
+
+    for rec in print_records:
+        if f := to_solr_multi(rec, "710", "0"):
+            i_ids: set[str] = {f"institution_{i}" for i in f if i}
+            ids.update(i_ids)
+    return list(ids)

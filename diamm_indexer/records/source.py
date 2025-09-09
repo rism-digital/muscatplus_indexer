@@ -49,6 +49,12 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     else:
         date_ranges = [record["start_date"], record["end_date"]]
 
+    hi_ids: list[str] = [holding_institution_id] if holding_institution_id else []
+    rel_ids: list[str] = (
+        _get_related_institutions_ids(record["related_organizations"]) or []
+    )
+    all_related_ids: list[str] = list(set(hi_ids + rel_ids))
+
     source_record: dict = {
         "id": f"diamm_source_{record['id']}",
         "type": "source",
@@ -89,20 +95,17 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "holding_institutions_identifiers_sm": _get_full_diamm_holding_identifiers(
             record
         ),
-        "holding_institutions_ids": [holding_institution_id]
-        if holding_institution_id
-        else None,
+        "holding_institutions_ids": hi_ids,
         "holding_institutions_places_sm": [record["city_name"]],
         "country_codes_sm": [country_code],
-        "related_institutions_ids": _get_related_institutions_ids(
-            record["related_organizations"]
-        ),
+        "related_institutions_ids": rel_ids,
         "related_institutions_sm": _get_related_institutions_names(
             record["related_organizations"]
         ),
         "related_institutions_json": orjson.dumps(
             _get_related_institutions_json(record["related_organizations"])
         ).decode("utf-8"),
+        "all_related_institutions_ids": all_related_ids,
         "country_names_sm": COUNTRY_CODE_MAPPING.get(country_code, []),
         "minimal_mss_holding_json": orjson.dumps(
             _get_minimal_manuscript_holding_data_diamm(record)

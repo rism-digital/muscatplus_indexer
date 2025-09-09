@@ -14,7 +14,7 @@ log = logging.getLogger("muscat_indexer")
 
 def _get_unlinked_cantus_institutions(
     cfg: dict,
-) -> Generator[list[dict[str, Any]], None, None]:
+) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         # Only select institutions that have *published* sources attached to them.
@@ -33,16 +33,19 @@ def _get_unlinked_cantus_institutions(
 
 def _get_linked_cantus_institutions(
     cfg: dict,
-) -> Generator[list[dict[str, Any]], None, None]:
+) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT DISTINCT cti.id AS id, ctii.identifier AS rism_id, cti.name AS name,
                         'institution' AS project_type,
-                        (SELECT COUNT(*) FROM main_app_source AS s WHERE cti.id = s.holding_institution_id AND s.published IS TRUE) AS source_count
+                        (SELECT COUNT(*)
+                            FROM main_app_source AS s
+                            WHERE cti.id = s.holding_institution_id AND s.published IS TRUE
+                        ) AS source_count
                         FROM main_app_institution AS cti
                         LEFT JOIN main_app_institutionidentifier AS ctii ON cti.id = ctii.institution_id
                         WHERE ctii.institution_id IS NOT NULL AND ctii.identifier_type = 1
-                        ORDER BY cti.id""")
+                        ORDER BY cti.id;""")
 
         while rows := curs.fetchmany(size=500):
             yield rows
@@ -59,6 +62,7 @@ def update_institution_records_with_cantus_institutions(
         doc = update_rism_document(record, "cantus", "institution", label, cfg)
         if not doc:
             continue
+
         records.append(doc)
 
     check: bool = True if cfg["dry"] else submit_to_solr(records, cfg)

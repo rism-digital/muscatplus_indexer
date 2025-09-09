@@ -14,7 +14,7 @@ from indexer.helpers.utilities import parallelise
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]], None, None]:
+def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]]]:
     with postgres_pool.connection() as conn:
         curs = conn.cursor(row_factory=dict_row)
         curs.execute("""SELECT cts.id AS id, cts.shelfmark AS shelfmark, cts.date AS source_date, cts.summary AS source_summary,

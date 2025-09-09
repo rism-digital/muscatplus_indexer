@@ -26,9 +26,11 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 
     inst_identifiers: list[str] = record.get("institution_rism_ids") or []
     source_date: list = record.get("source_century") or []
-    date_ranges: list[tuple] = [_process_dates(cent) for cent in source_date]
+    date_ranges: list[tuple[int | None, int | None] | None] = [
+        _process_dates(cent) for cent in source_date if cent
+    ]
     flattened_centuries: list[int] = [
-        cent for pairs in date_ranges for cent in pairs if cent
+        cent for pairs in date_ranges if pairs for cent in pairs if cent
     ]
     if flattened_centuries:
         earliest = min(flattened_centuries)
@@ -39,6 +41,8 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 
     source_summary: str | None = record.get("source_summary")
     general_note: str | None = record.get("html_source_description")
+
+    institution_ids: list = [transform_rism_id(rid) for rid in inst_identifiers]
 
     source_record: dict = {
         "id": f"cantus_source_{record['id']}",
@@ -70,9 +74,8 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "holding_institutions_sm": [
             record["institution_name"],
         ],
-        "holding_institutions_ids": [
-            transform_rism_id(rid) for rid in inst_identifiers
-        ],
+        "holding_institutions_ids": institution_ids,
+        "all_related_institutions_ids": institution_ids,
         "holding_institutions_places_sm": [
             record["institution_city"],
         ],

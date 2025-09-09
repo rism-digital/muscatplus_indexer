@@ -42,10 +42,40 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     rism_id: str = marc_record["001"].value()
     institution_id: str = f"institution_{rism_id}"
 
-    source_count: int = record.get("source_count", 0)
-    holdings_count: int = record.get("holdings_count", 0)
-    other_count: int = record.get("other_count", 0)
-    total_count: int = record.get("total_source_count", 0)
+    related_source_ids: list[int] = (
+        orjson.loads(r) if (r := record["source_count"]) else []
+    )
+    source_count = len(related_source_ids)
+    # source_count: int = record.get("source_count", 0)
+    related_holding_source_ids: list[int] = (
+        orjson.loads(h) if (h := record["holdings_count"]) else []
+    )
+    holdings_count: int = len(related_holding_source_ids)
+    # holdings_count: int = record.get("holdings_count", 0)
+
+    related_source_other_ids: list[int] = (
+        orjson.loads(o) if (o := record["other_count"]) else []
+    )
+    other_count: int = len(related_source_other_ids)
+    # other_count: int = record.get("other_count", 0)
+
+    related_source_other_holding_ids: list[int] = (
+        orjson.loads(p) if (p := record["other_holdings_count"]) else []
+    )
+    other_holdings_count: int = len(related_source_other_holding_ids)
+    # other_holdings_count: int = record.get("other_holdings_count", 0)
+
+    all_related_ids = set(
+        related_source_ids
+        + related_holding_source_ids
+        + related_source_other_ids
+        + related_source_other_holding_ids
+    )
+    total_count = len(all_related_ids)
+
+    # total_count: int = (
+    #     source_count + holdings_count + other_count + other_holdings_count
+    # )
     people_contribution_count: int = record.get("people_contribution_count", 0)
 
     related_institutions: list = (

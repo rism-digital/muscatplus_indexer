@@ -340,6 +340,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     # number of related institutions based on the number of occurrences of that institution id
     # in this field.
     source_core["all_related_institutions_ids"] = list(set(all_related_institutions))
+    creator_id: list[str] = [f] if (f := additional_fields.get("creator_id")) else []
+    source_core["all_related_people_ids"] = list(set(related_people_ids + creator_id))
 
     source_dates: list[int] | None = additional_fields.get("date_ranges_im")
     creator_name = additional_fields.get("creator_name_s")

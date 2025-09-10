@@ -76,6 +76,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         ],
         "holding_institutions_ids": institution_ids,
         "all_related_institutions_ids": institution_ids,
+        "all_related_people_ids": None,  # cantus does not track people relationships
         "holding_institutions_places_sm": [
             record["institution_city"],
         ],

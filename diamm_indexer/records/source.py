@@ -106,6 +106,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
             _get_related_institutions_json(record["related_organizations"])
         ).decode("utf-8"),
         "all_related_institutions_ids": all_related_ids,
+        "all_related_people_ids": list(set(composer_ids)),
         "country_names_sm": COUNTRY_CODE_MAPPING.get(country_code, []),
         "minimal_mss_holding_json": orjson.dumps(
             _get_minimal_manuscript_holding_data_diamm(record)

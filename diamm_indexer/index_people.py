@@ -72,10 +72,12 @@ def _get_linked_diamm_people(cfg: dict) -> Generator[list[dict[str, Any]]]:
                             ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,
                             ddp.latest_year_approximate AS latest_approx, 'people' AS project_type,
                             (SELECT COUNT(DISTINCT ddi.source_id)
-                                FROM diamm_data_item AS ddi
-                                LEFT JOIN diamm_data_compositioncomposer AS ddcc ON ddi.composition_id = ddcc.composition_id
-                                WHERE ddcc.composer_id = ddp.id)
-                            AS source_count
+                             FROM diamm_data_item AS ddi
+                                 LEFT JOIN diamm_data_compositioncomposer AS ddcc ON ddi.composition_id = ddcc.composition_id
+                                 LEFT JOIN diamm_data_itemcomposer AS ddii ON ddi.id = ddii.item_id
+                                 LEFT JOIN diamm_data_sourceauthority AS ddsa ON ddi.source_id = ddsa.source_id AND ddsa.identifier_type = 1
+                             WHERE ddsa.id IS NULL AND (ddcc.composer_id = ddp.id OR ddii.composer_id = ddp.id)
+                            ) AS source_count
                         FROM diamm_data_person ddp
                         LEFT JOIN diamm_data_personidentifier ddpi on ddp.id = ddpi.person_id
                         WHERE ddpi.person_id IS NOT NULL AND ddpi.identifier_type = 1

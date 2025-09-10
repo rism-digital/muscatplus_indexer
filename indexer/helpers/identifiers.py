@@ -1,4 +1,3 @@
-import re
 from enum import IntEnum, unique
 
 
@@ -364,28 +363,30 @@ ISO3166_TO_SIGLUM_MAPPING = {
     "XE-PG": "PNG",
 }
 
-RISM_ID_SUB: re.Pattern = re.compile(r"(?:people|sources|institutions)/(?P<doc_id>\d+)")
 
-
-def transform_rism_id(q_id: str | None) -> str | None:
+def transform_rism_id(q_id: str) -> str | None:
     """
-    Transform an incoming RISM ID into a Solr ID.
+    Transform an incoming RISM URL ID into a RISM Solr Document ID.
     :param q_id: Query ID
     :return: A Solr ID string, or None if not successful.
     """
     if not q_id:
         return None
 
-    doc_matcher: re.Match[str] | None = re.match(RISM_ID_SUB, q_id)
-    if not doc_matcher:
+    # doc_matcher: re.Match[str] | None = re.match(RISM_ID_SUB, q_id)
+    # if not doc_matcher:
+    #     return None
+    doc_matcher = q_id.split("/")
+    if len(doc_matcher) != 2:
         return None
 
-    doc_num: str = doc_matcher["doc_id"]
-    if "people" in q_id:
+    doc_type, doc_num = doc_matcher
+
+    if doc_type == "people":  # noqa: SIM116
         return f"person_{doc_num}"
-    elif "sources" in q_id:
+    elif doc_type == "sources":
         return f"source_{doc_num}"
-    elif "institutions" in q_id:
+    elif doc_type == "institutions":
         return f"institution_{doc_num}"
     else:
         return None

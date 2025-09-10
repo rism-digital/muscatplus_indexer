@@ -52,7 +52,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         orjson.loads(s) if (s := record.get("source_relationships")) else []
     )
     holding_relationships = (
-        orjson.loads(h) if (h := record.get("holdings_relationships")) else []
+        orjson.loads(h) if (h := record.get("holding_relationships")) else []
     )
 
     source_roles: list[str] = [o["rel"] for o in source_relationships]

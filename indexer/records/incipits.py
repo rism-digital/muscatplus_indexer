@@ -53,7 +53,7 @@ def check_unique_identifiers(
     for incipit in fields:
         work_number = _get_work_number(incipit, document_id, check_format)
         if work_number in work_numbers:
-            log.error("Duplicate incipit number: %s for %s", work_number, document_id)
+            log.warning("Duplicate incipit number: %s for %s", work_number, document_id)
             return False
         work_numbers.add(work_number)
     return True
@@ -173,7 +173,7 @@ def _get_work_number(
     if check_format and (
         not work_num.isdigit() or not mvt_num.isdigit() or not inc_num.isdigit()
     ):
-        log.error(
+        log.warning(
             "Incipit numbering is not correct for %s (%s.%s.%s)",
             document_id,
             work_num,

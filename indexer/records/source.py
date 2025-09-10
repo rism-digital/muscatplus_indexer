@@ -62,7 +62,9 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     membership_id: int = m if (m := parent_id) else record["id"]
     rism_id: str = marc_record["001"].value()
     source_id: str = f"source_{rism_id}"
-    num_holdings: int = record.get("holdings_count", 0)
+    child_holdings_count: int = record.get("child_holdings_count", 0)
+    parent_holdings_count: int = record.get("parent_holdings_count", 0)
+    num_holdings: int = child_holdings_count + parent_holdings_count
     main_title: str = record["std_title"]
 
     # If a source has no parent, and no children, then it is a single-item source.

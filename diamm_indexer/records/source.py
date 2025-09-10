@@ -15,16 +15,59 @@ log = logging.getLogger("muscat_indexer")
 def create_source_index_documents(record, cfg: dict) -> list[dict]:
     log.debug("Indexing %s", record["shelfmark"])
 
-    composer_names = (
+    inventoried_composer_names = (
         _get_composer_names(record["composer_names"])
         if record["composer_names"]
         else []
     )
 
-    composer_ids = (
-        [transform_rism_id(cid) for cmp in record["composer_ids"] for cid in cmp]
-        if record["composer_ids"]
+    rism_composer_ids: set[str] = (
+        {
+            t
+            for cmp in record["composer_names"]
+            if (t := transform_rism_id(cmp["rism_id"]))
+        }
+        if record["composer_names"]
+        else set()
+    )
+
+    diamm_composer_ids: set[str] = (
+        {cmp["id"] for cmp in record["composer_names"]}
+        if record["composer_names"] and record["rism_id"] is None
+        else set()
+    )
+
+    uninventoried_composer_names = (
+        _get_composer_names(record["uninventoried_composers"])
+        if record["uninventoried_composers"]
         else []
+    )
+
+    uninventoried_rism_composer_ids: set[str] = (
+        {
+            t
+            for cmp in record["uninventoried_composers"]
+            if (t := transform_rism_id(cmp["rism_id"]))
+        }
+        if record["uninventoried_composers"]
+        else set()
+    )
+
+    uninventoried_diamm_composer_ids: set[str] = (
+        {cmp["id"] for cmp in record["composer_names"]}
+        if record["composer_names"] and record["rism_id"] is None
+        else set()
+    )
+
+    all_composer_ids: list[str] = list(
+        rism_composer_ids
+        | diamm_composer_ids
+        | uninventoried_diamm_composer_ids
+        | uninventoried_rism_composer_ids
+    )
+
+    composer_names: list[str] = list(
+        set(inventoried_composer_names + uninventoried_composer_names)
     )
 
     display_label = f"{record['siglum']} {record['shelfmark']}"
@@ -83,7 +126,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
         "physical_dimensions_s": record["measurements"],
         "people_names_sm": composer_names,
         "source_member_composers_sm": composer_names,
-        "related_people_ids": composer_ids,
+        # "related_people_ids": all_composer_ids,
         "siglum_s": record["siglum"],
         "additional_title_s": record["name"],
         "general_notes_sm": general_description,
@@ -106,7 +149,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
             _get_related_institutions_json(record["related_organizations"])
         ).decode("utf-8"),
         "all_related_institutions_ids": all_related_ids,
-        "all_related_people_ids": list(set(composer_ids)),
+        "all_related_people_ids": list(set(all_composer_ids)),
         "country_names_sm": COUNTRY_CODE_MAPPING.get(country_code, []),
         "minimal_mss_holding_json": orjson.dumps(
             _get_minimal_manuscript_holding_data_diamm(record)

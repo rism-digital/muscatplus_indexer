@@ -33,28 +33,32 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
 
                         SELECT p.id AS id, p.marc_source AS marc_source,
                                p.created_at AS created, p.updated_at AS updated,
-                               (
-                                   (SELECT COUNT(DISTINCT sp.source_id)
-                                        FROM {dbname}.sources_to_people sp
-                                        LEFT JOIN {dbname}.sources ss ON sp.source_id = ss.id
-                                        WHERE sp.person_id = p.id AND (ss.wf_stage IS NULL OR ss.wf_stage = 1))
-                                   +
-                                   (SELECT COUNT(DISTINCT ho.source_id)
-                                        FROM {dbname}.holdings ho
-                                        LEFT JOIN {dbname}.holdings_to_people hp ON ho.id = hp.holding_id
-                                        WHERE hp.person_id = p.id)
-                               ) AS source_count,
-                               (SELECT JSON_ARRAYAGG(DISTINCT COALESCE(ssp.relator_code, 'cre'))
-                                    FROM {dbname}.sources_to_people AS ssp
-                                    LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
-                                    WHERE p.id = ssp.person_id AND sss.wf_stage = 1
+                               (SELECT JSON_ARRAYAGG(DISTINCT
+                                                    JSON_OBJECT('id', CONCAT('source_', sss.id),
+                                                                'rel', COALESCE(ssp.relator_code, 'cre')))
+                                   FROM {dbname}.sources_to_people AS ssp
+                                   LEFT JOIN {dbname}.sources AS sss ON ssp.source_id = sss.id
+                                   WHERE p.id = ssp.person_id
+                                     AND sss.wf_stage = 1
+                                     AND p.id != 30004985
                                ) AS source_relationships,
+                               (SELECT JSON_ARRAYAGG(DISTINCT
+                                                    JSON_OBJECT('id', CONCAT('holding_', hhp.holding_id),
+                                                                'source_id', CONCAT('source_', hhs.id),
+                                                                'rel', COALESCE(hhp.relator_code, 'oth')))
+                                   FROM {dbname}.holdings AS hhr
+                                   LEFT JOIN {dbname}.sources AS hhs ON hhr.source_id = hhs.id
+                                   LEFT JOIN {dbname}.holdings_to_people AS hhp ON hhr.id = hhp.holding_id
+                                   WHERE p.id = hhp.person_id
+                                     AND hhs.wf_stage = 1
+                                     AND p.id != 30004985
+                               ) AS holding_relationships,
                                (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
                                     FROM {dbname}.digital_object_links AS do
                                     WHERE do.object_link_type = 'Person' AND do.object_link_id = p.id
                                ) AS digital_objects,
                                (SELECT JSON_ARRAYAGG(DISTINCT
-                                                         JSON_OBJECT('id', CONCAT('publication_', pub.id),
+                                                     JSON_OBJECT('id', CONCAT('publication_', pub.id),
                                                                      'author', pub.author,
                                                                      'title', pub.title,
                                                                      'journal', pub.journal,
@@ -70,7 +74,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                       AND pub.work_catalogue IN (2, 3)
                                ) AS work_catalogues,
                                (SELECT JSON_ARRAYAGG(DISTINCT
-                                                      JSON_OBJECT('institution_id', CONCAT('institution_', reli.id),
+                                                     JSON_OBJECT('institution_id', CONCAT('institution_', reli.id),
                                                                   'siglum', reli.siglum,
                                                                   'name', reli.corporate_name,
                                                                   'place', reli.place))

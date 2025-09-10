@@ -28,7 +28,8 @@ def _get_sources(cfg: dict) -> Generator[dict]:
         child.created_at AS created, child.updated_at AS updated, parent.marc_source AS parent_marc_source,
         child.record_type AS record_type, parent.std_title AS parent_title, parent.shelf_mark AS parent_shelfmark,
         parent.lib_siglum AS parent_siglum, parent.record_type AS parent_record_type,
-        COUNT(DISTINCT h.id) AS holdings_count,
+        COUNT(DISTINCT h.id) AS child_holdings_count,
+        COUNT(DISTINCT hp.id) AS parent_holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT JSON_ARRAYAGG(DISTINCT srm2.marc_source)
             FROM {dbname}.sources AS srm2

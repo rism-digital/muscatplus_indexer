@@ -44,13 +44,26 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     marc_record: pymarc.Record = create_marc(record["marc_source"])
     rism_id: str = marc_record["001"].value()
     person_id: str = f"person_{rism_id}"
-    roles: list[str] = (
+
+    source_relationships: list[dict]
+    holding_relationships: list[dict]
+
+    source_relationships = (
         orjson.loads(s) if (s := record.get("source_relationships")) else []
     )
+    holding_relationships = (
+        orjson.loads(h) if (h := record.get("holdings_relationships")) else []
+    )
 
-    source_count: int = record.get("source_count", 0)
-    holdings_count: int = record.get("holdings_count", 0)
-    total_count: int = source_count + holdings_count
+    source_roles: list[str] = [o["rel"] for o in source_relationships]
+    holding_roles: list[str] = [o["rel"] for o in holding_relationships]
+    roles: list[str] = list(set(source_roles + holding_roles))
+
+    source_ids = [s["id"] for s in source_relationships]
+    holding_source_ids = [h["source_id"] for h in holding_relationships]
+    all_related_sources = list(set(source_ids + holding_source_ids))
+    total_count: int = len(all_related_sources)
+
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
         orjson.loads(d) if (d := record.get("digital_objects")) else []
@@ -103,9 +116,9 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "roles_sm": roles,
         "has_digital_objects_b": has_digital_objects,
         "digital_object_ids": digital_object_ids,
-        "source_count_i": source_count if rism_id != "30004985" else 0,
+        "source_count_i": total_count,
         # "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
-        "total_sources_i": total_count if rism_id != "30004985" else 0,
+        "total_sources_i": total_count,
         "work_node_ids": work_node_ids,
         "work_nodes_json": work_nodes_json,
         "works_catalogue_json": works_catalogue_json,

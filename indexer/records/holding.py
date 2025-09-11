@@ -87,17 +87,14 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
         composite_marc: pymarc.Record | None = (
             create_marc(composite_record) if composite_record else None
         )
-        (
-            idx_document.update(
-                {
-                    "source_membership_order_i": get_parent_order_for_members(
-                        composite_marc, holding_id
-                    )
-                    if composite_marc
-                    else None
-                }
-            ),
-        )
+
+        if composite_marc:
+            idx_document.update({
+                "source_membership_order_i": get_parent_order_for_members(
+                    composite_marc, holding_id
+                )
+            })
+
 
     if c := record.get("institution_record_marc"):
         institution_marc_record: pymarc.Record = create_marc(c)

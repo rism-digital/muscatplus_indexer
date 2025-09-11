@@ -62,7 +62,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     related_source_other_holding_ids: list[int] = (
         orjson.loads(p) if (p := record["other_holdings_count"]) else []
     )
-    other_holdings_count: int = len(related_source_other_holding_ids)
+    # other_holdings_count: int = len(related_source_other_holding_ids)
     # other_holdings_count: int = record.get("other_holdings_count", 0)
 
     all_related_ids = set(

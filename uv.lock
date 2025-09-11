@@ -47,11 +47,11 @@ wheels = [
 
 [[package]]
 name = "dbutils"
-version = "3.1.1"
+version = "3.1.2"
 source = { registry = "https://pypi.org/simple/" }
-sdist = { url = "https://files.pythonhosted.org/packages/da/d5/ad1aa0fd519d328405c7c549174a71d6480216da05187dbc9cb413bad6ce/dbutils-3.1.1.tar.gz", hash = "sha256:ade79fbc5786d7496d4138722fbca24340cf7c73b5d66df05296f656ff086bbf", size = 95821, upload-time = "2025-06-04T19:30:26.178Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/33/b739e991d8234b3fb0602d501b4aacda88ad1fd5d061b5b9d6022fa35ed6/dbutils-3.1.2.tar.gz", hash = "sha256:160b5788154f1adeddc61080daff1530b4df2ba0d45af1c3bfbac76db24186b3", size = 95869, upload-time = "2025-09-07T17:01:31.713Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/18/e4261a2b96d1387c16273dccf74bb88e3ecfe7061ea589655426aca6c3d1/dbutils-3.1.1-py3-none-any.whl", hash = "sha256:edc8ebd8445094c335d52e2bcbcf9f7dcc54d7a294adf7d01a8baf21924317f5", size = 32866, upload-time = "2025-06-04T19:30:24.782Z" },
+    { url = "https://files.pythonhosted.org/packages/98/a7/4fe7da3082241028e62c390bf9357d60522dd03d9329e3a560045fe14dfd/dbutils-3.1.2-py3-none-any.whl", hash = "sha256:0cb388a89eeecf04089aef113a7007c3fac9199e9580c8549829f954870c403a", size = 32936, upload-time = "2025-09-07T17:01:30.466Z" },
 ]
 
 [[package]]
@@ -218,6 +218,7 @@ dev = [
     { name = "ipython" },
     { name = "mypy" },
     { name = "pip" },
+    { name = "pyright" },
     { name = "types-pyyaml" },
 ]
 
@@ -229,7 +230,7 @@ requires-dist = [
     { name = "mysqlclient", specifier = ">=2.2.7" },
     { name = "orjson", specifier = ">=3.10.3,<4.0.0" },
     { name = "psycopg", extras = ["pool"], specifier = ">=3.2.6" },
-    { name = "pymarc", specifier = ">=5.3.1" },
+    { name = "pymarc", git = "https://gitlab.com/ahankinson/pymarc.git?rev=pyright-typing-fixes" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
     { name = "sentry-sdk", specifier = ">=2.19.0,<4.0.0" },
     { name = "verovio", specifier = ">=5.2.1" },
@@ -240,6 +241,7 @@ dev = [
     { name = "ipython", specifier = ">=9.0.0,<10" },
     { name = "mypy", specifier = ">=1.11.2,<2" },
     { name = "pip", specifier = ">=25.1.1" },
+    { name = "pyright", specifier = ">=1.1.405" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250402" },
 ]
 
@@ -288,43 +290,52 @@ wheels = [
 ]
 
 [[package]]
+name = "nodeenv"
+version = "1.9.1"
+source = { registry = "https://pypi.org/simple/" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/16/fc88b08840de0e0a72a2f9d8c6bae36be573e475a6326ae854bcc549fc45/nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f", size = 47437, upload-time = "2024-06-04T18:44:11.171Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/1d/1b658dbd2b9fa9c4c9f32accbfc0205d532c8c6194dc0f2a4c0428e7128a/nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9", size = 22314, upload-time = "2024-06-04T18:44:08.352Z" },
+]
+
+[[package]]
 name = "opentelemetry-api"
-version = "1.36.0"
+version = "1.37.0"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
     { name = "importlib-metadata" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/d2/c782c88b8afbf961d6972428821c302bd1e9e7bc361352172f0ca31296e2/opentelemetry_api-1.36.0.tar.gz", hash = "sha256:9a72572b9c416d004d492cbc6e61962c0501eaf945ece9b5a0f56597d8348aa0", size = 64780, upload-time = "2025-07-29T15:12:06.02Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/04/05040d7ce33a907a2a02257e601992f0cdf11c73b33f13c4492bf6c3d6d5/opentelemetry_api-1.37.0.tar.gz", hash = "sha256:540735b120355bd5112738ea53621f8d5edb35ebcd6fe21ada3ab1c61d1cd9a7", size = 64923, upload-time = "2025-09-11T10:29:01.662Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/ee/6b08dde0a022c463b88f55ae81149584b125a42183407dc1045c486cc870/opentelemetry_api-1.36.0-py3-none-any.whl", hash = "sha256:02f20bcacf666e1333b6b1f04e647dc1d5111f86b8e510238fcc56d7762cda8c", size = 65564, upload-time = "2025-07-29T15:11:47.998Z" },
+    { url = "https://files.pythonhosted.org/packages/91/48/28ed9e55dcf2f453128df738210a980e09f4e468a456fa3c763dbc8be70a/opentelemetry_api-1.37.0-py3-none-any.whl", hash = "sha256:accf2024d3e89faec14302213bc39550ec0f4095d1cf5ca688e1bfb1c8612f47", size = 65732, upload-time = "2025-09-11T10:28:41.826Z" },
 ]
 
 [[package]]
 name = "opentelemetry-sdk"
-version = "1.36.0"
+version = "1.37.0"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-semantic-conventions" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/85/8567a966b85a2d3f971c4d42f781c305b2b91c043724fa08fd37d158e9dc/opentelemetry_sdk-1.36.0.tar.gz", hash = "sha256:19c8c81599f51b71670661ff7495c905d8fdf6976e41622d5245b791b06fa581", size = 162557, upload-time = "2025-07-29T15:12:16.76Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/62/2e0ca80d7fe94f0b193135375da92c640d15fe81f636658d2acf373086bc/opentelemetry_sdk-1.37.0.tar.gz", hash = "sha256:cc8e089c10953ded765b5ab5669b198bbe0af1b3f89f1007d19acd32dc46dda5", size = 170404, upload-time = "2025-09-11T10:29:11.779Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/59/7bed362ad1137ba5886dac8439e84cd2df6d087be7c09574ece47ae9b22c/opentelemetry_sdk-1.36.0-py3-none-any.whl", hash = "sha256:19fe048b42e98c5c1ffe85b569b7073576ad4ce0bcb6e9b4c6a39e890a6c45fb", size = 119995, upload-time = "2025-07-29T15:12:03.181Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/62/9f4ad6a54126fb00f7ed4bb5034964c6e4f00fcd5a905e115bd22707e20d/opentelemetry_sdk-1.37.0-py3-none-any.whl", hash = "sha256:8f3c3c22063e52475c5dbced7209495c2c16723d016d39287dfc215d1771257c", size = 131941, upload-time = "2025-09-11T10:28:57.83Z" },
 ]
 
 [[package]]
 name = "opentelemetry-semantic-conventions"
-version = "0.57b0"
+version = "0.58b0"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
     { name = "opentelemetry-api" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7e/31/67dfa252ee88476a29200b0255bda8dfc2cf07b56ad66dc9a6221f7dc787/opentelemetry_semantic_conventions-0.57b0.tar.gz", hash = "sha256:609a4a79c7891b4620d64c7aac6898f872d790d75f22019913a660756f27ff32", size = 124225, upload-time = "2025-07-29T15:12:17.873Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/1b/90701d91e6300d9f2fb352153fb1721ed99ed1f6ea14fa992c756016e63a/opentelemetry_semantic_conventions-0.58b0.tar.gz", hash = "sha256:6bd46f51264279c433755767bb44ad00f1c9e2367e1b42af563372c5a6fa0c25", size = 129867, upload-time = "2025-09-11T10:29:12.597Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/75/7d591371c6c39c73de5ce5da5a2cc7b72d1d1cd3f8f4638f553c01c37b11/opentelemetry_semantic_conventions-0.57b0-py3-none-any.whl", hash = "sha256:757f7e76293294f124c827e514c2a3144f191ef175b069ce8d1211e1e38e9e78", size = 201627, upload-time = "2025-07-29T15:12:04.174Z" },
+    { url = "https://files.pythonhosted.org/packages/07/90/68152b7465f50285d3ce2481b3aec2f82822e3f52e5152eeeaf516bab841/opentelemetry_semantic_conventions-0.58b0-py3-none-any.whl", hash = "sha256:5564905ab1458b96684db1340232729fce3b5375a06e140e8904c78e4f815b28", size = 207954, upload-time = "2025-09-11T10:28:59.218Z" },
 ]
 
 [[package]]
@@ -414,14 +425,14 @@ wheels = [
 
 [[package]]
 name = "psycopg"
-version = "3.2.9"
+version = "3.2.10"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/4a/93a6ab570a8d1a4ad171a1f4256e205ce48d828781312c0bbaff36380ecb/psycopg-3.2.9.tar.gz", hash = "sha256:2fbb46fcd17bc81f993f28c47f1ebea38d66ae97cc2dbc3cad73b37cefbff700", size = 158122, upload-time = "2025-05-13T16:11:15.533Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/f1/0258a123c045afaf3c3b60c22ccff077bceeb24b8dc2c593270899353bd0/psycopg-3.2.10.tar.gz", hash = "sha256:0bce99269d16ed18401683a8569b2c5abd94f72f8364856d56c0389bcd50972a", size = 160380, upload-time = "2025-09-08T09:13:37.775Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/b0/a73c195a56eb6b92e937a5ca58521a5c3346fb233345adc80fd3e2f542e2/psycopg-3.2.9-py3-none-any.whl", hash = "sha256:01a8dadccdaac2123c916208c96e06631641c0566b22005493f09663c7a8d3b6", size = 202705, upload-time = "2025-05-13T16:06:26.584Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/90/422ffbbeeb9418c795dae2a768db860401446af0c6768bc061ce22325f58/psycopg-3.2.10-py3-none-any.whl", hash = "sha256:ab5caf09a9ec42e314a21f5216dbcceac528e0e05142e42eea83a3b28b320ac3", size = 206586, upload-time = "2025-09-08T09:07:50.121Z" },
 ]
 
 [package.optional-dependencies]
@@ -471,11 +482,7 @@ wheels = [
 [[package]]
 name = "pymarc"
 version = "5.3.1"
-source = { registry = "https://pypi.org/simple/" }
-sdist = { url = "https://files.pythonhosted.org/packages/e2/28/8cd999db1c4c6d7e855e7596bc17294829e95e818473afbb655cfa167dd0/pymarc-5.3.1.tar.gz", hash = "sha256:d289233d7298aeae45d976081710391cf21e754f73928132508b8adfe8ea0b49", size = 235395, upload-time = "2025-06-18T13:57:51.3Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/ba/058498db9945b4f0b1bbf9d2e3095d3c4c21934946953056b1a0751cc5a1/pymarc-5.3.1-py3-none-any.whl", hash = "sha256:3fcc09f9d51ef27c40f8d215e3219d0f3eb29716a0767e689c4923e38182ad73", size = 160259, upload-time = "2025-06-18T13:57:46.869Z" },
-]
+source = { git = "https://gitlab.com/ahankinson/pymarc.git?rev=pyright-typing-fixes#470aafc6c8202cf4b007a16b55990b3c7b151406" }
 
 [[package]]
 name = "pyparsing"
@@ -484,6 +491,19 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/bb/22/f1129e69d94ffff626bdb5c835506b3a5b4f3d070f17ea295e12c2c6f60f/pyparsing-3.2.3.tar.gz", hash = "sha256:b9c13f1ab8b3b542f72e28f634bad4de758ab3ce4546e4301970ad6fa77c38be", size = 1088608, upload-time = "2025-03-25T05:01:28.114Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl", hash = "sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf", size = 111120, upload-time = "2025-03-25T05:01:24.908Z" },
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.405"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/6c/ba4bbee22e76af700ea593a1d8701e3225080956753bee9750dcc25e2649/pyright-1.1.405.tar.gz", hash = "sha256:5c2a30e1037af27eb463a1cc0b9f6d65fec48478ccf092c1ac28385a15c55763", size = 4068319, upload-time = "2025-09-04T03:37:06.776Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/1a/524f832e1ff1962a22a1accc775ca7b143ba2e9f5924bb6749dce566784a/pyright-1.1.405-py3-none-any.whl", hash = "sha256:a2cb13700b5508ce8e5d4546034cb7ea4aedb60215c6c33f56cec7f53996035a", size = 5905038, upload-time = "2025-09-04T03:37:04.913Z" },
 ]
 
 [[package]]
@@ -608,15 +628,16 @@ wheels = [
 
 [[package]]
 name = "verovio"
-version = "5.5.0"
+version = "5.6.0"
 source = { registry = "https://pypi.org/simple/" }
-sdist = { url = "https://files.pythonhosted.org/packages/da/48/4b7f1dc03c66c6502057faad145d9f247a8101b3ed1525bd32e0bcccc2b2/verovio-5.5.0.tar.gz", hash = "sha256:5ee40b8d97a93b599dd6e39d814f36d785575848b7d06e4cbc939542b8026be3", size = 3885856, upload-time = "2025-08-04T11:40:13.26Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/60/a85a36bf371d191152623291aa876a5e3af9e08112bbf14d32c6352f418a/verovio-5.6.0.tar.gz", hash = "sha256:77abb59cc9acfe78dbf801c11288f29779590f0792cbc150063db34744be7152", size = 3893594, upload-time = "2025-09-09T13:27:33.598Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/6f/2f4c440cd68b4062e13c7c60e8a6eb750e147fd5468649e77c5930586cfd/verovio-5.5.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:0c34795461a7921e03f26101ef3785bcc0c850fcc90bb587b5ddf145947f034e", size = 7032174, upload-time = "2025-08-04T11:39:50.09Z" },
-    { url = "https://files.pythonhosted.org/packages/75/a8/fa7eb34d57335e7d53383797dc7d0fdccd30ce479448591acbd934157c6a/verovio-5.5.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:6687e793be02574323768f949e5f9548b80fef3ce1ed8589c17c3bb1b8275408", size = 7361470, upload-time = "2025-08-04T11:39:52.842Z" },
-    { url = "https://files.pythonhosted.org/packages/91/2f/801eaf4199db36b4f8533b4bb5da6ae844e6c0b279395f87e52067ed514d/verovio-5.5.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:2a4001162b9c0decb08e77b8ad84a398a6958dc86a844ebd731260bc23592b58", size = 8653699, upload-time = "2025-08-04T11:39:54.755Z" },
-    { url = "https://files.pythonhosted.org/packages/04/40/4f6756575d5f4b7e7b5a348acd241e32eecc1e7186a15aaf314730d1a816/verovio-5.5.0-cp313-cp313-win32.whl", hash = "sha256:a64b72886ed4c0484679325b0a5b10025c901aa41ed19789815c6555a0b61295", size = 4767844, upload-time = "2025-08-04T11:39:58.453Z" },
-    { url = "https://files.pythonhosted.org/packages/c0/2c/0636467639cd7d5bcd74a6553a13d224f127a2d3030f385682c6f6c3460e/verovio-5.5.0-cp313-cp313-win_amd64.whl", hash = "sha256:c2eca083578c86141a198faa11dde745dcdba3f3f94181b80b21191d5418eab4", size = 5261479, upload-time = "2025-08-04T11:39:56.96Z" },
+    { url = "https://files.pythonhosted.org/packages/47/b5/406c1e250b3382514bb523dc157db2a9a3332d08a219d3256e29be6f4181/verovio-5.6.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:4cf2443351f6b19038b3e7da68561efa79e2c41eb0d00fb3fd7e300684970811", size = 7016006, upload-time = "2025-09-09T13:27:14.397Z" },
+    { url = "https://files.pythonhosted.org/packages/28/e5/98d262126c34461887e23340fd092c7bdf67f1817897afad268caa76eafa/verovio-5.6.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:ea23a8737c598957bf03bb598de4a511ef6bd93f09d57ffa72994627cdecbc12", size = 7378310, upload-time = "2025-09-09T13:27:15.939Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/51/e0b348d1ddb4633073aa55261d5fa41dba94a7799035eb2fdaea996c42cc/verovio-5.6.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b418bdcad545d86cf7b7a1b0264c647bdec60bc9f2dfb60cb71a2cc92a4e16b2", size = 8676947, upload-time = "2025-09-09T13:27:19.632Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/b3/57c598f00c6a01431f11b6e64d798591334f46337f5f3f14325d4a54a7e3/verovio-5.6.0-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:288784fd01a50f883df8514107e8f609fe6290cdb87548299a0599cf359981de", size = 7926112, upload-time = "2025-09-09T13:27:17.64Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/60/2170559092dc5d3de49c27d1a7138fd6406dfa71dac6e2c679374cd94710/verovio-5.6.0-cp313-cp313-win32.whl", hash = "sha256:40c4d116508ca438117d4d4f9e7a46fab64ea5799649d7f86ff76d028a7bee7f", size = 4769479, upload-time = "2025-09-09T13:27:23.654Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/43/bcacfd317b08d0d52b5126bf142d4bf0079eac73b144762d55bee55ff7e4/verovio-5.6.0-cp313-cp313-win_amd64.whl", hash = "sha256:02e49808d5325cdb584ceb74d385a84ec6c999cdb3f60595f83e75272a12cbcb", size = 5265143, upload-time = "2025-09-09T13:27:22.24Z" },
 ]
 
 [[package]]

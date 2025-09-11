@@ -556,7 +556,7 @@ def __title(
         "catalogue_numbers": catalogue_numbers,
     }
 
-    scoring_summary_f: str = field.get("m")
+    scoring_summary_f: str | None = field.get("m")
     if scoring_summary_f:
         d["scoring_summary"] = list(
             {val.strip() for val in scoring_summary_f.split(",") if val and val.strip()}
@@ -984,6 +984,7 @@ def get_related_sources(
         and by "|:|" between the ID and MARC.
     :param relationship_fields: A list of 787 fields from the source MARC. Needed because this is the only place any
         notes about the relationship are stored.
+    :param host_source_id: The id of the parent source record.
     :return: A list of related sources in JSON format.
     """
     # =787  0#$nT p: Solo and Chorus ... From Cantata of

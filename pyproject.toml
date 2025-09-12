@@ -26,6 +26,9 @@ dev = [
     "types-pyyaml>=6.0.12.20250402",
 ]
 
+[tool.pyright]
+reportMissingImports = false
+
 [tool.uv]
 package = false
 prerelease = "allow"
@@ -42,7 +45,7 @@ explicit = true
 
 [tool.uv.sources]
 # pymarc = { git = "https://gitlab.com/pymarc/pymarc.git", rev = "main" }
- pymarc = { git = "https://gitlab.com/ahankinson/pymarc.git", rev = "pyright-typing-fixes" }
+ pymarc = { git = "https://gitlab.com/pymarc/pymarc.git", rev = "main" }
 
 [tool.ruff]
 target-version = "py313"

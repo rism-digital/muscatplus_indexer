@@ -162,3 +162,21 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
     )
 
     return people or None
+
+
+def _get_related_works_data(record: pymarc.Record) -> list | None:
+    if "530" not in record:
+        return None
+
+    work_fields: list[pymarc.Field] = record.get_fields("530")
+
+    ret: list = []
+    for wf in work_fields:
+        d = {
+            "work_id": f"work_{wf['0']}",
+            "title": wf.get("a", "[Unknown title]"),
+            "relationship": wf.get("i"),
+        }
+        ret.append({k: v for k, v in d.items() if v})
+
+    return ret

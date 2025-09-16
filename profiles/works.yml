@@ -74,6 +74,10 @@ alternative_titles_json:
   processor: "_get_alternative_titles_data"
   json: true
 
+related_works_json:
+  processor: "_get_related_works_data"
+  json: true
+
 catalogue_s:
   field: "690"
   subfield: "a"

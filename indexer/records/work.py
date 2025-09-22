@@ -29,9 +29,11 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         marc_record, "690", publications
     )
 
-    secondary_works_catalogue: list[dict] | None = get_bibliographic_references_json(
+    secondary_works_catalogue: list[dict] = get_bibliographic_references_json(
         marc_record, "691", publications
-    )
+    ) or []
+
+    secondary_works_catalogue_titles: list[str] = [f"{w["short_name"]} {w.get("pages")}" for w in secondary_works_catalogue]
 
     work_core: dict = {
         "id": work_id,
@@ -48,6 +50,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         ).decode("utf-8")
         if secondary_works_catalogue
         else None,
+        "secondary_catalogue_numbers_sm": secondary_works_catalogue_titles,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

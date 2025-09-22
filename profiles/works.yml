@@ -91,6 +91,12 @@ catalogue_id:
   subfield: "0"
   value_prefix: "publication_"
 
+secondary_catalogue_ids:
+  field: "691"
+  subfield: "0"
+  multiple: true
+  value_prefix: "publication_"
+
 external_resources_json:
   processor: "_get_external_resources_data"
   json: true

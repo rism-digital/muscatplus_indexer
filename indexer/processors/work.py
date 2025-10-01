@@ -1,9 +1,7 @@
 import logging
 
 import pymarc
-from edtf import is_valid_edtf
 
-from indexer.helpers.datelib import convert_to_edtf
 from indexer.helpers.utilities import (
     external_resource_data,
     get_related_people,
@@ -79,38 +77,38 @@ def _get_external_resources_data(record: pymarc.Record) -> list | None:
     return resources if resources else None
 
 
-def _validate_edtf_date(
-    value: str, doc_id: str, marc_field: str | None, marc_subfield: str | None
-) -> bool:
-    is_valid: bool = is_valid_edtf(value)
-    if is_valid:
-        return True
-
-    fixed_date = convert_to_edtf(value)
-    if fixed_date == value:
-        # couldn't be fixed.
-        log.warning("%s could not be fixed on %s", value, doc_id)
-        return False
-
-    now_is_valid: bool = is_valid_edtf(fixed_date)
-    if now_is_valid:
-        log.critical(
-            '"%s" was fixed to "%s" on "%s", "%s", "%s"',
-            value,
-            fixed_date,
-            doc_id,
-            marc_field,
-            marc_subfield,
-        )
-        return True
-
-    log.warning(
-        "%s was fixed to %s on %s, but was still not valid EDTF.",
-        value,
-        fixed_date,
-        doc_id,
-    )
-    return False
+# def _validate_edtf_date(
+#     value: str, doc_id: str, marc_field: str | None, marc_subfield: str | None
+# ) -> bool:
+#     is_valid: bool = is_valid_edtf(value)
+#     if is_valid:
+#         return True
+#
+#     fixed_date = convert_to_edtf(value)
+#     if fixed_date == value:
+#         # couldn't be fixed.
+#         log.warning("%s could not be fixed on %s", value, doc_id)
+#         return False
+#
+#     now_is_valid: bool = is_valid_edtf(fixed_date)
+#     if now_is_valid:
+#         log.critical(
+#             '"%s" was fixed to "%s" on "%s", "%s", "%s"',
+#             value,
+#             fixed_date,
+#             doc_id,
+#             marc_field,
+#             marc_subfield,
+#         )
+#         return True
+#
+#     log.warning(
+#         "%s was fixed to %s on %s, but was still not valid EDTF.",
+#         value,
+#         fixed_date,
+#         doc_id,
+#     )
+#     return False
 
 
 def _get_work_form_data(record: pymarc.Record) -> list[dict] | None:
@@ -180,3 +178,23 @@ def _get_related_works_data(record: pymarc.Record) -> list | None:
         ret.append({k: v for k, v in d.items() if v})
 
     return ret
+
+
+def _get_date_statement(record: pymarc.Record) -> str | None:
+    if "046" not in record:
+        return None
+
+    date_statement: pymarc.Field = record["046"]
+
+    # If the date statement exists but does not have a
+    # $k entry, then it gets skipped.
+    try:
+        date_value: str = date_statement["k"]
+    except KeyError:
+        work_id: str = f"work_{record['001'].value()}"
+        log.warning("Missing $k entry in 046. Skipping %s.", work_id)
+        return None
+
+    date_note: str | None = date_statement.get("z")
+
+    return f"{date_value} ({date_note})" if date_note else f"{date_value}"

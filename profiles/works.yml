@@ -11,6 +11,8 @@ latest_date_s:
 date_note_s:
   field: "046"
   subfield: "z"
+date_statement_s:
+  processor: "_get_date_statement"
 
 has_incipits_b:
   processor: "_get_has_incipits"

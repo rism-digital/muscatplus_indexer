@@ -684,6 +684,7 @@ class ContentTypes:
     TREATISE = "Treatise"
     MIXED = "Mixed"
     OTHER = "Other"
+    INVENTORY = "Inventory"
 
 
 def get_content_types(record: pymarc.Record | None) -> list[str]:
@@ -720,6 +721,9 @@ def get_content_types(record: pymarc.Record | None) -> list[str]:
 
     if all_types & {ContentTypes.OTHER}:
         ret.append("other")
+
+    if all_types & {ContentTypes.INVENTORY}:
+        ret.append("inventory")
 
     return ret
 
@@ -821,7 +825,7 @@ def get_bibliographic_references_json(
             log.warning(
                 "The publication ID %s was not available in the list of references for %s. Skipping it.",
                 str(fid),
-                record["001"].value()
+                record["001"].value(),
             )
             continue
 

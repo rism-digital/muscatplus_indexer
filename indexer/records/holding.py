@@ -13,6 +13,7 @@ from indexer.helpers.utilities import (
     get_content_types,
     get_creator_name,
     get_parent_order_for_members,
+    get_titles,
     to_solr_single,
 )
 from indexer.processors import holding as holding_processor
@@ -81,6 +82,16 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
         mss_profile=False,
     )
 
+    source_standard_title: list[dict] | None = get_titles(source_marc_record, "240")
+    if source_standard_title:
+        idx_document.update(
+            {
+                "standard_titles_json": orjson.dumps(source_standard_title).decode(
+                    "utf-8"
+                )
+            }
+        )
+
     if composite_record := record.get("comp_marc"):
         # We can do this here since we don't need to worry about the case where a fake holding record for a MS
         # is needed. (We're indexing "real" holding records here, not making "fake" ones from the MS source record).
@@ -89,12 +100,13 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
         )
 
         if composite_marc:
-            idx_document.update({
-                "source_membership_order_i": get_parent_order_for_members(
-                    composite_marc, holding_id
-                )
-            })
-
+            idx_document.update(
+                {
+                    "source_membership_order_i": get_parent_order_for_members(
+                        composite_marc, holding_id
+                    )
+                }
+            )
 
     if c := record.get("institution_record_marc"):
         institution_marc_record: pymarc.Record = create_marc(c)

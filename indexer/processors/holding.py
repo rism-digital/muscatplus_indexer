@@ -80,10 +80,6 @@ def _get_holding_titles_data(record: pymarc.Record) -> dict | None:
     return {k: v for k, v in d.items() if v}
 
 
-# def _get_standard_titles_data(record: pymarc.Record) -> Optional[list]:
-#     return get_titles(record, "240")
-
-
 def _get_iiif_manifest_uris(record: pymarc.Record) -> list | None:
     if "856" not in record:
         return None

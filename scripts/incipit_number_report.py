@@ -135,6 +135,11 @@ if __name__ == "__main__":
         siglum_f: pymarc.Field | None = marc_record.get("852")
         siglum: str = siglum_f.get("a", "") if siglum_f else ""
 
+        source_of_description: pymarc.Field | None = marc_record.get("588")
+        cataloguing_copy: str = (
+            source_of_description.get("a", "") if source_of_description else ""
+        )
+
         pubstate = "published" if record["wf_stage"] == 1 else "unpublished"
 
         incipit_numbers: set = set()
@@ -150,6 +155,7 @@ if __name__ == "__main__":
                         "siglum": siglum,
                         "type": "format",
                         "state": pubstate,
+                        "cataloguing_copy": cataloguing_copy,
                     }
                 )
 
@@ -163,12 +169,21 @@ if __name__ == "__main__":
                         "siglum": siglum,
                         "type": "duplicate",
                         "state": pubstate,
+                        "cataloguing_copy": cataloguing_copy,
                     }
                 )
             incipit_numbers.add(work_number)
 
     with open(f"{RECORD_TYPE}-incipit-errors.csv", "w", newline="") as csvfile:
-        fieldnames = ["record", "url", "work_number", "siglum", "type", "state"]
+        fieldnames = [
+            "record",
+            "url",
+            "work_number",
+            "siglum",
+            "type",
+            "state",
+            "cataloguing_copy",
+        ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(errors)

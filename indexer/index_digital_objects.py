@@ -21,7 +21,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.sources AS s ON d.object_link_id = s.id
             LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
-            WHERE d.object_link_type = 'Source'
+            WHERE d.object_link_type = 'Source' AND do.attachment_file_name IS NOT NULL
 
         UNION ALL
 
@@ -30,7 +30,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.people AS p ON d.object_link_id = p.id
             LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
-            WHERE d.object_link_type = 'Person'
+            WHERE d.object_link_type = 'Person' AND do.attachment_file_name IS NOT NULL
 
         UNION ALL
 
@@ -39,7 +39,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.holdings AS h ON d.object_link_id = h.id
             LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
-            WHERE d.object_link_type = 'Holding'
+            WHERE d.object_link_type = 'Holding' AND do.attachment_file_name IS NOT NULL
 
         UNION ALL
 
@@ -48,7 +48,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.institutions AS i ON d.object_link_id = i.id
             LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
-        WHERE d.object_link_type = 'Institution'
+        WHERE d.object_link_type = 'Institution' AND do.attachment_file_name IS NOT NULL
 
         UNION ALL
 
@@ -57,7 +57,7 @@ def _get_digital_objects(cfg: dict) -> Generator[dict]:
             FROM {dbname}.digital_object_links AS d
             JOIN {dbname}.works AS w ON d.object_link_id = w.id
             LEFT JOIN {dbname}.digital_objects AS do ON d.digital_object_id = do.id
-        WHERE d.object_link_type = 'Work'"""  # noqa: S608
+        WHERE d.object_link_type = 'Work' AND do.attachment_file_name IS NOT NULL"""  # noqa: S608
 
     curs.execute(sql_query)
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa

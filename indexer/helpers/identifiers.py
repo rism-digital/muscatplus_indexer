@@ -115,6 +115,7 @@ def get_is_collection_record(record_type_id: int, children_count: int) -> bool:
         record_type_id
         in (
             RecordTypes.COLLECTION,
+            RecordTypes.EDITION,
             RecordTypes.LIBRETTO_SOURCE,
             RecordTypes.LIBRETTO_EDITION,
             RecordTypes.THEORETICA_SOURCE,

@@ -154,7 +154,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     )
 
     source_membership_data: dict | None = None
-    if parent_record_type_id := record.get("parent_record_type"):
+    if parent_record_type_id := record["parent_record_type"]:
         parent_material_source_types: list[str] | None = to_solr_multi(
             parent_marc_record, "593", "a"
         )

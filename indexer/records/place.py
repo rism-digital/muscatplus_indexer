@@ -1,5 +1,8 @@
 from typing import TypedDict
 
+import pymarc
+
+from indexer.helpers.marc import create_marc
 from indexer.helpers.utilities import clean_multivalued
 
 
@@ -20,7 +23,7 @@ class PlaceIndexDocument(TypedDict):
     holdings_count_i: int
 
 
-def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
+def create_place_index_document(record: dict, cfg: dict) -> PlaceIndexDocument:
     """
     Places are not stored as MARC records, so the dictionary that is returned from the
     MySQL query is indexed directly.
@@ -28,23 +31,24 @@ def create_place_index_document(place: dict, cfg: dict) -> PlaceIndexDocument:
     :param place: A dictionary result from the places table
     :return: A Solr index document.
     """
-    rism_id: str = place["id"]
+    rism_id: str = record["id"]
+    marc_record: pymarc.Record = create_marc(record["marc_source"])
 
     d: PlaceIndexDocument = {
         "id": f"place_{rism_id}",
         "rism_id": rism_id,
         "full_rism_id": f"places/{rism_id}",
         "type": "place",
-        "name_s": place["name"],
-        "country_s": place.get("country"),
-        "district_s": place.get("district"),
-        "alternate_terms_sm": clean_multivalued(place, "alternate_terms"),
-        "topic_sm": clean_multivalued(place, "topic"),
-        "subtopic_sm": clean_multivalued(place, "sub_topic"),
-        "sources_count_i": place.get("sources_count", 0),
-        "people_count_i": place.get("people_count", 0),
-        "institutions_count_i": place.get("institutions_count", 0),
-        "holdings_count_i": place.get("holdings_count", 0),
+        "name_s": record["name"],
+        "country_s": record["country"],
+        "district_s": record["district"],
+        "alternate_terms_sm": clean_multivalued(record, "alternate_terms"),
+        "topic_sm": clean_multivalued(record, "topic"),
+        "subtopic_sm": clean_multivalued(record, "sub_topic"),
+        "sources_count_i": record["sources_count"],
+        "people_count_i": record["people_count"],
+        "institutions_count_i": record["institutions_count"],
+        "holdings_count_i": record["holdings_count"],
     }
 
     return d

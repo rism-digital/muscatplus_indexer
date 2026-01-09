@@ -224,6 +224,12 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
             "A right-to-left unicode character was detected in %s", date_statement
         )
 
+    if date_statement.startswith("-"):
+        log.warning(
+            "A date statement with a leading hyphen was detected: %s, record: %s. This is not a negative date.",
+        )
+        date_statement = date_statement[1:]
+
     # Fast path: If we have a single date of four digits, don't bother doing any additional processing.
     if simplest_single_match := SIMPLE_SINGLE_YEAR_REGEX.match(date_statement):
         year: int = int(simplest_single_match.group("year"))
@@ -496,7 +502,18 @@ def process_date_statements(
         )
         return None
 
-    # If we don't have one but we do have the other, these will still be valid (but
+    # If we have a case where the earliest date is in the negatives
+    # and the latest date is more than 300 CE, then assume a problem
+    # and set the earliest and latest date to the same value.
+    if earliest_date < 0 and latest_date > 300:
+        log.warning(
+            "The earliest date %s is unlikely. Setting it to the same value as the latest date, %s.",
+            earliest_date,
+            latest_date,
+        )
+        earliest_date = latest_date
+
+    # If we don't have one, but we do have the other, these will still be valid (but
     # improbable) integer values.
     return [earliest_date, latest_date]
 

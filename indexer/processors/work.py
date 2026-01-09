@@ -174,6 +174,7 @@ def _get_related_works_data(record: pymarc.Record) -> list | None:
             "work_id": f"work_{wf['0']}",
             "title": wf.get("a", "[Unknown title]"),
             "relationship": wf.get("i"),
+            "note": wf.get("g"),
         }
         ret.append({k: v for k, v in d.items() if v})
 

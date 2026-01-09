@@ -94,24 +94,29 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
             "institution_id": f"{reli['a_id']}",
             "type": "institution",
             "name": f"{reli['a_name']}",
-            "place": f"{reli['a_place']}",
-            "siglum": f"{reli['a_siglum']}",
             "this_id": institution_id,
             "this_type": "institution",
         }
+
+        if ap := reli.get("a_place"):
+            a_institution["place"] = f"{ap}"
+
+        if ris := reli.get("a_siglum"):
+            a_institution["siglum"] = f"{ris}"
 
         b_institution = {
             "institution_id": f"{reli['b_id']}",
             "type": "institution",
             "name": f"{reli['b_name']}",
-            "place": f"{reli['b_place']}",
-            "siglum": reli["b_siglum"],
             "this_id": institution_id,
             "this_type": "institution",
         }
 
         if bp := reli.get("b_place"):
             b_institution["place"] = bp
+
+        if ribs := reli.get("b_siglum"):
+            b_institution["siglum"] = f"{ribs}"
 
         marc_tag: str = reli["marc_tag"]
         a_now_in_b: bool = reli["a_now_in_b"]

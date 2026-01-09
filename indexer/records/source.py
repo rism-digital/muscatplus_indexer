@@ -294,6 +294,9 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         "holding_institutions_ids": holding_orgs_ids,
         "holding_institutions_places_sm": institution_places,
         "holding_institutions_relationships_ids": print_holding_relationships,
+        "holding_material_held_sm": _get_print_holdings_material_held(
+            all_print_holding_records
+        ),
         "country_codes_sm": country_codes,
         "people_names_sm": people_names,
         "variant_people_names_sm": variant_people_names,
@@ -599,3 +602,15 @@ def _get_print_holding_institution_relationships(
             i_ids: set[str] = {f"institution_{i}" for i in f if i}
             ids.update(i_ids)
     return list(ids)
+
+
+def _get_print_holdings_material_held(
+    print_records: list[pymarc.Record],
+) -> list[str] | None:
+    material_held: set[str] = set()
+
+    for rec in print_records:
+        if f := to_solr_multi(rec, "852", "q"):
+            mat_held: set[str] = set(f)
+            material_held.update(mat_held)
+    return list(material_held) or None

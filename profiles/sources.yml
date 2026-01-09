@@ -158,9 +158,11 @@ source_title_s:
   required: true
 # $c is deprecated and is omitted
 
-variant_title_s:
+variant_titles_sm:
   field: "246"
   subfield: "a"
+  multiple: true
+  sorted: false
 
 # More complete indexing for display is done by the material groups.
 # We index this data here so that we can provide it to the user for

@@ -74,9 +74,11 @@ source_title_s:
   subfield: "a"
   required: true
 
-variant_title_s:
+variant_titles_sm:
   field: "246"
   subfield: "a"
+  multiple: true
+  sorted: false
 
 # 300 is also indexed in material groups
 format_extent_sm:

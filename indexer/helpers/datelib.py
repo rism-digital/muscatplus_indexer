@@ -9,6 +9,8 @@ from edtf.parser.edtf_exceptions import EDTFParseException
 
 log = logging.getLogger("muscat_indexer")
 
+DateRange = tuple[int | None, int | None]
+
 # The simplest single year match
 SIMPLE_SINGLE_YEAR_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})$")
 # The simplest date range -- 1234-1256
@@ -40,7 +42,7 @@ MULTI_YEAR_REGEX: re.Pattern = re.compile(
     r"^(?P<first>\d{4})-\d{2}-\d{2}-(?P<second>\d{4})-\d{2}-\d{2}"
 )
 # A lot of dates have a letters attached to them for some odd reason.
-STRIP_LETTERS: re.Pattern = re.compile(r"(?P<year>\d{3,4})(?:c|p|q|a|!])")
+STRIP_LETTERS: re.Pattern = re.compile(r"(?P<year>\d{3,4})[cpqa!]")
 # Find any cases like "between XXXX and YYYY". Also handles French ('entre XXXX et YYYY') and german ('um XXXX bis um XXXX)
 EXPLICIT_BETWEEN: re.Pattern = re.compile(
     r"^.*(?:between|entre|um|von|vor|et).*(?P<first>\d{4}).*(?P<second>\d{4}).*$",
@@ -126,6 +128,53 @@ NO_DATES = {
     "Año X",
 }
 
+# Each tuple is (pattern, replacement)
+SIMPLIFICATION_RULES: list[tuple[re.Pattern, str]] = [
+    # Strip uncertainty markers and brackets early
+    (STRIP_LETTERS, r"\g<year>"),
+    (ZERO_DAY_REGEX, r"\g<year>"),
+    (MUSHED_TOGETHER_RANGE_REGEX, r"\g<first>/\g<second>"),
+    (MULTI_YEAR_REGEX, r"\g<first>/\g<second>"),
+    (EXPLICIT_BETWEEN, r"\g<first>/\g<second>"),
+    (MUSHED_TOGETHER_REGEX, r"\g<first>"),
+    (PARENTHETICAL_APPENDAGES1, r"\g<year>"),
+    (PARENTHETICAL_APPENDAGES2, r"\g<year>"),
+]
+
+
+def simplify_date_statement(date_statement: str) -> str:
+    """
+    Normalize a raw date string into something EDTF can reasonably parse.
+    This function is intentionally conservative and order-sensitive.
+    """
+
+    s: str = date_statement
+
+    # Normalize common oddities
+    s = s.replace("(?)", "?")
+
+    # Convert dot-separated dates (dd.mm.yyyy) to dash-separated
+    if DOT_DIVIDED_REGEX.match(s):
+        s = s.replace(".", "-")
+
+    # Remove uncertainty markers and brackets globally
+    s = re.sub(r"[?\[\]]", "", s)
+
+    # Apply ordered simplification rules
+    for pattern, replacement in SIMPLIFICATION_RULES:
+        s = pattern.sub(replacement, s)
+
+    # Drop any remaining parentheses anywhere
+    s = re.sub(r"[()]", "", s)
+
+    # Normalize quotes and whitespace
+    s = s.strip().lstrip('"').rstrip('"')
+
+    # Normalize semantic phrases EDTF understands
+    s = s.replace("not after", "before").replace("not before", "after").strip()
+
+    return s
+
 
 @functools.lru_cache(maxsize=1024)
 def _parse_century_date_with_fraction(
@@ -202,7 +251,7 @@ def _parse_century_date_with_adjective(
     if adjective in ("beginning", "start", "early"):
         return century_start, century_start + EARLY_CENTURY_END_YEAR
     if adjective in ("late", "end"):
-        return century_start + LATE_CENTURY_START_YEAR, century_start + 100
+        return century_start + LATE_CENTURY_START_YEAR, century_start + 99
     if adjective == "middle":
         return century_start + 25, century_start + 75
 
@@ -210,7 +259,7 @@ def _parse_century_date_with_adjective(
 
 
 @functools.lru_cache(maxsize=2048)
-def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]:  # noqa: MC0001
+def parse_date_statement(date_statement: str) -> DateRange:  # noqa: MC0001
     # Optimize for non-date years; return as early as possible if we know we can't get any further information.
     if date_statement in NO_DATES:
         return None, None
@@ -219,15 +268,8 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
     if date_statement.startswith(("A", "M", "X")):
         return None, None
 
-    if "\u200f" in date_statement:
-        log.warning(
-            "A right-to-left unicode character was detected in %s", date_statement
-        )
-
     if date_statement.startswith("-"):
-        log.warning(
-            "A date statement with a leading hyphen was detected: %s, record: %s. This is not a negative date.",
-        )
+        log.warning("Stripping leading hyphen off date: %s", date_statement)
         date_statement = date_statement[1:]
 
     # Fast path: If we have a single date of four digits, don't bother doing any additional processing.
@@ -250,48 +292,12 @@ def parse_date_statement(date_statement: str) -> tuple[int | None, int | None]: 
 
         return year, year
 
-    # Slow path
-    # First simplify known problems for the edtf parser
-    simplified_date_statement = date_statement.replace("(?)", "?")
-
-    # Replace any dates that use dots instead of dashes to separate the parameters.
-    if DOT_DIVIDED_REGEX.match(simplified_date_statement):
-        simplified_date_statement = simplified_date_statement.replace(".", "-")
-
-    simplified_date_statement = re.sub(r"[?\[\]]", r"", simplified_date_statement)
-    simplified_date_statement = re.sub(
-        STRIP_LETTERS, r"\g<year>", simplified_date_statement
+    simplified_date_statement = simplify_date_statement(date_statement)
+    log.debug(
+        "Parsing %s simplified to %s",
+        date_statement,
+        simplified_date_statement,
     )
-    simplified_date_statement = re.sub(
-        ZERO_DAY_REGEX, r"\g<year>", simplified_date_statement
-    )
-    simplified_date_statement = re.sub(
-        MUSHED_TOGETHER_REGEX, r"\g<first>", simplified_date_statement
-    )
-    simplified_date_statement = re.sub(
-        MULTI_YEAR_REGEX, r"\g<first>/\g<second>", simplified_date_statement
-    )
-    simplified_date_statement = re.sub(
-        EXPLICIT_BETWEEN, r"\g<first>/\g<second>", simplified_date_statement
-    )
-    simplified_date_statement = re.sub(
-        MUSHED_TOGETHER_RANGE_REGEX, r"\g<first>/\g<second>", simplified_date_statement
-    )
-    simplified_date_statement = re.sub(
-        PARENTHETICAL_APPENDAGES1, r"\g<year>", simplified_date_statement
-    )
-    simplified_date_statement = re.sub(
-        PARENTHETICAL_APPENDAGES2, r"\g<year>", simplified_date_statement
-    )
-    # Any remaining parenthesis should be dropped from anywhere in the string
-    simplified_date_statement = re.sub(r"([()])", "", simplified_date_statement)
-    # Strip any leading or trailing quotation marks.
-    simplified_date_statement = simplified_date_statement.lstrip('"').rstrip('"')
-    simplified_date_statement = simplified_date_statement.replace(
-        "not after", "before"
-    ).replace("not before", "after")
-    simplified_date_statement = simplified_date_statement.strip()
-    log.debug("Parsing %s simplified to %s", date_statement, simplified_date_statement)
 
     # adds / subtracts 99 years if a person's birth or death dates are the only known dates
     if simplified_date_statement.endswith("*") or simplified_date_statement.endswith(
@@ -450,6 +456,20 @@ def process_date_statements(
         if statement.startswith(("A", "M", "X")):
             return None
 
+        if statement.startswith("-"):
+            log.warning(
+                "A date statement with a leading hyphen was detected: %s, record ID %s.",
+                statement,
+                record_id,
+            )
+
+        if "\u200f" in statement:
+            log.warning(
+                "A right-to-left unicode character was detected in %s, record %s",
+                statement,
+                record_id,
+            )
+
         try:
             earliest, latest = parse_date_statement(statement)
         except Exception as e:  # noqa
@@ -507,9 +527,10 @@ def process_date_statements(
     # and set the earliest and latest date to the same value.
     if earliest_date < 0 and latest_date > 300:
         log.warning(
-            "The earliest date %s is unlikely. Setting it to the same value as the latest date, %s.",
+            "The earliest date %s is unlikely. Setting it to the same value as the latest date, %s. record: %s",
             earliest_date,
             latest_date,
+            record_id,
         )
         earliest_date = latest_date
 

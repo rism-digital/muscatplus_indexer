@@ -21,9 +21,17 @@ SLASH_DIVIDED_REGEX: re.Pattern = re.compile(
     r"^(?P<day>\d{2})/(?P<month>\d{2})/(?P<year>\d{4})"
 )
 
+# Matches NNNNNN/NN
+ALT_DIVIDED_REGEX: re.Pattern = re.compile(
+    r"^(?P<year>\d{4})(?P<month>\d{2})/(?P<day>\d{2})"
+)
+
+# Matches NNNN---- or NNNNNN--
+ALT_DASHED_REGEX: re.Pattern = re.compile(r"^(?P<year>\d{4})(?P<month>-{2}|\d{2})--")
+
 # normalize any dates with dot divisions; used as a matcher, not a substitute.
 DOT_DIVIDED_REGEX: re.Pattern = re.compile(
-    r"(\d{2}\.)?(\d{2})\.(\d{4})(-(\d{2}\.)?(\d{2})\.(\d{4}))?"
+    r"(\d{1,2}\.)?(\d{1,2})\.(\d{4})(-(\d{1,2}\.)?(\d{1,2})\.(\d{4}))?"
 )
 CENTURY_REGEX: re.Pattern = re.compile(
     r"^(?P<century>\d{2})(?:th|st|rd) century, (?P<adjective1>\w+)(?: (?P<adjective2>\w+))?$",
@@ -32,7 +40,7 @@ CENTURY_REGEX: re.Pattern = re.compile(
 # Parses dates like '18.2q' (18th century, second quarter) or '19.in' (beginning of the 19th Century)
 # Also matches "20.sc" ("20eme siecle")
 ANOTHER_CENTURY_REGEX: re.Pattern = re.compile(
-    r"^(?P<century>\d{2})\.(?P<adjective1>[\diesm])(?P<adjective2>[dqhtnxce])$"
+    r"^(?P<century>\d{2})\.(?P<adjective1>[\diesm])(?P<adjective2>[dqhtnxce])?$"
 )
 CENTURY_DASHES_REGEX: re.Pattern = re.compile(r"^(\d\d)(?:--|\?\?)$")
 CENTURY_TRUNCATED_REGEX: re.Pattern = re.compile(r"(?P<first>\d{2})/(?P<second>\d{2})")
@@ -289,6 +297,16 @@ def parse_date_statement(date_statement: str) -> DateRange:  # noqa: MC0001
 
     if simplest_slash_match := SLASH_DIVIDED_REGEX.match(date_statement):
         year = int(simplest_slash_match.group("year"))
+
+        return year, year
+
+    if alt_slash_match := ALT_DIVIDED_REGEX.match(date_statement):
+        year = int(alt_slash_match.group("year"))
+
+        return year, year
+
+    if alt_dash_match := ALT_DASHED_REGEX.match(date_statement):
+        year = int(alt_dash_match.group("year"))
 
         return year, year
 

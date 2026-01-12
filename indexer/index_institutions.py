@@ -90,6 +90,19 @@ SELECT i.id, i.marc_source, i.siglum,
         LEFT JOIN {dbname}.institutions AS relj ON relj.id = rela.institution_b_id
         WHERE rela.institution_a_id = i.id OR rela.institution_b_id = i.id
     ) AS institution_relationships,
+    (SELECT JSON_ARRAYAGG(DISTINCT
+                         JSON_OBJECT('place_id', CONCAT('place_', reli.id),
+                                      'relationship', COALESCE(rela.relator_code, "xp"),
+                                      'name', reli.name,
+                                      'country', reli.country,
+                                      'district', reli.district,
+                                      'id', rela.id,
+                                      'this_type', 'institution',
+                                      'this_id', CONCAT('institution_', i.id)))
+        FROM {dbname}.institutions_to_places AS rela
+        LEFT JOIN {dbname}.places AS reli ON reli.id = rela.place_id
+        WHERE rela.institution_id = i.id AND rela.marc_tag = '551'
+   ) AS related_places,
     (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
         FROM {dbname}.digital_object_links AS do
         WHERE do.object_link_type = 'Institution'

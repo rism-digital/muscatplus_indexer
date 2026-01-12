@@ -76,9 +76,9 @@ related_people_json:
   processor: "_get_related_people_data"
   json: true
 
-related_places_json:
-  processor: "_get_related_places_data"
-  json: true
+#related_places_json:
+#  processor: "_get_related_places_data"
+#  json: true
 
 external_resources_json:
   processor: "_get_external_resources_data"

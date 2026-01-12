@@ -92,9 +92,6 @@ parallel_names_sm:
   subfield: "a"
   multiple: true
 
-related_places_json: # 551 or 751?
-  processor: "_get_related_places_data"
-  json: true
 place_ids:
   field: "551"
   subfield: "0"

@@ -260,6 +260,19 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
             work_node_id = work_node["external_id"]
             work_node_json = orjson.dumps(work_node).decode("utf-8")
 
+    locations_peformances_db: list = (
+        orjson.loads(ii) if (ii := record.get("locations_of_performances")) else []
+    )
+
+    locations_peformances: list = [
+        {k: v for k, v in it.items() if v} for it in locations_peformances_db
+    ]
+    locations_peformances_json: list | None = (
+        orjson.dumps(locations_peformances).decode("utf-8")
+        if locations_peformances
+        else None
+    )
+
     # add some core fields to the source. These are fields that may not be easily
     # derived directly from the MARC record, or that include data from the database.
     source_core: dict = {
@@ -316,6 +329,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         "work_ids": work_ids,
         "related_sources_json": related_sources_json,
         "works_catalogue_json": works_catalogue_json,
+        "location_of_performance_json": locations_peformances_json,
         "related_institution_sigla_sm": related_institution_sigla,
         "work_node_json": work_node_json,
         "work_node_id": work_node_id,

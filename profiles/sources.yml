@@ -395,9 +395,9 @@ location_of_performance_ids:
   subfield: "0"
   multiple: true
   value_prefix: "place_"
-location_of_performance_json:  # 651 is linked to the places list
-  processor: "_get_location_performance_data"
-  json: true
+#location_of_performance_json:  # 651 is linked to the places list
+#  processor: "_get_location_performance_data"
+#  json: true
 
 liturgical_festivals_sm:
   field: "657"

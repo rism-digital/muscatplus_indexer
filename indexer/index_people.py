@@ -82,6 +82,19 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                     LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
                                     WHERE rela.person_id = p.id AND rela.marc_tag = '510'
                                ) AS related_institutions,
+                               (SELECT JSON_ARRAYAGG(DISTINCT
+                                                     JSON_OBJECT('place_id', CONCAT('place_', reli.id),
+                                                                  'relationship', COALESCE(rela.relator_code, "xp"),
+                                                                  'name', reli.name,
+                                                                  'country', reli.country,
+                                                                  'district', reli.district,
+                                                                  'id', rela.id,
+                                                                  'this_type', 'person',
+                                                                  'this_id', CONCAT('person_', p.id)))
+                                    FROM {dbname}.people_to_places AS rela
+                                    LEFT JOIN {dbname}.places AS reli ON reli.id = rela.place_id
+                                    WHERE rela.person_id = p.id AND rela.marc_tag = '551'
+                               ) AS related_places,
                                (SELECT JSON_ARRAYAGG(ww.json_object)
                                     FROM person_work_nodes ww
                                     WHERE ww.person_id = p.id

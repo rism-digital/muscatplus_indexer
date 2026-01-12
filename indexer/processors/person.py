@@ -7,9 +7,7 @@ import pymarc
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.utilities import (
     external_resource_data,
-    get_related_institutions,
     get_related_people,
-    get_related_places,
     to_solr_multi,
     tokenize_variants,
 )
@@ -91,24 +89,6 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
     )
 
     return people
-
-
-def _get_related_institutions_data(record: pymarc.Record) -> list | None:
-    record_id: str = record["001"].value()
-    person_id: str = f"person_{record_id}"
-    institutions: list | None = get_related_institutions(
-        record, person_id, "person", ungrouped=True
-    )
-
-    return institutions
-
-
-def _get_related_places_data(record: pymarc.Record) -> list | None:
-    record_id: str = record["001"].value()
-    person_id: str = f"person_{record_id}"
-    places: list | None = get_related_places(record, person_id, "person")
-
-    return places
 
 
 def _get_external_resources_data(record: pymarc.Record) -> list | None:

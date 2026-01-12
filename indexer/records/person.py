@@ -104,6 +104,14 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         }
         related.append({k: v for k, v in institution_record.items() if v})
 
+    related_places_db: list = (
+        orjson.loads(ii) if (ii := record.get("related_places")) else []
+    )
+
+    related_places: list = [
+        {k: v for k, v in it.items() if v} for it in related_places_db
+    ]
+
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
     core_person: dict = {
@@ -124,6 +132,9 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "works_catalogue_json": works_catalogue_json,
         "related_institutions_json": (
             orjson.dumps(related).decode("utf-8") if related else None
+        ),
+        "related_places_json": (
+            orjson.dumps(related_places).decode("utf-8") if related_places else None
         ),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),

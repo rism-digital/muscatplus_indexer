@@ -11,7 +11,6 @@ from indexer.helpers.utilities import (
     external_resource_data,
     get_related_institutions,
     get_related_people,
-    get_related_places,
     to_solr_single,
 )
 
@@ -106,14 +105,6 @@ def _get_related_institutions_data(record: pymarc.Record) -> list | None:
     )
 
     return institutions
-
-
-def _get_related_places_data(record: pymarc.Record) -> list | None:
-    record_id: str = record["001"].value()
-    institution_id: str = f"institution_{record_id}"
-    places: list | None = get_related_places(record, institution_id, "institution")
-
-    return places
 
 
 def _get_external_resources_data(record: pymarc.Record) -> list | None:

@@ -148,6 +148,13 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         else:
             continue
 
+    related_places_db: list = (
+        orjson.loads(ii) if (ii := record.get("related_places")) else []
+    )
+    related_places: list = [
+        {k: v for k, v in it.items() if v} for it in related_places_db
+    ]
+
     has_digital_objects: bool = record.get("digital_objects") is not None
     digital_object_ids: list[str] = (
         orjson.loads(d) if (d := record.get("digital_objects")) else []
@@ -197,6 +204,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "contains_json": orjson.dumps(contains).decode("utf-8") if contains else None,
         "related_institutions_json": orjson.dumps(related).decode("utf-8")
         if related
+        else None,
+        "related_places_json": orjson.dumps(related_places).decode("utf-8")
+        if related_places
         else None,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),

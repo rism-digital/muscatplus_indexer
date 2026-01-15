@@ -65,6 +65,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                                                      'date', pub.date,
                                                                      'place', pub.place,
                                                                      'short_name', pub.short_name,
+                                                                     'marc_source', pub.marc_source,
                                                                      'catalogue_type', pub.work_catalogue))
                                     FROM {dbname}.publications_to_people ppt2
                                     LEFT JOIN {dbname}.publications pub ON ppt2.publication_id = pub.id
@@ -88,7 +89,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                                                   'name', reli.name,
                                                                   'country', reli.country,
                                                                   'district', reli.district,
-                                                                  'id', rela.id,
+                                                                  'id', CAST(rela.id AS CHAR),
                                                                   'this_type', 'person',
                                                                   'this_id', CONCAT('person_', p.id)))
                                     FROM {dbname}.people_to_places AS rela

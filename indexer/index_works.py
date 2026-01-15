@@ -47,7 +47,20 @@ SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
         LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
         WHERE wpt.work_id = work.id AND pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED}, {WorkPublicationStatusIdentifiers.ALTERNATE})
     ) AS publication_entries,
-    JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name
+    JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name,
+    (SELECT JSON_ARRAYAGG(DISTINCT
+                JSON_OBJECT('id', (CAST(pub.id AS CHAR)),
+                     'author', pub.author,
+                     'title', pub.title,
+                     'journal', pub.journal,
+                     'date', pub.date,
+                     'place', pub.place,
+                     'short_name', pub.short_name,
+                     'marc_source', pub.marc_source))
+        FROM {dbname}.works_to_publications wpt
+        LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
+        WHERE wpt.work_id = work.id AND wpt.marc_tag = '670'
+    ) AS source_data_found
 FROM {dbname}.works AS work
     LEFT JOIN {dbname}.people peep ON work.person_id = peep.id
     WHERE work.wf_stage = 1 {id_where_clause}

@@ -67,7 +67,8 @@ SELECT i.id, i.marc_source, i.siglum,
                              'journal', pub.journal,
                              'date', pub.date,
                              'place', pub.place,
-                             'short_name', pub.short_name))
+                             'short_name', pub.short_name,
+                             'marc_source', pub.marc_source))
         FROM {dbname}.institutions_to_publications ipt2
         LEFT JOIN {dbname}.publications pub ON ipt2.publication_id = pub.id
         WHERE ipt2.institution_id = i.id
@@ -96,7 +97,7 @@ SELECT i.id, i.marc_source, i.siglum,
                                       'name', reli.name,
                                       'country', reli.country,
                                       'district', reli.district,
-                                      'id', rela.id,
+                                      'id', CAST(rela.id AS CHAR),
                                       'this_type', 'institution',
                                       'this_id', CONCAT('institution_', i.id)))
         FROM {dbname}.institutions_to_places AS rela

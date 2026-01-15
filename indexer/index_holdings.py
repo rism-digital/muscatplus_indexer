@@ -34,7 +34,8 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict]:
                                      'journal', pub.journal,
                                      'date', pub.date,
                                      'place', pub.place,
-                                     'short_name', pub.short_name))
+                                     'short_name', pub.short_name,
+                                     'marc_source', pub.marc_source))
                              FROM {dbname}.holdings_to_publications hpt
                              LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
                              WHERE hpt.holding_id = holdings.id

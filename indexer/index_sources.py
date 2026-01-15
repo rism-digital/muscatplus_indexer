@@ -85,7 +85,8 @@ def _get_sources(cfg: dict) -> Generator[dict]:
                                      'journal', pub.journal,
                                      'date', pub.date,
                                      'place', pub.place,
-                                     'short_name', pub.short_name))
+                                     'short_name', pub.short_name,
+                                     'marc_source', pub.marc_source))
             FROM {dbname}.sources_to_publications spt
             LEFT JOIN {dbname}.publications pub ON spt.publication_id = pub.id
             WHERE spt.source_id = child.id
@@ -116,7 +117,7 @@ def _get_sources(cfg: dict) -> Generator[dict]:
             FROM {dbname}.sources_to_places AS rela
             LEFT JOIN {dbname}.places AS reli ON reli.id = rela.place_id
             WHERE rela.source_id = child.id AND rela.marc_tag = '651'
-       ) AS locations_of_performances,
+       ) AS locations_of_performances
 FROM {dbname}.sources AS child
     LEFT JOIN {dbname}.sources AS parent ON parent.id = child.source_id
     LEFT JOIN {dbname}.holdings h on child.id = h.source_id

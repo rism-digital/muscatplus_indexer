@@ -80,6 +80,11 @@ related_works_json:
   processor: "_get_related_works_data"
   json: true
 
+general_notes_sm:
+  field: "680"
+  subfield: "a"
+  multiple: true
+
 catalogue_s:
   field: "690"
   subfield: "a"

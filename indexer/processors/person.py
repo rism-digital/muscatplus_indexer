@@ -1,4 +1,3 @@
-import datetime
 import logging
 from collections import defaultdict
 
@@ -11,9 +10,6 @@ from indexer.helpers.utilities import (
     to_solr_multi,
     tokenize_variants,
 )
-
-LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
-EARLIEST_YEAR_IF_MISSING: int = -2000
 
 log = logging.getLogger("muscat_indexer")
 

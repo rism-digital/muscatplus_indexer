@@ -9,6 +9,8 @@ from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.utilities import (
     external_resource_data,
     get_catalogue_numbers,
+    get_creator_data,
+    get_creator_name,
     get_related_institutions,
     get_related_people,
     get_related_places,
@@ -32,28 +34,11 @@ def _get_num_incipits(record: pymarc.Record) -> int:
 
 
 def _get_creator_name(record: pymarc.Record) -> str | None:
-    if "100" not in record:
-        return None
-
-    creator: pymarc.Field = record["100"]
-    name: str = creator["a"].strip()
-    dates: str = f" ({d})" if (d := creator.get("d")) else ""
-
-    return f"{name}{dates}"
+    return get_creator_name(record)
 
 
 def _get_creator_data(record: pymarc.Record) -> list | None:
-    if "100" not in record:
-        return None
-
-    record_id: str = record["001"].value()
-    source_id: str = f"source_{record_id}"
-    creator = get_related_people(record, source_id, "source", fields=("100",))
-    if not creator:
-        return None
-
-    creator[0]["relationship"] = "cre"
-    return creator
+    return get_creator_data(record)
 
 
 def _is_anonymous_creator(record: pymarc.Record) -> bool:
@@ -66,6 +51,7 @@ def _is_anonymous_creator(record: pymarc.Record) -> bool:
 def _get_subjects(record: pymarc.Record) -> list[dict] | None:
     if "650" not in record:
         return None
+
     subject_fields: list[pymarc.Field] = record.get_fields("650")
 
     ret: list = []

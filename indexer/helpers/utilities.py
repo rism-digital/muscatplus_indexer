@@ -783,7 +783,6 @@ def get_bibliographic_reference_titles(
 
     ret: list = []
     for r in references:
-        # |:| is a unique field delimiter
         ret.append(format_reference(r))
 
     return ret

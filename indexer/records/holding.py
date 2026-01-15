@@ -5,11 +5,11 @@ import orjson
 import pymarc
 import yaml
 
+from indexer.helpers.bibliography import get_bibliographic_references_json
 from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    get_bibliographic_references_json,
     get_content_types,
     get_creator_name,
     get_parent_order_for_members,

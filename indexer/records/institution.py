@@ -5,12 +5,12 @@ import orjson
 import pymarc
 import yaml
 
-from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import (
+from indexer.helpers.bibliography import (
     get_bibliographic_reference_titles,
     get_bibliographic_references_json,
 )
+from indexer.helpers.marc import create_marc
+from indexer.helpers.profiles import process_marc_profile
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")

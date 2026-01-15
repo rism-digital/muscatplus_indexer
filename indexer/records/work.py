@@ -2,11 +2,11 @@ import orjson
 import pymarc
 import yaml
 
-from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
-from indexer.helpers.utilities import (
+from indexer.helpers.bibliography import (
     get_bibliographic_references_json,
 )
+from indexer.helpers.marc import create_marc
+from indexer.helpers.profiles import process_marc_profile
 from indexer.processors import work as work_processor
 from indexer.records.incipits import get_work_incipits
 
@@ -29,11 +29,24 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         marc_record, "690", publications
     )
 
-    secondary_works_catalogue: list[dict] = get_bibliographic_references_json(
-        marc_record, "691", publications
-    ) or []
+    secondary_works_catalogue: list[dict] = (
+        get_bibliographic_references_json(marc_record, "691", publications) or []
+    )
 
-    secondary_works_catalogue_titles: list[str] = [f"{w["short_name"]} {w.get("pages")}" for w in secondary_works_catalogue]
+    secondary_works_catalogue_titles: list[str] = [
+        f"{w['short_name']} {w.get('pages')}" for w in secondary_works_catalogue
+    ]
+
+    source_data_entries: list = (
+        orjson.loads(s) if (s := record["source_data_found"]) else []
+    )
+
+    source_data_found: list[dict] | None = get_bibliographic_references_json(
+        marc_record, "670", source_data_entries, control_subf="w"
+    )
+    source_data_found_json = (
+        orjson.dumps(source_data_found).decode("utf-8") if source_data_found else []
+    )
 
     work_core: dict = {
         "id": work_id,
@@ -42,7 +55,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         "full_rism_id": f"works/{rism_id}",
         "sources_ids": source_entries,
         "source_count_i": source_count,
-        "works_catalogue_json": orjson.dumps(works_catalogue[0]).decode("utf-8")
+        "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8")
         if works_catalogue
         else None,
         "secondary_works_catalogue_json": orjson.dumps(
@@ -51,6 +64,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         if secondary_works_catalogue
         else None,
         "secondary_catalogue_numbers_sm": secondary_works_catalogue_titles,
+        "source_data_found_json": source_data_found_json,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

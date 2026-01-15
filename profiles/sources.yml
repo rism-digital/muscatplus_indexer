@@ -152,10 +152,14 @@ standard_titles_json:
   processor: "_get_standard_titles_data"
   json: true
 
-source_title_s:
+# Although the 245 $a field is singular, it can have {{brk}} in it. Splitting the
+# string on {{brk}} requires a multi-valued field.
+source_title_sm:
   field: "245"
   subfield: "a"
   required: true
+  multiple: true
+  breaks: true
 # $c is deprecated and is omitted
 
 variant_titles_sm:

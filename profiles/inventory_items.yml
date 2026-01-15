@@ -69,10 +69,12 @@ standard_titles_json:
   processor: "_get_standard_titles_data"
   json: true
 
-source_title_s:
+source_title_sm:
   field: "245"
   subfield: "a"
   required: true
+  multiple: true
+  breaks: true
 
 variant_titles_sm:
   field: "246"

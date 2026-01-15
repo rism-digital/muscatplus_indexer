@@ -261,12 +261,16 @@ class PersonRelationshipIndexDocument(TypedDict):
     qualifier: str | None
     date_statement: str | None
     person_id: str
-    this_id: str
-    this_type: str
+    this_id: str | None
+    this_type: str | None
+    function: str | None
 
 
 def related_person(
-    field: pymarc.Field, this_id: str, this_type: str, relationship_number: int
+    field: pymarc.Field,
+    this_id: str | None,
+    this_type: str | None,
+    relationship_number: int,
 ) -> dict[str, object]:
     """
     Generate a related person record. The target of the relationship is given in the other_person_id field,
@@ -297,10 +301,12 @@ def related_person(
         "person_id": f"person_{field.get('0')}",
         "this_id": this_id,
         "this_type": this_type,
+        "function": field.get("4"),
     }
 
     # The main entry (100) field does not have a relator code.
-    if not d.get("relationship") and field.tag != "100":
+    # If this_id is not set, don't warn about a relator code.
+    if this_id and field.tag != "100" and not d.get("relationship"):
         log.warning(
             "A person was saved without a relator code. %s %s", this_id, d.get("name")
         )
@@ -310,8 +316,8 @@ def related_person(
 
 def get_related_people(
     record: pymarc.Record,
-    record_id: str,
-    record_type: str,
+    record_id: str | None,
+    record_type: str | None,
     fields: tuple = ("500", "700"),
     ungrouped: bool = False,
 ) -> list[dict[str, object]] | None:
@@ -650,17 +656,35 @@ def tokenize_variants(variants: list[str]) -> list[str]:
     return list(unique_tokens)
 
 
-def get_creator_name(record: pymarc.Record) -> str | None:
+def get_creator_name(record: pymarc.Record, suppress_dates: bool = False) -> str | None:
     creator_field: pymarc.Field | None = record.get("100")
     if not creator_field:
         return None
 
-    creator_name: str = creator_field.get("a", "").strip()
-    creator_dates: str = f" ({d})" if (d := creator_field.get("d")) else ""
-    return f"{creator_name}{creator_dates}"
+    d = {
+        "name": creator_field.get("a", "").strip(),
+        "life_dates": creator_field.get("d"),
+    }
+    return get_person_name(d, suppress_dates)
 
 
-def get_people_names(names: list[dict] | None) -> list[str] | None:
+def get_creator_data(record: pymarc.Record) -> list | None:
+    if "100" not in record:
+        return None
+
+    record_id: str = record["001"].value()
+    source_id: str = f"source_{record_id}"
+    creator = get_related_people(record, source_id, "source", fields=("100",))
+    if not creator:
+        return None
+
+    creator[0]["relationship"] = "cre"
+    return creator
+
+
+def get_people_names(
+    names: list[dict] | None, suppress_dates: bool = False
+) -> list[str] | None:
     if not names:
         return None
 
@@ -671,9 +695,9 @@ def get_people_names(names: list[dict] | None) -> list[str] | None:
     return out_l
 
 
-def get_person_name(name: dict) -> str:
+def get_person_name(name: dict, suppress_dates: bool = False) -> str:
     nm: str = name.get("name", "")
-    dt: str = f" ({d})" if (d := name.get("life_dates")) else ""
+    dt = f" ({d})" if not suppress_dates and (d := name.get("life_dates")) else ""
     return f"{nm}{dt}"
 
 
@@ -775,106 +799,6 @@ def get_parent_order_for_members(
     return None
 
 
-def get_bibliographic_reference_titles(
-    references: list[dict] | None,
-) -> list[str] | None:
-    if not references:
-        return None
-
-    ret: list = []
-    for r in references:
-        ret.append(format_reference(r))
-
-    return ret
-
-
-def get_bibliographic_references_json(
-    record: pymarc.Record, field: str, references: list[dict] | None
-) -> list[dict] | None:
-    if not references:
-        log.debug("No bibliographic references, bailing.")
-        return None
-
-    if field not in record:
-        log.debug("Field %s is not in the record, bailing.", field)
-        return None
-
-    refs: dict[str, dict] = {}
-    for ref in references:
-        rid = str(ref["id"])
-        refs[rid] = ref
-
-    outp: list = []
-    fields: list[pymarc.Field] = record.get_fields(field)
-    for ff in fields:
-        if not ff.subfields:
-            log.warning("Empty field %s. Skipping: %s", field, record["001"].value())
-            continue
-
-        fid: str | None = ff.get("0")
-        if not fid:
-            log.warning(
-                "No field 0 for entry in record %s. Skipping: %s",
-                record["001"].value(),
-                str(ff),
-            )
-            continue
-
-        if fid not in refs:
-            log.warning(
-                "The publication ID %s was not available in the list of references for %s. Skipping it.",
-                str(fid),
-                record["001"].value(),
-            )
-            continue
-
-        ref = refs[fid]
-
-        publication_id: str = f"publication_{fid}"
-        lit = {
-            "id": publication_id,
-            "formatted": format_reference(ref),
-            "work_catalogue_status": (
-                convert_work_catalogue_status(t)
-                if (t := ref.get("work_catalogue_status"))
-                else None
-            ),
-            "short_name": ref.get("short_name"),
-            "title": ref.get("title"),
-        }
-        if p := ff.get("n"):
-            lit["pages"] = p
-
-        outp.append({k: v for k, v in lit.items() if v})
-
-    log.debug("Success for field %s, record %s", field, record["001"].value())
-    return outp
-
-
-def format_reference(ref: dict) -> str:
-    res: str = ""
-
-    if a := ref.get("author"):
-        res += f"{a.strip()}{' ' if a.endswith('.') else '. '}"
-
-    if d := ref.get("title"):
-        res += f"{d.strip()}{' ' if d.endswith('.') else '. '}"
-
-    if j := ref.get("journal"):
-        res += f"{j.strip()}, "
-
-    if dd := ref.get("date"):
-        res += f"{dd.strip()}. "
-
-    if p := ref.get("place"):
-        res += f"{p.strip()} "
-
-    if s := ref.get("short"):
-        res += f"({s.strip()})."
-
-    return res.strip()
-
-
 def update_rism_document(
     record,
     project: str,
@@ -951,10 +875,7 @@ def get_work_node(
     work_title: str | None = None
 
     if creator and "a" in creator:
-        name: str = creator["a"].strip()
-        dates: str = f" ({date})" if (date := creator.get("d")) else ""
-
-        composer_name = f"{name}{dates}"
+        composer_name: str = get_creator_name(record)
         composer_id = f"person_{creator['0']}"
 
         work_title_subf: str = creator["t"]

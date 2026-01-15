@@ -17,12 +17,13 @@ log = logging.getLogger("muscat_indexer")
 def create_source_index_documents(record, cfg: dict) -> list[dict]:
     log.debug("Indexing %s", record["shelfmark"])
 
-    display_label = f"{record['institution_siglum']} {record['shelfmark']}"
-
+    display_label: str
     if inst_sigl := record.get("institution_siglum"):
         country_code: str = country_code_from_siglum(inst_sigl)
+        display_label = f"{inst_sigl} {record['shelfmark']}"
     else:
         country_code = "XX"
+        display_label = f"{record['shelfmark']}"
 
     inst_identifiers: list[str] = record.get("institution_rism_ids") or []
     source_date: list = record.get("source_century") or []
@@ -116,24 +117,24 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
 
 
 def _get_standard_titles_json(record) -> list[dict]:
-    return [
-        {
-            "title": n if (n := record.get("source_name")) else "[No title]",
-            "holding_siglum": record["institution_siglum"],
-            "holding_shelfmark": record["shelfmark"],
-            "source_type": "Manuscript copy",
-        }
-    ]
+    d = {
+        "title": n if (n := record.get("source_name")) else "[No title]",
+        "holding_siglum": record["institution_siglum"],
+        "holding_shelfmark": record["shelfmark"],
+        "source_type": "Manuscript copy",
+    }
+    return [{k: v for k, v in d.items() if v}]
 
 
 def _get_minimal_manuscript_holding_data_cantus(record) -> list:
-    return [
-        {
-            "siglum": record["institution_siglum"],
-            "holding_institution_name": record["institution_name"],
-            "holding_institution_id": f"cantus_institution_{record['institution_id']}",
-        }
-    ]
+    d = {
+        "siglum": record["institution_siglum"],
+        "holding_institution_name": record["institution_name"],
+        "holding_institution_id": f"cantus_institution_{r}"
+        if (r := record["institution_id"])
+        else None,
+    }
+    return [{k: v for k, v in d.items() if v}]
 
 
 DATE_RE: re.Pattern = re.compile(

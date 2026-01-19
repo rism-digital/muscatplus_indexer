@@ -119,6 +119,15 @@ def to_solr_single_required(
     return values[0]
 
 
+def _field_matches_grouping(fl: pymarc.Field, grouped: bool) -> bool:
+    has_8: bool = fl.get("8") is not None
+    return (
+        grouped is None
+        or (grouped is True and has_8)
+        or (grouped is False and not has_8)
+    )
+
+
 def to_solr_multi(
     record: pymarc.Record | None,
     field: str,
@@ -150,40 +159,27 @@ def to_solr_multi(
 
     fields: list[pymarc.Field] = record.get_fields(field)
 
+    # Fast path: whole-field values
     if subfield is None:
-        return list(OrderedDict.fromkeys(f.value() for f in fields if f))
+        vv = (f.value() for f in fields if f)
+        return list(OrderedDict.fromkeys(vv)) or None
 
-    # Treat the subfields as a list of lists, and flatten their values. `get_subfields` returns a list,
-    # and we are dealing with a list of fields, so we iterate twice here: Once over the fields, and then
-    # over the values in each field.
-    retval: list[str] = []
-
-    for fl in fields:
-        if subfield not in fl:
-            continue
-
-        if (
-            grouped is True
-            and fl.get("8") is not None
-            or grouped is False
-            and fl.get("8") is None
-            or grouped is None
-        ):
-            retval += [subf.strip() for subf in fl.get_subfields(subfield) if subf]
-        else:
-            # Skip anything else and don't do anything.
-            continue
-
-    if not retval:
-        return None
+    # Slow path
+    values: Iterable[str] = (
+        subf.strip()
+        for fl in fields
+        if subfield in fl and _field_matches_grouping(fl, grouped)
+        for subf in fl.get_subfields(subfield)
+        if subf
+    )
 
     # We want to remove duplicate values, but need to be careful about ordering.
     if sortout:
         # using a set is simpler, but order is not guaranteed.
-        return sorted(set(retval))
+        return sorted(set(values))
 
-    # Creating a dictionary guarantees insertion order.
-    return list(dict.fromkeys(retval))
+    # Creating a dictionary guarantees insertion order while de-duplicating values
+    return list(dict.fromkeys(values))
 
 
 def to_solr_multi_required(
@@ -263,7 +259,6 @@ class PersonRelationshipIndexDocument(TypedDict):
     person_id: str
     this_id: str | None
     this_type: str | None
-    function: str | None
 
 
 def related_person(
@@ -287,21 +282,29 @@ def related_person(
         lets us give a unique number to each enumerated relationship.
     :return: A Solr record for the person relationship
     """
-    if "a" not in field:
-        log.error("A name was not found for person %s on %s", field.get("0"), this_id)
+    name: str | None = field.get("a")
+    rel_4: str | None = field.get("4")
+    rel: str | None = rel_4 or field.get("i")
+    pid: str | None = field.get("0")
+
+    if not name:
+        log.error(
+            "A name was not found for person %s on %s",
+            field.get("0"),
+            this_id,
+        )
 
     d: PersonRelationshipIndexDocument = {
         "id": f"{relationship_number}",
-        "name": field.get("a", "[Unknown name]"),
+        "name": name or "[Unknown name]",
         "type": "person",
         # sources use $4 for relationship info; others use $i. Will ultimately return None if neither are found.
-        "relationship": field.get("4") if "4" in field else field.get("i"),
+        "relationship": rel,
         "qualifier": field.get("j"),
         "date_statement": field.get("d"),
-        "person_id": f"person_{field.get('0')}",
+        "person_id": f"person_{pid}" if pid else None,
         "this_id": this_id,
         "this_type": this_type,
-        "function": field.get("4"),
     }
 
     # The main entry (100) field does not have a relator code.
@@ -318,7 +321,7 @@ def get_related_people(
     record: pymarc.Record,
     record_id: str | None,
     record_type: str | None,
-    fields: tuple = ("500", "700"),
+    fields: tuple[str, ...] = ("500", "700"),
     ungrouped: bool = False,
 ) -> list[dict[str, object]] | None:
     """
@@ -337,23 +340,15 @@ def get_related_people(
 
     :return: A list of person relationships, or None if not applicable.
     """
-    record_tags: set = {f.tag for f in record}
-    if set(fields).isdisjoint(record_tags):
+    people: list[pymarc.Field] = record.get_fields(*fields)
+    if not people:
         return None
 
-    people: list[pymarc.Field] = record.get_fields(*fields)
-
     # NB: enumeration starts at 1
-    if ungrouped:
-        return [
-            related_person(p, record_id, record_type, i)
-            for i, p in enumerate(people, 1)
-            if p and "8" not in p
-        ]
     return [
         related_person(p, record_id, record_type, i)
         for i, p in enumerate(people, 1)
-        if p
+        if p and (not ungrouped or "8" not in p)
     ]
 
 
@@ -388,12 +383,11 @@ def get_related_places(
     record: pymarc.Record,
     record_id: str,
     record_type: str,
-    fields: tuple = ("551", "751"),
+    fields: tuple[str, ...] = ("551", "751"),
 ) -> list[dict[str, object]] | None:
-    record_tags: set = {f.tag for f in record}
-    if set(fields).isdisjoint(record_tags):
-        return None
     places: list[pymarc.Field] = record.get_fields(*fields)
+    if not places:
+        return None
 
     return [
         __related_place(p, record_id, record_type, i)
@@ -458,30 +452,21 @@ def get_related_institutions(
     record: pymarc.Record,
     record_id: str,
     record_type: str,
-    fields: tuple = ("510", "710"),
+    fields: tuple[str, ...] = ("510", "710"),
     ungrouped: bool = False,
 ) -> list[dict[str, object]] | None:
     # Due to inconsistencies in authority records, these relationships are held in both 510 and 710 fields.
-    record_tags: set = {f.tag for f in record}
-    if set(fields).isdisjoint(record_tags):
+    institutions: list = record.get_fields(*fields)
+    if not institutions:
         return None
 
-    institutions: list = record.get_fields(*fields)
-
-    if ungrouped:
-        return [
-            related_institution(p, record_id, record_type, i)
-            for i, p in enumerate(institutions, 1)
-            if p and p.get("0") and ("8" not in p)
-        ]
     return [
         related_institution(p, record_id, record_type, i)
         for i, p in enumerate(institutions, 1)
-        if p and p.get("0")
+        if p and p.get("0") and (not ungrouped or "8" not in p)
     ]
 
 
-BREAK_CONVERT: re.Pattern = re.compile(r"({{brk}})")
 URL_MATCH: re.Pattern = re.compile(
     r"((https?):((//)|(\\\\))+[\w:#@%/;$()~_?+-=\\.&]*)", re.MULTILINE | re.UNICODE
 )
@@ -580,22 +565,6 @@ def __title(
     return {k: v for k, v in d.items() if v}
 
 
-def get_where(
-    record: pymarc.Record, field: str, conditions: dict
-) -> list[pymarc.Field]:
-    fields: list[pymarc.Field] = record.get_fields(field)
-    if not fields:
-        return []
-
-    out = []
-    for subf, val in conditions.items():
-        for marcf in fields:
-            if subf in marcf and marcf[subf] == val:
-                out.append(marcf)
-
-    return out
-
-
 def get_titles(record: pymarc.Record, field: str) -> list[dict] | None:
     """
     Standardize the title field structure. This is used for both the 240 and 730 fields
@@ -621,8 +590,10 @@ def get_titles(record: pymarc.Record, field: str) -> list[dict] | None:
             # If the record has a 593 and that is for material group 01, then
             # prefer that for generating the titles. If it does not,
             # then simply take the first 593.
-            candidates = get_where(record, "593", {"8": "01"})
-            y = candidates[0] if candidates else record.get("593")
+            y = next(
+                (f for f in record.get_fields("593") if f.get("8") == "01"),
+                record.get("593"),
+            )
 
     return [__title(t, c, h, y) for t in titles if t]
 
@@ -668,17 +639,21 @@ def get_creator_name(record: pymarc.Record, suppress_dates: bool = False) -> str
     return get_person_name(d, suppress_dates)
 
 
-def get_creator_data(record: pymarc.Record) -> list | None:
+def get_creator_data(
+    record: pymarc.Record,
+    record_type: str = "source",
+    creator_relationship: str = "cre",
+) -> list | None:
     if "100" not in record:
         return None
 
     record_id: str = record["001"].value()
-    source_id: str = f"source_{record_id}"
-    creator = get_related_people(record, source_id, "source", fields=("100",))
+    solr_record_id: str = f"{record_type}_{record_id}"
+    creator = get_related_people(record, solr_record_id, record_type, fields=("100",))
     if not creator:
         return None
 
-    creator[0]["relationship"] = "cre"
+    creator[0]["relationship"] = creator_relationship
     return creator
 
 
@@ -962,14 +937,15 @@ def get_related_sources(
 
 
 def convert_work_catalogue_status(work_catalogue_status: int) -> str:
-    if work_catalogue_status == WorkPublicationStatusIdentifiers.COMPLETED:
-        return "completed"
-    elif work_catalogue_status == WorkPublicationStatusIdentifiers.ALTERNATE:
-        return "alternate"
-    elif work_catalogue_status == WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED:
-        return "partial"
-    elif work_catalogue_status == WorkPublicationStatusIdentifiers.ELIGIBLE:
-        return "eligible"
-    else:
-        # This should not happen, but just in case...
-        return "not-a-work-catalogue"
+    match work_catalogue_status:
+        case WorkPublicationStatusIdentifiers.COMPLETED:
+            return "completed"
+        case WorkPublicationStatusIdentifiers.ALTERNATE:
+            return "alternate"
+        case WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED:
+            return "partial"
+        case WorkPublicationStatusIdentifiers.ELIGIBLE:
+            return "eligible"
+        case _:
+            # This should not happen, but just in case...
+            return "not-a-work-catalogue"

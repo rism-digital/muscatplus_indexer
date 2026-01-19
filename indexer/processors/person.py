@@ -103,7 +103,7 @@ def _get_contributing_projects_data(record: pymarc.Record) -> list | None:
     if "910" not in record:
         return None
 
-    fields = record.get_fields("910")
+    fields: list[pymarc.Field] = record.get_fields("910")
 
     return [
         {

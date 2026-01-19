@@ -6,6 +6,7 @@ import sys
 import time
 import timeit
 import traceback
+from collections.abc import Callable
 from pathlib import Path
 
 import sentry_sdk
@@ -166,23 +167,22 @@ def main(args: argparse.Namespace) -> bool:
         res &= only_cantus(idx_config)
         return res
 
-    inc: list
-    if args.include:
-        inc = args.include
-    else:
-        inc = [
-            "sources",
-            "people",
-            "places",
-            "institutions",
-            "holdings",
-            "subjects",
-            "festivals",
-            "digital-objects",
-            "works",
-            "tombstones",
-            "inventory-items",
-        ]
+    fn_map: dict[str, tuple[Callable[[dict], bool], ...]] = {
+        "sources": (index_sources,),
+        "people": (index_people,),
+        "places": (index_places,),
+        "institutions": (index_institutions,),
+        "holdings": (index_holdings,),
+        "subjects": (index_subjects,),
+        "festivals": (index_liturgical_festivals,),
+        "digital-objects": (index_digital_objects,),
+        "works": (index_publications, index_works),
+        "publications": (index_publications,),
+        "inventory-items": (index_inventory_items,),
+        "tombstones": (index_tombstones,),
+    }
+
+    inc: list = args.include or fn_map.keys()
 
     if args.empty and not args.dry:
         log.info("Emptying Solr indexing core")
@@ -195,38 +195,17 @@ def main(args: argparse.Namespace) -> bool:
         res &= run_preflight_queries(idx_config)
 
     for record_type in inc:
-        if record_type == "sources" and "sources" not in args.exclude:
-            res &= index_sources(idx_config)
-        elif record_type == "people" and "people" not in args.exclude:
-            res &= index_people(idx_config)
-        elif record_type == "places" and "places" not in args.exclude:
-            res &= index_places(idx_config)
-        elif record_type == "institutions" and "institutions" not in args.exclude:
-            res &= index_institutions(idx_config)
-        elif record_type == "holdings" and "holdings" not in args.exclude:
-            res &= index_holdings(idx_config)
-        elif record_type == "subjects" and "subjects" not in args.exclude:
-            res &= index_subjects(idx_config)
-        elif record_type == "festivals" and "festivals" not in args.exclude:
-            res &= index_liturgical_festivals(idx_config)
-        elif record_type == "digital-objects" and "digital-objects" not in args.exclude:
-            res &= index_digital_objects(idx_config)
-        elif record_type == "works" and "works" not in args.exclude:
-            res &= index_publications(idx_config)
-            res &= index_works(idx_config)
-        elif record_type == "inventory-items" and "inventory-items" not in args.exclude:
-            res &= index_inventory_items(idx_config)
-        elif record_type == "tombstones" and "tombstones" not in args.exclude:
-            res &= index_tombstones(idx_config)
+        if record_type in args.exclude or record_type not in fn_map:
+            continue
+
+        for fn in fn_map[record_type]:
+            res &= fn(idx_config)
 
     if not args.skip_diamm:
         res &= index_diamm(idx_config)
 
     if not args.skip_cantus:
         res &= index_cantus(idx_config)
-
-    # if not args.skip_cmo:
-    #     res &= index_cmo(idx_config)
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()

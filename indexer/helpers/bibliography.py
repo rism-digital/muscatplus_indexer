@@ -100,8 +100,10 @@ def reference_author(marc_ref: pymarc.Record) -> str:
         get_related_people(marc_ref, record_id="", record_type="", fields=("700",))
         or []
     )
-    filt_add_auth = [f for f in additional_authors_struct if f.get("function") == "aut"]
-    filt_edt = [f for f in additional_authors_struct if f.get("function") == "edt"]
+    filt_add_auth = [
+        f for f in additional_authors_struct if f.get("relationship") == "aut"
+    ]
+    filt_edt = [f for f in additional_authors_struct if f.get("relationship") == "edt"]
     additional_authors: list = get_people_names(filt_add_auth, suppress_dates=True)
     editors: list = get_people_names(filt_edt, suppress_dates=True)
     rel_corp: str | None = to_solr_single(marc_ref, "710", "a")

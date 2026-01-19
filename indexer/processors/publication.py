@@ -3,6 +3,8 @@ import pymarc
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.utilities import (
     external_resource_data,
+    get_creator_data,
+    get_creator_name,
     get_related_institutions,
     get_related_people,
     to_solr_multi,
@@ -10,28 +12,11 @@ from indexer.helpers.utilities import (
 
 
 def _get_creator_name(record: pymarc.Record) -> str | None:
-    if "100" not in record:
-        return None
-
-    creator: pymarc.Field = record["100"]
-    name: str = creator["a"].strip()
-    dates: str = f" ({d})" if (d := creator.get("d")) else ""
-
-    return f"{name}{dates}"
+    return get_creator_name(record)
 
 
 def _get_creator_data(record: pymarc.Record) -> list | None:
-    if "100" not in record:
-        return None
-
-    record_id: str = record["001"].value()
-    publication_id: str = f"publication_{record_id}"
-    creator = get_related_people(record, publication_id, "publication", fields=("100",))
-    if not creator:
-        return None
-
-    creator[0]["relationship"] = "aut"
-    return creator
+    return get_creator_data(record, "publication", "aut")
 
 
 def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:

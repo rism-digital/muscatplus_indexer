@@ -7,6 +7,8 @@ from indexer.helpers.utilities import (
     get_related_people,
     get_titles,
     to_solr_single,
+    get_creator_name,
+    get_creator_data,
 )
 
 
@@ -19,28 +21,11 @@ def _get_num_incipits(record: pymarc.Record) -> int:
 
 
 def _get_creator_name(record: pymarc.Record) -> str | None:
-    if "100" not in record:
-        return None
-
-    creator: pymarc.Field = record["100"]
-    name: str = creator["a"].strip()
-    dates: str = f" ({d})" if (d := creator.get("d")) else ""
-
-    return f"{name}{dates}"
+    return get_creator_name(record)
 
 
 def _get_creator_data(record: pymarc.Record) -> list | None:
-    if "100" not in record:
-        return None
-
-    record_id: str = record["001"].value()
-    source_id: str = f"source_{record_id}"
-    creator = get_related_people(record, source_id, "inventory_item", fields=("100",))
-    if not creator:
-        return None
-
-    creator[0]["relationship"] = "cre"
-    return creator
+    return get_creator_data(record, "inventory_item")
 
 
 def _is_anonymous_creator(record: pymarc.Record) -> bool:

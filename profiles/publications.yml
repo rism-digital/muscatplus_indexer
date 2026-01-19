@@ -1,4 +1,15 @@
 ---
+isbn_sm:
+  field: "020"
+  subfield: "a"
+  multiple: true
+
+language_text_sm:
+  field: "041"
+  subfield: "a"
+  multiple: true
+
+
 # most of the non-search data for the 100 field is indexed in the JSON,
 # e.g., $j.
 creator_id:
@@ -24,6 +35,10 @@ publication_category_s:
 publication_type_s:
   field: "240"
   subfield: "h"
+
+edition_statement_s:
+  field: "250"
+  subfield: "a"
 
 publication_place_sm:
   field: "260"

@@ -113,7 +113,16 @@ SELECT i.id, i.marc_source, i.siglum,
         FROM {dbname}.sources_to_institutions AS ssi
         LEFT JOIN {dbname}.sources AS sss ON ssi.source_id = sss.id
         WHERE i.id = ssi.institution_id AND sss.wf_stage = 1
-    ) AS source_relationships
+    ) AS source_relationships,
+    ( SELECT EXISTS (
+        SELECT 1 FROM {dbname}.people_to_institutions pi
+        WHERE pi.marc_tag = '910' AND pi.institution_id = i.id
+
+        UNION ALL
+
+        SELECT 1 FROM {dbname}.sources_to_institutions si
+        WHERE si.marc_tag = '910' AND si.institution_id = i.id
+    )) AS is_contributing_project
 FROM {dbname}.institutions AS i
 WHERE i.siglum IS NOT NULL OR
     ((EXISTS (SELECT 1 FROM {dbname}.holdings_to_institutions AS hi WHERE hi.institution_id = i.id)

@@ -208,6 +208,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "related_places_json": orjson.dumps(related_places).decode("utf-8")
         if related_places
         else None,
+        "is_contributing_project_b": record["is_contributing_project"],
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -221,15 +222,15 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
 
 
 def _get_num_sources_facet(num: int) -> str | None:
-    if num == 0:
-        return None
-    elif num == 1:
-        return "1"
-    elif 2 <= num <= 10:
-        return "2 to 10"
-    elif 11 <= num <= 100:
-        return "11 to 100"
-    elif num > 100:
-        return "more than 100"
-    else:
-        return None
+    match num:
+        case n if n <= 0:
+            return None
+        case 1:
+            return "1"
+        case n if 2 <= n <= 10:
+            return "2 to 10"
+        case n if 11 <= n <= 100:
+            return "11 to 100"
+        case n if n > 100:
+            return "more than 100"
+    return None

@@ -48,7 +48,7 @@ place_ids:
   multiple: true
   value_prefix: "place_"
 
-additional_biography_sm:
+other_dates_sm:
   field: "678"
   subfield: "a"
   multiple: true

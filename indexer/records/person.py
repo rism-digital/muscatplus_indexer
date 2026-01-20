@@ -23,13 +23,12 @@ class PersonIndexDocument(TypedDict):
     person_id: str
     name_s: str | None
     date_statement_s: str | None
-    other_dates_s: str | None
     variant_names_sm: list | None
     related_places_sm: list | None
     related_people_sm: list | None
     related_institutions_sm: list | None
     general_notes_sm: list | None
-    additional_biography_sm: list | None
+    other_dates_sm: list | None
     gender_s: str | None
     roles_sm: list | None
     external_ids: list | None

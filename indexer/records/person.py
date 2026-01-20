@@ -5,6 +5,7 @@ import orjson
 import pymarc
 import yaml
 
+from indexer.helpers.bibliography import get_bibliographic_references_json
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
@@ -112,6 +113,17 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         {k: v for k, v in it.items() if v} for it in related_places_db
     ]
 
+    source_data_entries: list = (
+        orjson.loads(s) if (s := record["source_data_found"]) else []
+    )
+
+    source_data_found: list[dict] | None = get_bibliographic_references_json(
+        marc_record, "670", source_data_entries, control_subf="w"
+    )
+    source_data_found_json = (
+        orjson.dumps(source_data_found).decode("utf-8") if source_data_found else []
+    )
+
     # For the source count we take the literal count *except* for the Anonymous user,
     # since that throws everything off.
     core_person: dict = {
@@ -136,6 +148,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "related_places_json": (
             orjson.dumps(related_places).decode("utf-8") if related_places else None
         ),
+        "source_data_found_json": source_data_found_json,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

@@ -99,7 +99,20 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                (SELECT JSON_ARRAYAGG(ww.json_object)
                                     FROM person_work_nodes ww
                                     WHERE ww.person_id = p.id
-                               ) AS work_nodes
+                               ) AS work_nodes,
+                               (SELECT JSON_ARRAYAGG(DISTINCT
+                                            JSON_OBJECT('id', (CAST(pub.id AS CHAR)),
+                                                 'author', pub.author,
+                                                 'title', pub.title,
+                                                 'journal', pub.journal,
+                                                 'date', pub.date,
+                                                 'place', pub.place,
+                                                 'short_name', pub.short_name,
+                                                 'marc_source', pub.marc_source))
+                                    FROM {dbname}.people_to_publications wpt
+                                    LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
+                                    WHERE wpt.person_id = p.id AND wpt.marc_tag = '670'
+                               ) AS source_data_found
                         FROM {dbname}.people AS p
                         WHERE
                             EXISTS (SELECT 1 FROM {dbname}.people_to_institutions pi WHERE pi.person_id = p.id)

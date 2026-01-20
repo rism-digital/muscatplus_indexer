@@ -256,7 +256,7 @@ class PersonRelationshipIndexDocument(TypedDict):
     relationship: str | None
     qualifier: str | None
     date_statement: str | None
-    person_id: str
+    person_id: str | None
     this_id: str | None
     this_type: str | None
 
@@ -845,12 +845,15 @@ def get_work_node(
         return None
 
     creator: pymarc.Field | None = record.get("100")
+    if not creator:
+        return None
+
     composer_name: str | None = None
     composer_id: str | None = None
     work_title: str | None = None
 
-    if creator and "a" in creator:
-        composer_name: str = get_creator_name(record)
+    if "a" in creator:
+        composer_name: str | None = get_creator_name(record)
         composer_id = f"person_{creator['0']}"
 
         work_title_subf: str = creator["t"]

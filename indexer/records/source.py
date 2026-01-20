@@ -128,7 +128,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     # This normalizes the holdings information to include manuscripts. This is so when a user
     # wants to see all the sources in a particular institution we can simply filter by the institution
     # id on the sources, regardless of whether they have a holding record, or they are a MS.
-    manuscript_holdings: list = (
+    manuscript_holdings: list[HoldingIndexDocument] = (
         _get_manuscript_holdings(
             marc_record,
             source_id,
@@ -269,7 +269,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     locations_peformances: list = [
         {k: v for k, v in it.items() if v} for it in locations_peformances_db
     ]
-    locations_peformances_json: list | None = (
+    locations_peformances_json: str | None = (
         orjson.dumps(locations_peformances).decode("utf-8")
         if locations_peformances
         else None
@@ -404,7 +404,7 @@ def _get_manuscript_holdings(
     creator_name: str | None,
     record_type_id: int,
     institution_places: list[str],
-) -> list[dict[str, object]] | None:
+) -> list[HoldingIndexDocument] | None:
     """
     Create a holding record for sources that do not actually have a holding record, e.g., manuscripts
     This is so that we can provide a unified interface for searching all holdings of an institution

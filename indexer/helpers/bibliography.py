@@ -87,6 +87,9 @@ def get_bibliographic_references_json(
         if p := ff.get("n"):
             lit["pages"] = p
 
+        if b := ff.get("b"):
+            lit["info"] = b
+
         outp.append({k: v for k, v in lit.items() if v})
 
     log.debug("Success for field %s, record %s", field, record["001"].value())

@@ -84,6 +84,13 @@ publication_general_notes_smni:
   breaks: true
   links: true
 
+work_catalogue_notes_sm:
+  field: "590"
+  subfield: "a"
+  multiple: true
+  sorted: false
+  links: true
+
 related_people_json:
   processor: "_get_related_people_data"
   json: true

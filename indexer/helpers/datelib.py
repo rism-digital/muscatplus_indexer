@@ -134,6 +134,7 @@ NO_DATES = {
     "[20th c.]",
     "XIX-XX",
     "Año X",
+    "(ohne Datum)",
 }
 
 # Each tuple is (pattern, replacement)

@@ -85,6 +85,18 @@ general_notes_sm:
   subfield: "a"
   multiple: true
 
+# For notes directly defined on the source we store them. We do not
+# need to index them since they will be caught in the field above,
+# so we just need a separate field for display.
+work_general_notes_smni:
+  field: "680"
+  subfield: "a"
+  multiple: true
+  grouping: false
+  sorted: false
+  breaks: true
+  links: true
+
 catalogue_s:
   field: "690"
   subfield: "a"

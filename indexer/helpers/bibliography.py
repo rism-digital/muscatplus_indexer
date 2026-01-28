@@ -129,15 +129,15 @@ def reference_title(marc_ref: pymarc.Record) -> str:
     reftype = to_solr_single(marc_ref, "240", "h")
     title = to_solr_single(marc_ref, "240", "a")
     if reftype and reftype == "Article/chapter":
-        return f"{title}" if title else ""
+        return f"{title}{'' if title.endswith('.') else '.'}" if title else ""
     else:
-        return f"<i>{title}.</i>" if title else ""
+        return f"<i>{title}{'' if title.endswith('.') else '.'}</i>" if title else ""
 
 
 def reference_date(marc_ref: pymarc.Record) -> str:
     dt = to_solr_single(marc_ref, "260", "c")
 
-    return f"{dt}." if dt else ""
+    return f"{dt}{'' if dt.endswith('.') else '.'}" if dt else ""
 
 
 def reference_place_publisher(marc_ref: pymarc.Record) -> str:
@@ -147,9 +147,9 @@ def reference_place_publisher(marc_ref: pymarc.Record) -> str:
     if place and publ:
         return f"{place}: {publ}."
     elif place:
-        return f"{place}."
+        return f"{place}{'' if place.endswith('.') else '.'}"
     elif publ:
-        return f"{publ}."
+        return f"{publ}{'' if publ.endswith('.') else '.'}"
     return ""
 
 
@@ -179,7 +179,7 @@ def reference_shorttitle(marc_ref: pymarc.Record) -> str:
 
 def reference_external_resource(marc_ref: pymarc.Record) -> str:
     ex = to_solr_single(marc_ref, "856", "u")
-    return f"{ex}" if ex else ""
+    return f'<a href="{ex}">{ex}</a>' if ex else ""
 
 
 def format_reference(ref: dict) -> str:

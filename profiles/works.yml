@@ -65,8 +65,8 @@ work_form_json:
   processor: "_get_work_form_data"
   json: true
 
-opus_number_s:
-  field: "393"
+opus_numbers_sm:
+  field: "383"
   subfield: "b"
 
 alternative_titles_sm:

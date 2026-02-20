@@ -11,6 +11,7 @@ from indexer.helpers.utilities import (
     get_catalogue_numbers,
     get_creator_data,
     get_creator_name,
+    get_external_resources_data,
     get_related_institutions,
     get_related_people,
     get_related_places,
@@ -332,22 +333,7 @@ def _get_minimal_manuscript_holding_data(record: pymarc.Record) -> list | None:
 
 
 def _get_external_resources_data(record: pymarc.Record) -> list | None:
-    """
-    Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
-    material group descriptions -- those are handled in the material group indexing section above.
-    :param record: A pymarc record
-    :return: A list of external links. This will be serialized to a string for storage in Solr.
-    """
-    if "856" not in record:
-        return None
-
-    resources: list = [
-        external_resource_data(f)
-        for f in record.get_fields("856")
-        if f and ("8" not in f or f["8"] != "01")
-    ]
-
-    return resources if resources else None
+    return get_external_resources_data(record)
 
 
 def _get_iiif_manifest_uris(record: pymarc.Record) -> list | None:

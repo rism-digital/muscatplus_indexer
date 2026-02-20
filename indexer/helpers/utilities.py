@@ -217,6 +217,25 @@ def clean_multivalued(fields: dict, field_name: str) -> list[str] | None:
     return [t.strip() for t in fields.get(field_name, "").splitlines() if t.strip()]
 
 
+def get_external_resources_data(record: pymarc.Record) -> list | None:
+    """
+    Fetch the external links defined on the record. Note that this will *not* index the links that are linked to
+    material group descriptions -- those are handled in the material group indexing section above.
+    :param record: A pymarc record
+    :return: A list of external links. This will be serialized to a string for storage in Solr.
+    """
+    if "856" not in record:
+        return None
+
+    resources: list = [
+        external_resource_data(f)
+        for f in record.get_fields("856")
+        if f and ("8" not in f or f["8"] != "01")
+    ]
+
+    return resources if resources else None
+
+
 class ExternalResourceDocument(TypedDict, total=False):
     url: str | None
     note: str | None

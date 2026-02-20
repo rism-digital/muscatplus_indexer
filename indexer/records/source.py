@@ -21,6 +21,7 @@ from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
     get_content_types,
     get_creator_name,
+    get_external_resources_data,
     get_parent_order_for_members,
     get_people_names,
     get_related_sources,
@@ -88,7 +89,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     holding_info: list[dict] = orjson.loads(m) if (m := record.get("holdings")) else []
     parent_holding_info: list[dict] = (
-        orjson.loads(mp) if (mp := record.get("parent_holdings_marc")) else []
+        orjson.loads(mp) if (mp := record.get("parent_holdings")) else []
     )
 
     holdings_marc: list[pymarc.Record] = create_marc_list(
@@ -164,7 +165,26 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
             parent_marc_record, "593", "b"
         )
 
-        source_membership_data = {
+        parent_external_resources = _label_external_resources(
+            get_external_resources_data(parent_marc_record) or [],
+            record.get("parent_siglum"),
+            record.get("parent_shelfmark"),
+        )
+        parent_holding_external_resources = []
+        for p in all_print_holding_records:
+            if "856" not in p:
+                continue
+            holding_resources: list | None = get_external_resources_data(p)
+            if not holding_resources:
+                continue
+            mod_labels = _label_external_resources(
+                holding_resources,
+                to_solr_single(p, "852", "a"),
+                to_solr_single(p, "852", "c"),
+            )
+            parent_holding_external_resources.extend(mod_labels)
+
+        source_membership_block = {
             "source_id": f"source_{membership_id}",
             "main_title": record.get("parent_title"),
             "shelfmark": record.get("parent_shelfmark"),
@@ -172,10 +192,14 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
             # If a child has a parent, then by definition we do not have a single item.
             "record_type": get_record_type(parent_record_type_id, False),
             "source_type": get_source_type(parent_record_type_id),
-            "content_types_sm": get_content_types(parent_marc_record),
+            "content_types": get_content_types(parent_marc_record),
             "material_source_types": parent_material_source_types,
             "material_content_types": parent_material_content_types,
+            "external_resources": (
+                parent_external_resources + parent_holding_external_resources
+            ),
         }
+        source_membership_data = {k: v for k, v in source_membership_block.items() if v}
 
     source_mship_json = (
         orjson.dumps(source_membership_data).decode("utf-8")
@@ -507,6 +531,15 @@ def _get_full_holding_identifiers(
         ids.add(f"{rec_name} {rec_sig} {rec_shelfmark}")
 
     return [realid for realid in ids if realid.strip()]
+
+
+def _label_external_resources(
+    resources: list, siglum: str | None, shelfmark: str | None
+) -> list:
+    label = " ".join(filter(None, [siglum or "", shelfmark or "[No shelfmark]"]))
+    if not label:
+        return resources
+    return [{**r, "note": label} for r in resources]
 
 
 def _get_country_codes(

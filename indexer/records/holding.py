@@ -144,6 +144,29 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
             }
         )
 
+    related: list = []
+    related_institutions: list = (
+        orjson.loads(ii) if (ii := record["related_institutions"]) else []
+    )
+    for i, reli in enumerate(related_institutions, 1):
+        institution_record: dict = {
+            "id": f"{i}",
+            "institution_id": f"{reli['institution_id']}",
+            "type": "institution",
+            "name": f"{reli['name']}",
+            "place": f"{reli['place']}",
+            "siglum": reli["siglum"],
+            "relationship": reli["relator"],
+            "this_id": holding_id,
+            "this_type": "holding",
+        }
+        related.append({k: v for k, v in institution_record.items() if v})
+
+    if related:
+        idx_document.update(
+            {"related_institutions_json": orjson.dumps(related).decode("utf-8")}
+        )
+
     return idx_document
 
 

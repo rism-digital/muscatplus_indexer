@@ -100,9 +100,9 @@ related_institutions_sm:
   field: "710"
   subfield: "a"
   multiple: true
-related_institutions_json:
-  processor: "_get_related_institutions_data"
-  json: true
+#related_institutions_json:
+#  processor: "_get_related_institutions_data"
+#  json: true
 
 siglum_s:
   field: "852"

@@ -26,7 +26,20 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict]:
                 sources.std_title AS source_title, sources.composer AS creator_name,
                 sources.record_type as record_type, sources.marc_source AS source_record_marc,
                 (SELECT comp.marc_source FROM sources AS comp WHERE holdings.collection_id = comp.id) AS comp_marc,
-                (SELECT inst.marc_source FROM institutions AS inst WHERE holdings.lib_siglum = inst.siglum) AS institution_record_marc,
+                (SELECT inst.marc_source
+                    FROM institutions AS inst
+                    WHERE holdings.lib_siglum = inst.siglum
+                ) AS institution_record_marc,
+                (SELECT JSON_ARRAYAGG(DISTINCT
+                             JSON_OBJECT('institution_id', CONCAT('institution_', reli.id),
+                                         'siglum', reli.siglum,
+                                         'name', reli.corporate_name,
+                                         'place', reli.place,
+                                         'relator', rela.relator_code))
+                    FROM {dbname}.holdings_to_institutions AS rela
+                    LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
+                    WHERE rela.holding_id = holdings.id AND rela.marc_tag = '710'
+                ) AS related_institutions,
                 (SELECT JSON_ARRAYAGG(DISTINCT
                                 JSON_OBJECT('id', pub.id,
                                      'author', pub.author,

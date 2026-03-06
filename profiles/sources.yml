@@ -372,6 +372,8 @@ dramatic_roles_json:
   processor: "_get_dramatic_roles_data"
   json: true
 
+has_rism_series_b:
+  processor: "_get_has_rism_series"
 rism_series_json:  # 596
   processor: "_get_rism_series_data"
   json: true

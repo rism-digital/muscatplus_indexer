@@ -258,7 +258,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
 
-    work_ids: list = orjson.loads(d) if (d := record.get("work_ids")) else []
+    work_ids_blob: list[dict] = orjson.loads(d) if (d := record.get("work_ids")) else []
+    work_ids = [g["id"] for g in work_ids_blob if g]
 
     related_sources = None
     if t := record.get("related_sources"):

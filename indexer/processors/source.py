@@ -195,6 +195,10 @@ def _get_dramatic_roles_data(record: pymarc.Record) -> list[dict] | None:
     return ret
 
 
+def _get_has_rism_series(record: pymarc.Record) -> bool:
+    return "596" in record
+
+
 def _get_rism_series_data(record: pymarc.Record) -> list[dict] | None:
     if "596" not in record:
         return None

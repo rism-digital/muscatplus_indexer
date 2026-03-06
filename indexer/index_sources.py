@@ -63,10 +63,13 @@ def _get_sources(cfg: dict) -> Generator[dict]:
             LEFT JOIN {dbname}.work_nodes AS wn ON swn.work_node_id = wn.id
             WHERE swn.source_id = child.id LIMIT 1
         ) AS work_node,
-        (SELECT (JSON_ARRAYAGG(DISTINCT CONCAT('work_', sw.work_id)))
+        (SELECT (JSON_ARRAYAGG(DISTINCT
+                    JSON_OBJECT('id', CONCAT('work_', sw.work_id),
+                                'marc_source', wk.marc_source)))
             FROM {dbname}.sources_to_works AS sw
             LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
-            WHERE sw.source_id = child.id AND ss.wf_stage = 1
+            LEFT JOIN {dbname}.works AS wk ON sw.work_id = wk.id
+            WHERE sw.source_id = child.id AND ss.wf_stage = 1 AND wk.wf_stage = 1
         ) AS work_ids,
         (SELECT JSON_ARRAYAGG(DISTINCT
                              JSON_OBJECT('lib_siglum', h2.lib_siglum,

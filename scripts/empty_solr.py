@@ -2,9 +2,9 @@ import argparse
 import logging
 import sys
 
-import httpx
 import orjson
 import yaml
+from pyreqwest.client import SyncClientBuilder
 
 log = logging.getLogger("mp_indexer")
 
@@ -13,15 +13,15 @@ def _empty_solr_core(cfg: dict, solr_core: str, delete_query: str = "*:*") -> bo
     solr_address = cfg["solr"]["server"]
     solr_idx_server: str = f"{solr_address}/{solr_core}"
 
-    res = httpx.post(
-        f"{solr_idx_server}/update?commit=true",
-        content=orjson.dumps({"delete": {"query": delete_query}}),
-        headers={"Content-Type": "application/json"},
-        timeout=None,  # noqa: S113
-        verify=False,  # noqa: S501
-    )
+    with SyncClientBuilder().build() as client:
+        res = (
+            client.post(f"{solr_idx_server}/update?commit=true")
+            .headers({"Content-Type": "application/json"})
+            .body_bytes(orjson.dumps({"delete": {"query": delete_query}}))
+            .build().send()
+        )
 
-    if 200 <= res.status_code < 400:
+    if 200 <= res.status < 400:
         log.debug("Deletion was successful")
         return True
     return False

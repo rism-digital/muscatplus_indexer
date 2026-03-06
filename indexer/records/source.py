@@ -169,18 +169,23 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
             get_external_resources_data(parent_marc_record) or [],
             record.get("parent_siglum"),
             record.get("parent_shelfmark"),
+            record.get("parent_lib_name"),
         )
         parent_holding_external_resources = []
         for p in all_print_holding_records:
             if "856" not in p:
                 continue
+
             holding_resources: list | None = get_external_resources_data(p)
+
             if not holding_resources:
                 continue
+
             mod_labels = _label_external_resources(
                 holding_resources,
                 to_solr_single(p, "852", "a"),
                 to_solr_single(p, "852", "c"),
+                to_solr_single(p, "852", "e"),
             )
             parent_holding_external_resources.extend(mod_labels)
 
@@ -535,11 +540,19 @@ def _get_full_holding_identifiers(
 
 
 def _label_external_resources(
-    resources: list, siglum: str | None, shelfmark: str | None
+    resources: list, siglum: str | None, shelfmark: str | None, name: str | None
 ) -> list:
-    label = " ".join(filter(None, [siglum or "", shelfmark or "[No shelfmark]"]))
+    label_parts: list[str] = []
+    if name:
+        label_parts.append(name)
+    if siglum:
+        label_parts.append(f"({siglum})")
+    label_parts.append(shelfmark or "[No shelfmark]")
+    label = " ".join(label_parts)
+
     if not label:
         return resources
+
     return [{**r, "note": label} for r in resources]
 
 

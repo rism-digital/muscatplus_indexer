@@ -19,8 +19,10 @@ def _get_sources(cfg: dict) -> Generator[dict]:
     dbname: str = cfg["mysql"]["database"]
 
     id_where_clause: str = ""
+    query_params: tuple[int, ...] = ()
     if "id" in cfg:
-        id_where_clause = f"AND child.id = {cfg['id']}"
+        id_where_clause = "AND child.id = %s"
+        query_params = (int(cfg["id"]),)
 
     sql_query: str = f"""
     SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
@@ -33,8 +35,13 @@ def _get_sources(cfg: dict) -> Generator[dict]:
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
         (SELECT JSON_ARRAYAGG(DISTINCT srm2.marc_source)
             FROM {dbname}.sources AS srm2
-            WHERE srm2.source_id IS NOT NULL AND srm2.source_id = child.id
+            WHERE srm2.source_id = child.id
         ) AS child_marc_records,
+        (SELECT mshi.full_name
+            FROM {dbname}.sources_to_institutions mssti
+            LEFT JOIN {dbname}.institutions mshi ON mssti.institution_id = mshi.id
+            WHERE mssti.marc_tag = '852' AND parent.id = mssti.source_id
+        ) AS parent_lib_name,
         (SELECT JSON_ARRAYAGG(DISTINCT
                              JSON_OBJECT('id', CONCAT('institution_', ins.id),
                                         'name', ins.corporate_name,
@@ -50,7 +57,7 @@ def _get_sources(cfg: dict) -> Generator[dict]:
                                          'marc_source', sours.marc_source))
             FROM {dbname}.sources_to_sources AS stos
             LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id
-            WHERE marc_tag = '787' AND source_a_id = child.id
+            WHERE stos.marc_tag = '787' AND stos.source_a_id = child.id
         ) AS related_sources,
         (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
                 FROM {dbname}.digital_object_links AS do
@@ -63,9 +70,9 @@ def _get_sources(cfg: dict) -> Generator[dict]:
             LEFT JOIN {dbname}.work_nodes AS wn ON swn.work_node_id = wn.id
             WHERE swn.source_id = child.id LIMIT 1
         ) AS work_node,
-        (SELECT (JSON_ARRAYAGG(DISTINCT
+        (SELECT JSON_ARRAYAGG(DISTINCT
                     JSON_OBJECT('id', CONCAT('work_', sw.work_id),
-                                'marc_source', wk.marc_source)))
+                                'marc_source', wk.marc_source))
             FROM {dbname}.sources_to_works AS sw
             LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
             LEFT JOIN {dbname}.works AS wk ON sw.work_id = wk.id
@@ -110,7 +117,7 @@ def _get_sources(cfg: dict) -> Generator[dict]:
         ) AS alt_standard_terms,
         (SELECT JSON_ARRAYAGG(DISTINCT
                              JSON_OBJECT('place_id', CONCAT('place_', reli.id),
-                                          'relationship', COALESCE(rela.relator_code, "xp"),
+                                          'relationship', COALESCE(rela.relator_code, 'xp'),
                                           'name', reli.name,
                                           'country', reli.country,
                                           'district', reli.district,
@@ -131,7 +138,7 @@ WHERE child.wf_stage = 1 {id_where_clause}
 GROUP BY child.id
 ORDER BY child.id asc;"""  # noqa: S608
 
-    curs.execute(sql_query)
+    curs.execute(sql_query, query_params)
 
     while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
         yield rows

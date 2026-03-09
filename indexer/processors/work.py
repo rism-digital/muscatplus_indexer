@@ -7,6 +7,7 @@ from indexer.helpers.utilities import (
     get_creator_data,
     get_creator_name,
     get_related_people,
+    get_standard_work_titles_data,
     get_titles,
 )
 
@@ -62,40 +63,6 @@ def _get_external_resources_data(record: pymarc.Record) -> list | None:
     return resources if resources else None
 
 
-# def _validate_edtf_date(
-#     value: str, doc_id: str, marc_field: str | None, marc_subfield: str | None
-# ) -> bool:
-#     is_valid: bool = is_valid_edtf(value)
-#     if is_valid:
-#         return True
-#
-#     fixed_date = convert_to_edtf(value)
-#     if fixed_date == value:
-#         # couldn't be fixed.
-#         log.warning("%s could not be fixed on %s", value, doc_id)
-#         return False
-#
-#     now_is_valid: bool = is_valid_edtf(fixed_date)
-#     if now_is_valid:
-#         log.critical(
-#             '"%s" was fixed to "%s" on "%s", "%s", "%s"',
-#             value,
-#             fixed_date,
-#             doc_id,
-#             marc_field,
-#             marc_subfield,
-#         )
-#         return True
-#
-#     log.warning(
-#         "%s was fixed to %s on %s, but was still not valid EDTF.",
-#         value,
-#         fixed_date,
-#         doc_id,
-#     )
-#     return False
-
-
 def _get_work_form_data(record: pymarc.Record) -> list[dict] | None:
     if "380" not in record:
         return None
@@ -114,21 +81,7 @@ def _get_work_form_data(record: pymarc.Record) -> list[dict] | None:
 
 
 def _get_standard_titles_data(record: pymarc.Record) -> list[dict] | None:
-    if "130" not in record:
-        return None
-
-    titles: list[pymarc.Field] = record.get_fields("130")
-
-    out: list = []
-    for title in titles:
-        d = {
-            "title": title.get("a"),
-            "key_mode": title.get("r"),
-            "scoring_summary": title.get("m"),
-        }
-        out.append({k: v for k, v in d.items() if v})
-
-    return out
+    return get_standard_work_titles_data(record)
 
 
 def _get_alternative_titles_data(record: pymarc.Record) -> list | None:

@@ -77,7 +77,7 @@ def _get_sources(cfg: dict) -> Generator[dict]:
             LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
             LEFT JOIN {dbname}.works AS wk ON sw.work_id = wk.id
             WHERE sw.source_id = child.id AND ss.wf_stage = 1 AND wk.wf_stage = 1
-        ) AS work_ids,
+        ) AS work_catalogue_entries,
         (SELECT JSON_ARRAYAGG(DISTINCT
                              JSON_OBJECT('lib_siglum', h2.lib_siglum,
                                          'marc_source', h2.marc_source))

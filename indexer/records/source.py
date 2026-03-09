@@ -29,6 +29,7 @@ from indexer.helpers.utilities import (
     to_solr_multi,
     to_solr_single,
     tokenize_variants,
+    get_work_record,
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
@@ -263,8 +264,17 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
 
-    work_ids_blob: list[dict] = orjson.loads(d) if (d := record.get("work_ids")) else []
-    work_ids = [g["id"] for g in work_ids_blob if g]
+    work_catalogue_for_source: list[dict] = (
+        orjson.loads(d) if (d := record.get("work_catalogue_entries")) else []
+    )
+    work_ids = [g["id"] for g in work_catalogue_for_source if g]
+    works_list = []
+    for wk in work_catalogue_for_source:
+        wk_record: pymarc.Record = create_marc(wk["marc_source"])
+        work_record = get_work_record(wk_record, source_id, "source")
+        works_list.append(work_record)
+
+    works_json = orjson.dumps(works_list).decode("utf-8") if works_list else None
 
     related_sources = None
     if t := record.get("related_sources"):
@@ -361,6 +371,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         "work_ids": work_ids,
         "related_sources_json": related_sources_json,
         "works_catalogue_json": works_catalogue_json,
+        "works_json": works_json,
         "location_of_performance_json": locations_peformances_json,
         "related_institution_sigla_sm": related_institution_sigla,
         "work_node_json": work_node_json,

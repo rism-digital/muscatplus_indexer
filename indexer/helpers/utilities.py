@@ -895,6 +895,47 @@ def get_work_node(
     return {k: v for k, v in d.items() if v}
 
 
+def get_standard_work_titles_data(record: pymarc.Record) -> list[dict] | None:
+    if "130" not in record:
+        return None
+
+    title: pymarc.Field = record["130"]
+    d = {
+        "title": title.get("a"),
+        "key_mode": title.get("r"),
+        "scoring_summary": title.get("m"),
+    }
+    # Add information from the 690
+    catalogue: pymarc.Field = record["690"]
+    addn = {"catalogue": catalogue["a"], "number_page": catalogue["n"]}
+    d.update(addn)
+
+    # "standard_titles_data" is typically a list, so we return a list even if it just has a single entry.
+    return [{k: v for k, v in d.items() if v}]
+
+
+def get_work_record(
+    record: pymarc.Record, record_id: str, record_type: str
+) -> dict | None:
+    work_id = record["001"].value()
+    d = {
+        "id": work_id,
+        "type": "work",
+        "this_id": record_id,
+        "this_type": record_type,
+    }
+
+    titles: list | None = get_standard_work_titles_data(record)
+    if titles:
+        d.update(titles[0])
+
+    catalogue_entry = record["690"]
+    d["catalogue"] = catalogue_entry["a"]
+    d["number_page"] = catalogue_entry["n"]
+
+    return d
+
+
 def get_related_sources(
     related: list, relationship_fields: list[pymarc.Field], host_source_id: str
 ) -> list[dict] | None:

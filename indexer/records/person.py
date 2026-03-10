@@ -5,7 +5,10 @@ import orjson
 import pymarc
 import yaml
 
-from indexer.helpers.bibliography import get_bibliographic_references_json
+from indexer.helpers.bibliography import (
+    get_bibliographic_references_json,
+    format_reference,
+)
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
@@ -183,6 +186,8 @@ def _get_work_catalogues(work_catalogues: list) -> list | None:
     formatted_catalogues: list = []
 
     for catalogue in work_catalogues:
+        formatted = format_reference(catalogue)
+
         publication_id = catalogue["id"]
         catalogue_type_value = catalogue["catalogue_type"]
         if catalogue_type_value == 3:
@@ -199,6 +204,7 @@ def _get_work_catalogues(work_catalogues: list) -> list | None:
                 "creator": catalogue["author"],
                 "short_name": catalogue["short_name"],
                 "status": catalogue_status,
+                "formatted": formatted,
             }
         )
 

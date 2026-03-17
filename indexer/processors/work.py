@@ -2,6 +2,7 @@ import logging
 
 import pymarc
 
+from indexer.helpers.datelib import process_edtf_date
 from indexer.helpers.utilities import (
     external_resource_data,
     get_creator_data,
@@ -9,6 +10,7 @@ from indexer.helpers.utilities import (
     get_related_people,
     get_standard_work_titles_data,
     get_titles,
+    to_solr_single,
 )
 
 log = logging.getLogger("muscat_indexer")
@@ -34,6 +36,37 @@ def _get_has_incipits(record: pymarc.Record) -> bool:
 
 def _get_num_incipits(record: pymarc.Record) -> int:
     return len(record.get_fields("031"))
+
+
+def _get_earliest_latest_dates(record: pymarc.Record) -> tuple[int | None, int | None]:
+    date_statement: str | None = to_solr_single(record, "046", "k")
+    if not date_statement:
+        return None, None
+
+    edtf_statement: tuple[int | None, int | None] = process_edtf_date(
+        date_statement, date_statement
+    )
+
+    if edtf_statement == (None, None):
+        record_id: str = record["001"].value()
+        log.warning(
+            "Problem with date statement %s for record %s", date_statement, record_id
+        )
+
+    return edtf_statement
+
+
+def _get_earliest_latest_dates_dtr(previously_computed: list[int] | None) -> str | None:
+    # Takes the output of the _get_earliest_latest_dates function and creates a Solr DateRange Statement.
+    if not previously_computed:
+        return None
+
+    first = previously_computed[0]
+    last = previously_computed[1]
+    if first is None or last is None:
+        return None
+
+    return f"[{first} TO {last}]"
 
 
 def _get_creator_name(record: pymarc.Record) -> str | None:

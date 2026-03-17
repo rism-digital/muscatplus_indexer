@@ -3,6 +3,7 @@ import functools
 import logging.config
 import math
 import re
+from time import struct_time
 
 import edtf
 from edtf.parser.edtf_exceptions import EDTFParseException
@@ -372,6 +373,12 @@ def parse_date_statement(date_statement: str) -> DateRange:  # noqa: MC0001
     else:
         log.debug("Neither century regexes matched for %s", simplified_date_statement)
 
+    return process_edtf_date(simplified_date_statement, date_statement)
+
+
+def process_edtf_date(
+    simplified_date_statement: str, date_statement: str
+) -> tuple[int | None, int | None]:
     parsed_date = None
     # First try the strictest processing
     try:
@@ -422,11 +429,19 @@ def parse_date_statement(date_statement: str) -> DateRange:  # noqa: MC0001
     # get the year for each edtf struct directly
     # We could parse as datetime instead but it's an extra step and doesn't support all the dates edtf does
     try:
-        start_year: int | None = parsed_date.lower_strict()[0]
-        end_year: int | None = parsed_date.upper_strict()[0]
+        # The first index in the returned value is the year, unless
+        start_year_s: struct_time = parsed_date.lower_strict()
+        end_year_s: struct_time = parsed_date.upper_strict()
     except AttributeError as e:
         log.debug("Unexpected error %s while parsing %s", e, date_statement)
         return None, None
+
+    start_year: int | None = (
+        start_year_s[0] if isinstance(start_year_s, struct_time) else None
+    )
+    end_year: int | None = (
+        end_year_s[0] if isinstance(end_year_s, struct_time) else None
+    )
 
     # remember start_year and end_year could be 0, which is also falsey
     if start_year is not None and end_year is not None and start_year > end_year:

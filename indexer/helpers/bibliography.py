@@ -56,9 +56,16 @@ def get_bibliographic_references_json(
         fid: str | None = ff.get(control_subf)
         if not fid:
             log.warning(
-                f"No field {control_subf} for entry in record %s. Skipping: %s",
+                "No field %s for entry in record %s. Skipping: %s",
+                control_subf,
                 record["001"].value(),
                 str(ff),
+            )
+            continue
+
+        if ff.get("b") == "0":
+            log.debug(
+                "Skipping an entry where the value of the information found field is '0'."
             )
             continue
 

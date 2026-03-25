@@ -456,24 +456,36 @@ def process_edtf_date(
 
     # edtf returns 0 and 9999 in some cases if only the year is unknown - it's pretty useless for us
     if end_year == 9999:
-        end_year = None
+        end_year = LATEST_YEAR_IF_MISSING
         if start_year == 0:
-            start_year = None
+            start_year = EARLIEST_YEAR_IF_MISSING
 
     if isinstance(parsed_date, edtf.Interval):
         # if one end of a date range is unknown the default is to set the strict date to 10 years before/after the
         # known date we detect that case here and make the date None instead
         # we could also consider changing edtf.appsettings.DELTA_IF_UNKNOWN
         if str(parsed_date.lower) == "unknown":
-            start_year = None
+            start_year = EARLIEST_YEAR_IF_MISSING
         if str(parsed_date.upper) == "unknown":
-            end_year = None
+            end_year = LATEST_YEAR_IF_MISSING
+
+    # If the end year is missing, then we choose the minimum between the
+    # current year, and the start year + 200.
+    # so: "1800/.." -> (1800, 2000); but "1900/.." -> (1900, 2026)
+    if end_year is None and isinstance(start_year, int):
+        end_year = min(LATEST_YEAR_IF_MISSING, start_year + 200)
+
+    if start_year is None and isinstance(end_year, int):
+        start_year = end_year - 200
 
     return start_year, end_year
 
 
 EARLIEST_YEAR_IF_MISSING: int = -2000
 LATEST_YEAR_IF_MISSING: int = datetime.datetime.now().year
+# Presume a window of +/- 200 years from a known date for either start or end years.
+# For example, "../1800" -> 1600 - 1800
+YEAR_GAP_IF_MISSING = 200
 
 
 def process_date_statements(

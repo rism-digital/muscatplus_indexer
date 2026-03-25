@@ -3,16 +3,20 @@ disable_existing_loggers: true
 formatters:
   simple:
     format: "[%(asctime)s] [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+  colored:
+    (): indexer.helpers.logging_utils.ColorFormatter
+    format: "[%(asctime)s] [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+    use_colors: true
 handlers:
   console:
     class: logging.StreamHandler
     level: DEBUG
-    formatter: simple
+    formatter: colored
     stream: ext://sys.stdout
   consoledebug:
     class: logging.StreamHandler
     level: DEBUG
-    formatter: simple
+    formatter: colored
     stream: ext://sys.stdout
   file:
     class: logging.handlers.TimedRotatingFileHandler

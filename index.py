@@ -344,8 +344,9 @@ if __name__ == "__main__":
     if not input_args.dry:
         pid_file.write_text(idx_pid)
 
+    success: bool = False
     try:
-        success: bool = main(input_args)
+        success = main(input_args)
     except Exception as e:
         log.critical("Main method raised an exception and could not continue: %s", e)
         traceback.print_exc()

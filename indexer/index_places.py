@@ -35,7 +35,8 @@ def index_places(cfg: dict) -> bool:
                 EXISTS (SELECT 1 FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) OR
                 EXISTS (SELECT 1 FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) OR
                 EXISTS (SELECT 1 FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) OR
-                EXISTS (SELECT 1 FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id)
+                EXISTS (SELECT 1 FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) OR
+                EXISTS (SELECT 1 FROM {dbname}.works_to_places AS wp WHERE wp.place_id = p.id)
                 {id_where_clause};"""  # noqa: S608
     )
 

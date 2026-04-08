@@ -123,6 +123,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                             OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_people ip WHERE ip.person_id = p.id)
                             OR EXISTS (SELECT 1 FROM {dbname}.people_to_publications pubp WHERE pubp.person_id = p.id)
                             OR EXISTS (SELECT 1 FROM {dbname}.publications_to_people ppub WHERE ppub.person_id = p.id)
+                            OR EXISTS (SELECT 1 FROM {dbname}.works_to_people wpub WHERE wpub.person_id = p.id)
                             {id_where_clause};"""  # noqa: S608
 
     curs.execute(sql_statement)

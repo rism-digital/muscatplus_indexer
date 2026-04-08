@@ -130,7 +130,8 @@ WHERE i.siglum IS NOT NULL OR
     OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_institutions AS ii WHERE ii.institution_b_id = i.id)
     OR EXISTS (SELECT 1 FROM {dbname}.people_to_institutions AS pi WHERE pi.institution_id = i.id)
     OR EXISTS (SELECT 1 FROM {dbname}.publications_to_institutions AS bi WHERE bi.institution_id = i.id)
-    OR EXISTS (SELECT 1 FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id))
+    OR EXISTS (SELECT 1 FROM {dbname}.sources_to_institutions AS si WHERE si.institution_id = i.id)
+    OR EXISTS (SELECT 1 FROM {dbname}.works_to_institutions AS wi WHERE wi.institution_id = i.id))
     ) {id_where_clause}
 GROUP BY i.id
 ORDER BY i.id ASC;

@@ -11,9 +11,15 @@ from indexer.helpers.bibliography import (
 )
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.utilities import calculate_boost_value
 from indexer.processors import institution as institution_processor
 
 log = logging.getLogger("muscat_indexer")
+
+# Roughly the number of the total sources in the largest institution
+# so that all other source counts can be scaled to this for boosts.
+# To be reviewed periodically.
+INSTITUTION_UPPER_SOURCE_COUNT = 120_000
 
 with open("profiles/institutions.yml") as pi:
     institution_profile: dict = yaml.full_load(pi)
@@ -71,11 +77,10 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         + related_source_other_ids
         + related_source_other_holding_ids
     )
-    total_count = len(all_related_ids)
+    all_count = len(all_related_ids)
+    total_count = all_count if rism_id != "40009305" else 0
+    source_count_doc_boost = calculate_boost_value(total_count, INSTITUTION_UPPER_SOURCE_COUNT)
 
-    # total_count: int = (
-    #     source_count + holdings_count + other_count + other_holdings_count
-    # )
     people_contribution_count: int = record.get("people_contribution_count", 0)
 
     related_institutions: list = (
@@ -195,7 +200,8 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "source_count_i": source_count if rism_id != "40009305" else 0,
         "holdings_count_i": holdings_count if rism_id != "40009305" else 0,
         "other_count_i": other_count if rism_id != "40009305" else 0,
-        "total_sources_i": total_count if rism_id != "40009305" else 0,
+        "total_sources_i": total_count,
+        "total_sources_boost": source_count_doc_boost,
         "people_contribution_count_i": people_contribution_count,
         "num_sources_s": _get_num_sources_facet(total_count),
         "bibliographic_references_json": bibliographic_references_json,

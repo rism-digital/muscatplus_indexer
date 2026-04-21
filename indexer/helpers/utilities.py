@@ -1,5 +1,7 @@
 import concurrent.futures
 import dataclasses
+import math
+
 import logging
 import re
 import timeit
@@ -1012,3 +1014,10 @@ def convert_work_catalogue_status(work_catalogue_status: int) -> str:
         case _:
             # This should not happen, but just in case...
             return "not-a-work-catalogue"
+
+def calculate_boost_value(count: int, upper_bound: int) -> float:
+    """Calculates a boost field value, normalized to a reasonable upper bound;
+     e.g., for institutions it's the total number of holdings, so the upper bound
+     is roughly what the largest institution has (~117,000), while for people it's
+     the number of related sources, so the person who is related to most (~19,000)"""
+    return 1 + 99 * math.log1p(count) / math.log1p(upper_bound)

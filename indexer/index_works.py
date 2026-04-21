@@ -26,9 +26,7 @@ def _get_works(cfg: dict) -> Generator[dict]:
     sql_query: str = f"""
 SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
     work.created_at AS created, work.updated_at AS updated,
-    (SELECT JSON_ARRAYAGG(DISTINCT
-                JSON_OBJECT('id', CONCAT('source_', ss.id),
-                            'marc_source', ss.marc_source))
+    (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('source_', ss.id))
         FROM {dbname}.sources_to_works AS sw
         LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
         WHERE sw.work_id = work.id AND ss.wf_stage = 1

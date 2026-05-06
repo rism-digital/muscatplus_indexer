@@ -17,16 +17,40 @@ def _get_inventory_items_groups(cfg: dict) -> Generator[dict]:
 
     sql_statement = f"""
         # noinspection SqlSignature @ routine/"JSON_ARRAYAGG"
-        SELECT ii.id AS id, ii.title AS title, ii.marc_source AS marc_source, ii.source_id AS source_id,
-            ii.created_at AS created, ii.updated_at AS updated,
-            (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('relator_code', stos.relator_code,
-                                         'marc_source', sours.marc_source))
-                FROM {dbname}.inventory_items_to_sources AS stos
-                LEFT JOIN {dbname}.sources AS sours ON stos.source_id = sours.id
-                WHERE marc_tag = '787' AND inventory_item_id = ii.id
-            ) AS related_sources
-        FROM {dbname}.inventory_items AS ii"""  # noqa: S608
+        WITH ranked AS (
+    SELECT ii.id,
+           ii.source_id,
+           ROW_NUMBER() OVER (
+               PARTITION BY ii.source_id
+               ORDER BY ii.id
+               ) AS zero_row_num
+    FROM {dbname}.inventory_items AS ii
+    WHERE ii.source_order = 0
+)
+SELECT ii.id AS id,
+       ii.title AS title,
+       ii.marc_source AS marc_source,
+       ii.source_id AS source_id,
+       COALESCE(ranked.zero_row_num, ii.source_order) AS source_order,
+       ii.created_at AS created,
+       ii.updated_at AS updated,
+       (
+           SELECT JSON_ARRAYAGG(
+                          DISTINCT JSON_OBJECT(
+                           'relator_code', stos.relator_code,
+                           'marc_source', sours.marc_source
+                                   )
+                  )
+           FROM {dbname}.inventory_items_to_sources AS stos
+                    LEFT JOIN {dbname}.sources AS sours
+                              ON stos.source_id = sours.id
+           WHERE stos.marc_tag = '787'
+             AND stos.inventory_item_id = ii.id
+       ) AS related_sources
+FROM {dbname}.inventory_items AS ii
+         LEFT JOIN ranked ON ranked.id = ii.id
+ORDER BY ii.source_id ASC,
+         source_order ASC;"""  # noqa: S608
 
     curs.execute(sql_statement)
 

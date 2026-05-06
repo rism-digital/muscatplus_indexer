@@ -37,6 +37,7 @@ def create_inventory_item_index_document(record: dict, cfg: dict) -> list[dict]:
         "source_id": source_id,
         "main_title_s": record.get("title", "[No title]"),
         "related_sources_json": related_sources_json,
+        "source_order_i": record.get("source_order", 0),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

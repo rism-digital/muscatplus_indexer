@@ -17,9 +17,7 @@ log = logging.getLogger("muscat_indexer")
 index_config: dict = yaml.full_load(open("index_config.yml"))  # noqa: SIM115
 
 verovio.enableLog(False)  # noqa
-VEROVIO_OPTIONS = {
-    "xmlIdChecksum": True,
-}
+VEROVIO_OPTIONS = {"xmlIdChecksum": True, "breaks": "none"}
 vrv_tk = verovio.toolkit()
 vrv_tk.setInputFrom("pae")
 vrv_tk.setOptions(VEROVIO_OPTIONS)

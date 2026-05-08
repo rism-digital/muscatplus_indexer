@@ -26,10 +26,10 @@ from indexer.helpers.utilities import (
     get_people_names,
     get_related_sources,
     get_work_node,
+    get_work_record,
     to_solr_multi,
     to_solr_single,
     tokenize_variants,
-    get_work_record,
 )
 from indexer.processors import source as source_processor
 from indexer.records.holding import HoldingIndexDocument, holding_index_document
@@ -260,7 +260,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
     has_digital_objects: bool = record.get("digital_objects") is not None
-    has_inventory_items: bool = record.get("has_inventory_items", False)
+    num_inventory_items: int = record.get("num_inventory_items", 0)
     digital_object_ids: list[str] = (
         orjson.loads(d) if (d := record.get("digital_objects")) else []
     )
@@ -365,7 +365,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         "has_iiif_manifest_b": _get_has_iiif_manifest(all_marc_records),
         "digitization_notes_sm": _get_digitization_notes(all_marc_records),
         "has_digital_objects_b": has_digital_objects,
-        "has_inventory_items_b": has_inventory_items,
+        "has_inventory_items_b": num_inventory_items > 0,
+        "num_inventory_items_i": num_inventory_items,
         "digital_object_ids": digital_object_ids,
         "bibliographic_references_json": bibliographic_references_json,
         "bibliographic_references_sm": bibliographic_reference_titles,

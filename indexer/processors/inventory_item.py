@@ -3,12 +3,12 @@ import pymarc
 from indexer.helpers.utilities import (
     external_resource_data,
     get_catalogue_numbers,
+    get_creator_data,
+    get_creator_name,
     get_related_institutions,
     get_related_people,
     get_titles,
     to_solr_single,
-    get_creator_name,
-    get_creator_data,
 )
 
 

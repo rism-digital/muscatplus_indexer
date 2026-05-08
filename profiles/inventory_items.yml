@@ -159,6 +159,16 @@ additional_titles_json:
   processor: "_get_additional_titles_data"
   json: true
 
+inventory_source_s:
+  field: "773"
+  subfield: "o"
+inventory_section_s:
+  field: "773"
+  subfield: "n"
+inventory_number_s:
+  field: "773"
+  subfield: "g"
+
 identified_source_json:
   processor: "_get_identified_source_data"
   json: true

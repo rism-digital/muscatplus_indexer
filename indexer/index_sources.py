@@ -33,7 +33,7 @@ def _get_sources(cfg: dict) -> Generator[dict]:
         COUNT(DISTINCT h.id) AS child_holdings_count,
         COUNT(DISTINCT hp.id) AS parent_holdings_count,
         (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
-        EXISTS(SELECT 1 FROM {dbname}.inventory_items AS ii WHERE ii.source_id = child.id) AS has_inventory_items,
+        (SELECT COUNT(ii.id) FROM {dbname}.inventory_items AS ii WHERE ii.source_id = child.id) AS num_inventory_items,
         (SELECT JSON_ARRAYAGG(DISTINCT srm2.marc_source)
             FROM {dbname}.sources AS srm2
             WHERE srm2.source_id = child.id

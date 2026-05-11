@@ -108,6 +108,13 @@ general_notes_sm:
   sorted: false
   breaks: true
   links: true
+source_general_notes_smni:
+  field: "500"
+  subfield: "a"
+  multiple: true
+  sorted: false
+  breaks: true
+  links: true
 
 material_source_types_sm:
   field: "593"

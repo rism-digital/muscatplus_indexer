@@ -1,8 +1,8 @@
+import atexit
 import logging
 
 import yaml
 from psycopg_pool import ConnectionPool
-import atexit
 
 log = logging.getLogger("muscat_indexer")
 idx_config: dict = yaml.full_load(open("./index_config.yml"))  # noqa: SIM115

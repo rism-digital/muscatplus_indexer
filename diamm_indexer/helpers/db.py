@@ -1,10 +1,10 @@
+import atexit
 import logging
 
 import orjson
 import yaml
 from psycopg.types.json import set_json_loads
 from psycopg_pool import ConnectionPool
-import atexit
 
 log = logging.getLogger("muscat_indexer")
 idx_config: dict = yaml.full_load(open("./index_config.yml"))  # noqa: SIM115

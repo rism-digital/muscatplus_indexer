@@ -79,17 +79,26 @@ def to_solr_single(
     """
     Extracts a single value from the MARC record. Always takes the first instance of the
     tag, and the first instance of the subfield within that tag.
-
-    Uses to_solr_multi under the hood; see the comments there to know how this works.
     """
-    values: list[str] | None = to_solr_multi(
-        record, field, subfield, ungrouped, sortout
-    )
-
-    if not values:
+    if not record:
         return None
 
-    return values[0]
+    fields: list[pymarc.Field] = record.get_fields(field)
+    if not fields:
+        return None
+
+    if subfield is None:
+        return fields[0].value()
+
+    for fl in fields:
+        if not _field_matches_grouping(fl, ungrouped):
+            continue
+
+        for subf in fl.get_subfields(subfield):
+            if subf:
+                return subf.strip()
+
+    return None
 
 
 def to_solr_single_required(
@@ -100,15 +109,11 @@ def to_solr_single_required(
     sortout: bool | None = True,
 ) -> str:
     """
-    Same operations as the to_solr_single, but raises an exception if the value is not found.
-
-    Uses to_solr_multi under the hood; see the comments there to know how this works.
+    Same operations as to_solr_single, but raises an exception if the value is not found.
     """
-    values: list[str] | None = to_solr_multi(
-        record, field, subfield, ungrouped, sortout
-    )
+    value: str | None = to_solr_single(record, field, subfield, ungrouped, sortout)
 
-    if not values:
+    if value is None:
         record_id: str = record["001"].value()
         log.error(
             "%s requires a value, but one was not found for %s.", field, record_id
@@ -117,10 +122,10 @@ def to_solr_single_required(
             f"{field} requires a value, but one was not found for {record_id}."
         )
 
-    return values[0]
+    return value
 
 
-def _field_matches_grouping(fl: pymarc.Field, grouped: bool) -> bool:
+def _field_matches_grouping(fl: pymarc.Field, grouped: bool | None) -> bool:
     has_8: bool = fl.get("8") is not None
     return (
         grouped is None
@@ -155,10 +160,12 @@ def to_solr_multi(
     Default is "None"
 
     """
-    if not record or field not in record:
+    if not record:
         return None
 
     fields: list[pymarc.Field] = record.get_fields(field)
+    if not fields:
+        return None
 
     # Fast path: whole-field values
     if subfield is None:

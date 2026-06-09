@@ -18,7 +18,11 @@ log = logging.getLogger("muscat_indexer")
 
 
 def process_marc_profile(
-    cfg: dict, doc_id: str, marc: pymarc.Record, processors: types.ModuleType
+    cfg: dict,
+    doc_id: str,
+    marc: pymarc.Record,
+    processors: types.ModuleType,
+    dbdata: dict | None = None,
 ) -> dict:
     solr_document: dict = {}
 
@@ -35,6 +39,7 @@ def process_marc_profile(
         validator_fn_name: str | None = field_config.get("validator")
         value_from: str | None = field_config.get("value_from")
         processor: str | None = field_config.get("processor")
+        additional_data: dict | None = field_config.get("additional_data")
 
         if "value" in field_config:
             # If we have a static value, simply set the field to the static value
@@ -65,6 +70,11 @@ def process_marc_profile(
                 )
                 continue
 
+            kwargs: dict = {}
+            if dbdata is not None and additional_data is not None:
+                addn = {k: dbdata[r] for k, r in additional_data.items()}
+                kwargs.update(addn)
+
             processor_fn: Callable = getattr(processors, processor)
 
             if value_from:
@@ -73,7 +83,7 @@ def process_marc_profile(
                         "The key %s was previously computed and is now available.",
                         value_from,
                     )
-                    field_result = processor_fn(input_value)
+                    field_result = processor_fn(input_value, **kwargs)
                 else:
                     log.debug(
                         "The key %s is not in the Solr document, so the previously computed value is not available.",
@@ -81,7 +91,7 @@ def process_marc_profile(
                     )
                     continue
             else:
-                field_result = processor_fn(marc)
+                field_result = processor_fn(marc, **kwargs)
 
             if field_result is None:
                 if required:

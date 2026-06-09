@@ -387,7 +387,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     # Process the MARC record and profile configuration and add additional fields
     additional_fields: dict = process_marc_profile(
-        source_profile, source_id, marc_record, source_processor
+        source_profile, source_id, marc_record, source_processor, record
     )
     source_core.update(additional_fields)
 

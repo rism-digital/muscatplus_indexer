@@ -6,13 +6,14 @@ import pymarc
 import yaml
 
 from indexer.helpers.bibliography import (
-    get_bibliographic_references_json,
     format_reference,
+    get_bibliographic_references_json,
 )
 from indexer.helpers.marc import create_marc
 from indexer.helpers.profiles import process_marc_profile
 from indexer.helpers.utilities import (
-    get_work_node, calculate_boost_value,
+    calculate_boost_value,
+    get_work_node,
 )
 from indexer.processors import person as person_processor
 
@@ -22,6 +23,7 @@ person_profile: dict = yaml.full_load(open("profiles/people.yml"))  # noqa: SIM1
 # The upper range of the number of sources the most "popular" person is attached to
 # which sets the range for boosting. At present, this is Mr. Mozart.
 PERSON_UPPER_SOURCE_COUNT = 25_000
+
 
 class PersonIndexDocument(TypedDict):
     id: str
@@ -92,23 +94,23 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
             orjson.dumps(all_work_nodes).decode("utf-8") if all_work_nodes else None
         )
 
-    related: list = []
-    related_institutions: list = (
-        orjson.loads(ii) if (ii := record.get("related_institutions")) else []
-    )
-    for i, reli in enumerate(related_institutions, 1):
-        institution_record: dict = {
-            "id": f"{i}",
-            "institution_id": f"{reli['institution_id']}",
-            "type": "institution",
-            "name": f"{reli['name']}",
-            "place": f"{reli['place']}",
-            "siglum": reli["siglum"],
-            "relationship": "xi",
-            "this_id": person_id,
-            "this_type": "person",
-        }
-        related.append({k: v for k, v in institution_record.items() if v})
+    # related: list = []
+    # related_institutions: list = (
+    #     orjson.loads(ii) if (ii := record.get("related_institutions")) else []
+    # )
+    # for i, reli in enumerate(related_institutions, 1):
+    #     institution_record: dict = {
+    #         "id": f"{i}",
+    #         "institution_id": f"{reli['institution_id']}",
+    #         "type": "institution",
+    #         "name": f"{reli['name']}",
+    #         "place": f"{reli['place']}",
+    #         "siglum": reli["siglum"],
+    #         "relationship": "xi",
+    #         "this_id": person_id,
+    #         "this_type": "person",
+    #     }
+    #     related.append({k: v for k, v in institution_record.items() if v})
 
     related_places_db: list = (
         orjson.loads(ii) if (ii := record.get("related_places")) else []
@@ -144,13 +146,15 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
         "source_count_i": total_count,
         # "holdings_count_i": holdings_count if rism_id != "30004985" else 0,
         "total_sources_i": total_count,
-        "total_sources_boost": calculate_boost_value(total_count, PERSON_UPPER_SOURCE_COUNT),
+        "total_sources_boost": calculate_boost_value(
+            total_count, PERSON_UPPER_SOURCE_COUNT
+        ),
         "work_node_ids": work_node_ids,
         "work_nodes_json": work_nodes_json,
         "works_catalogue_json": works_catalogue_json,
-        "related_institutions_json": (
-            orjson.dumps(related).decode("utf-8") if related else None
-        ),
+        # "related_institutions_json": (
+        #     orjson.dumps(related).decode("utf-8") if related else None
+        # ),
         "related_places_json": (
             orjson.dumps(related_places).decode("utf-8") if related_places else None
         ),
@@ -160,7 +164,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     }
 
     additional_fields: dict = process_marc_profile(
-        person_profile, person_id, marc_record, person_processor
+        person_profile, person_id, marc_record, person_processor, dbdata=record
     )
     core_person.update(additional_fields)
 

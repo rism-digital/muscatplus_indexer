@@ -54,6 +54,16 @@ def _get_sources(cfg: dict) -> Generator[dict]:
             WHERE ssi.marc_tag = '852' AND child.id = ssi.source_id
         ) AS ms_holding_institutions,
         (SELECT JSON_ARRAYAGG(DISTINCT
+                             JSON_OBJECT('id', CONCAT('institution_', ins.id),
+                                        'name', ins.corporate_name,
+                                        'relator_code', ssi.relator_code,
+                                        'siglum', ins.siglum,
+                                        'place', ins.place))
+            FROM {dbname}.sources_to_institutions ssi
+            LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id
+            WHERE ssi.marc_tag = '710' AND child.id = ssi.source_id
+        ) AS related_institutions,
+        (SELECT JSON_ARRAYAGG(DISTINCT
                              JSON_OBJECT('relator_code', stos.relator_code,
                                          'marc_source', sours.marc_source))
             FROM {dbname}.sources_to_sources AS stos

@@ -2,6 +2,7 @@ import itertools
 import logging
 from collections import defaultdict
 
+import orjson
 import pymarc
 
 from indexer.helpers.datelib import process_date_statements
@@ -257,12 +258,15 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
     return people or None
 
 
-def _get_related_institutions_data(record: pymarc.Record) -> list | None:
+def _get_related_institutions_data(
+    record: pymarc.Record, related: str | None
+) -> list | None:
     if "710" not in record:
         return None
     source_id: str = f"source_{record['001'].value()}"
+    additional_info: list[dict] = orjson.loads(related) if related else []
     institutions = get_related_institutions(
-        record, source_id, "source", fields=("710",)
+        record, source_id, "source", fields=("710",), additional_info=additional_info
     )
 
     return institutions or None

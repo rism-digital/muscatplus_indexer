@@ -2,10 +2,12 @@ import logging
 from collections import defaultdict
 
 import pymarc
+from orjson import orjson
 
 from indexer.helpers.datelib import process_date_statements
 from indexer.helpers.utilities import (
     external_resource_data,
+    get_related_institutions,
     get_related_people,
     to_solr_multi,
     tokenize_variants,
@@ -85,6 +87,19 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
     )
 
     return people
+
+
+def _get_related_institutions_data(
+    record: pymarc.Record, related: str | None
+) -> list | None:
+    if "510" not in record:
+        return None
+    person_id: str = f"person_{record['001'].value()}"
+    additional_info: list[dict] = orjson.loads(related) if related else []
+    institutions = get_related_institutions(
+        record, person_id, "person", fields=("510",), additional_info=additional_info
+    )
+    return institutions or None
 
 
 def _get_external_resources_data(record: pymarc.Record) -> list | None:

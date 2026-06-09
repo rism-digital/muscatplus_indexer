@@ -38,6 +38,18 @@
 #  If a processor is given then all responsibility for the values is delegated
 #  to that function. We will only check that the value returned from that function
 #  is not `None` if the `required` parameter is set.
+#  Processor functions can define an additional set of arguments using the `additional_data` key.
+#  This is used to map an argument name in the processor function to a specific key on the full database return.
+#  For example:
+#
+#    processor: "_get_foos"
+#    additional_data:
+#       bars: "db_bar"
+#
+#  This would look for the key "db_bar" in the database record that is being processed, and pass it to the
+#   `_get_foos` function, e.g., `def _get_foos(record: pymarc.Record, bars=record["db_bar"])`. You can
+#  pass additional arguments that will be passed in turn the same way. No guarantee is made on the shape
+#  of the incoming data; it should be handled appropriately in the processor function.
 #
 # For ease of use fields should be kept in numeric order by MARC tag!
 #
@@ -432,6 +444,8 @@ related_institutions_sm:
   multiple: true
 related_institutions_json:
   processor: "_get_related_institutions_data"
+  additional_data:
+    related: "related_institutions"
   json: true
 
 additional_titles_sm:

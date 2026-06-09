@@ -75,7 +75,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                       AND pub.work_catalogue IN (2, 3)
                                ) AS work_catalogues,
                                (SELECT JSON_ARRAYAGG(DISTINCT
-                                                     JSON_OBJECT('institution_id', CONCAT('institution_', reli.id),
+                                                      JSON_OBJECT('id', CONCAT('institution_', reli.id),
                                                                   'siglum', reli.siglum,
                                                                   'name', reli.corporate_name,
                                                                   'place', reli.place))

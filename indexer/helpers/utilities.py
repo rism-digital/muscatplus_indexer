@@ -1,8 +1,7 @@
 import concurrent.futures
 import dataclasses
-import math
-
 import logging
+import math
 import re
 import timeit
 from collections import OrderedDict
@@ -417,7 +416,7 @@ def get_related_places(
     ]
 
 
-class InstitutionRelationshipIndexDocument(TypedDict):
+class InstitutionRelationshipIndexDocument(TypedDict, total=False):
     id: str
     this_id: str
     this_type: str
@@ -428,10 +427,15 @@ class InstitutionRelationshipIndexDocument(TypedDict):
     institution_id: str | None
     relationship: str | None
     qualifier: str | None
+    siglum: str | None
 
 
 def related_institution(
-    field: pymarc.Field, this_id: str, this_type: str, relationship_number: int
+    field: pymarc.Field,
+    this_id: str,
+    this_type: str,
+    relationship_number: int,
+    additional_info: list[dict] | None = None,
 ) -> dict[str, object]:
     relationship_code: str
     if "4" in field:
@@ -446,6 +450,8 @@ def related_institution(
             "A name was not found for institution %s on %s", field.get("0"), this_id
         )
 
+    institution_id: str = f"institution_{field['0']}"
+
     d: InstitutionRelationshipIndexDocument = {
         "id": f"{relationship_number}",
         "type": "institution",
@@ -454,7 +460,7 @@ def related_institution(
         "name": field.get("a", "[Unknown name]"),
         "place": field.get("c"),
         "department": field.get("d"),
-        "institution_id": f"institution_{field['0']}",
+        "institution_id": institution_id,
         "relationship": relationship_code,
         "qualifier": field.get("g"),
     }
@@ -466,6 +472,12 @@ def related_institution(
             d.get("name"),
         )
 
+    if additional_info:
+        for addn in additional_info:
+            if addn["id"] == institution_id:
+                # will set to None if not in the institution; will be filtered out in the returned dict.
+                d["siglum"] = addn.get("siglum")
+
     return {k: v for k, v in d.items() if v}
 
 
@@ -475,6 +487,7 @@ def get_related_institutions(
     record_type: str,
     fields: tuple[str, ...] = ("510", "710"),
     ungrouped: bool = False,
+    additional_info: list[dict] | None = None,
 ) -> list[dict[str, object]] | None:
     # Due to inconsistencies in authority records, these relationships are held in both 510 and 710 fields.
     institutions: list = record.get_fields(*fields)
@@ -482,7 +495,7 @@ def get_related_institutions(
         return None
 
     return [
-        related_institution(p, record_id, record_type, i)
+        related_institution(p, record_id, record_type, i, additional_info)
         for i, p in enumerate(institutions, 1)
         if p and p.get("0") and (not ungrouped or "8" not in p)
     ]
@@ -1015,9 +1028,10 @@ def convert_work_catalogue_status(work_catalogue_status: int) -> str:
             # This should not happen, but just in case...
             return "not-a-work-catalogue"
 
+
 def calculate_boost_value(count: int, upper_bound: int) -> float:
     """Calculates a boost field value, normalized to a reasonable upper bound;
-     e.g., for institutions it's the total number of holdings, so the upper bound
-     is roughly what the largest institution has (~117,000), while for people it's
-     the number of related sources, so the person who is related to most (~19,000)"""
+    e.g., for institutions it's the total number of holdings, so the upper bound
+    is roughly what the largest institution has (~117,000), while for people it's
+    the number of related sources, so the person who is related to most (~19,000)"""
     return 1 + 99 * math.log1p(count) / math.log1p(upper_bound)

@@ -8,6 +8,7 @@ from indexer.helpers.identifiers import (
     country_code_from_siglum,
 )
 from indexer.helpers.utilities import (
+    get_external_ids,
     external_resource_data,
     get_related_institutions,
     get_related_people,
@@ -18,16 +19,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_external_ids(record: pymarc.Record) -> list | None:
-    """Converts DNB and VIAF Ids to a namespaced identifier suitable for expansion later."""
-    if "024" not in record:
-        return None
-    ids: list[pymarc.Field] = record.get_fields("024")
-
-    return [
-        f"{idf['2'].lower()}:{idf['a']}"
-        for idf in ids
-        if (idf and idf.get("2") and idf.get("a"))
-    ]
+    return get_external_ids(record)
 
 
 def _get_country_code(record: pymarc.Record) -> str | None:

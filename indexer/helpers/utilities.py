@@ -218,6 +218,40 @@ def to_solr_multi_required(
     return ret
 
 
+def get_external_ids(record: pymarc.Record) -> list[str] | None:
+    """Extract namespaced identifiers from 024 fields."""
+    if "024" not in record:
+        return None
+
+    external_ids: list[str] = []
+
+    for field in record.get_fields("024"):
+        namespace = field.get("2")
+        identifier = field.get("a")
+        if not namespace or not identifier:
+            continue
+
+        if " " in identifier:
+            record_id: str = record["001"].value()
+            log.warning(
+                "024 $a contains a space for %s: %s",
+                record_id,
+                identifier,
+            )
+
+        external_ids.append(f"{namespace.lower()}:{identifier}")
+
+    return external_ids or None
+
+
+def _get_first_external_id(record: pymarc.Record) -> str | None:
+    external_ids = get_external_ids(record)
+    if not external_ids:
+        return None
+
+    return external_ids[0]
+
+
 def clean_multivalued(fields: dict, field_name: str) -> list[str] | None:
     if field_name not in fields or fields[field_name] is None:
         return None
@@ -875,11 +909,8 @@ def get_work_node(
         log.warning("Work Node without an 024. Skipping: %s", work_node_id)
         return None
 
-    link_field: pymarc.Field = record["024"]
-
-    if link_field and "2" in link_field and "a" in link_field:
-        ident: str = f"{link_field['2'].lower()}:{link_field['a']}"
-    else:
+    ident = _get_first_external_id(record)
+    if ident is None:
         log.warning(
             "Work Node with 024 but without $2 or $a. Skipping: %s", work_node_id
         )

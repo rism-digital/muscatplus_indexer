@@ -1,0 +1,8 @@
+---
+
+external_ids:  # 024
+  processor: "_get_external_ids"
+
+name_s:
+  field: "151"
+  subfield: "a"

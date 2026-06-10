@@ -1,14 +1,16 @@
 import logging
+from collections import deque
+from collections.abc import Generator
 
 from indexer.helpers.db import mysql_pool
 from indexer.helpers.solr import submit_to_solr
-from indexer.records.place import PlaceIndexDocument, create_place_index_document
+from indexer.helpers.utilities import parallelise
+from indexer.records.place import create_place_index_document
 
 log = logging.getLogger("muscat_indexer")
 
 
-def index_places(cfg: dict) -> bool:
-    log.info("Indexing Places")
+def _get_place_groups(cfg: dict) -> Generator[dict]:
     conn = mysql_pool.connection()
     curs = conn.cursor()
     dbname: str = cfg["mysql"]["database"]
@@ -17,37 +19,52 @@ def index_places(cfg: dict) -> bool:
     if "id" in cfg:
         id_where_clause = f"AND p.id = {cfg['id']}"
 
-    curs.execute(
-        f"""SELECT
-                p.id AS id,
-                p.name AS name,
-                p.country AS country,
-                p.district AS district,
-                p.marc_source AS marc_source,
-                p.notes AS notes,
-                p.alternate_terms AS alternate_terms,
-                (SELECT COUNT(DISTINCT(sp.source_id)) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) AS sources_count,
-                (SELECT COUNT(DISTINCT(pp.person_id)) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) AS people_count,
-                (SELECT COUNT(DISTINCT(ip.institution_id)) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) AS institutions_count,
-                (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
-            FROM {dbname}.places AS p
-            WHERE
-                EXISTS (SELECT 1 FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) OR
-                EXISTS (SELECT 1 FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) OR
-                EXISTS (SELECT 1 FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) OR
-                EXISTS (SELECT 1 FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) OR
-                EXISTS (SELECT 1 FROM {dbname}.works_to_places AS wp WHERE wp.place_id = p.id)
-                {id_where_clause};"""  # noqa: S608
-    )
+    sql_statement = f"""SELECT
+                    p.id AS id,
+                    p.name AS name,
+                    p.country AS country,
+                    p.district AS district,
+                    p.marc_source AS marc_source,
+                    p.notes AS notes,
+                    p.alternate_terms AS alternate_terms,
+                    (SELECT COUNT(DISTINCT(sp.source_id)) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) AS sources_count,
+                    (SELECT COUNT(DISTINCT(pp.person_id)) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) AS people_count,
+                    (SELECT COUNT(DISTINCT(ip.institution_id)) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) AS institutions_count,
+                    (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
+                FROM {dbname}.places AS p
+                WHERE
+                    EXISTS (SELECT 1 FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) OR
+                    EXISTS (SELECT 1 FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) OR
+                    EXISTS (SELECT 1 FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) OR
+                    EXISTS (SELECT 1 FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) OR
+                    EXISTS (SELECT 1 FROM {dbname}.works_to_places AS wp WHERE wp.place_id = p.id)
+                    {id_where_clause};"""  # noqa: S608
 
-    all_places: list[dict] = curs._cursor.fetchall()
+    curs.execute(sql_statement)
 
-    records_to_index: list = []
-    for place in all_places:
-        doc: PlaceIndexDocument = create_place_index_document(place, cfg)
+    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
+        yield rows
+
+    curs.close()
+    conn.close()
+
+
+def index_places(cfg: dict) -> bool:
+    log.info("Indexing Places")
+    place_groups = _get_place_groups(cfg)
+    parallelise(place_groups, index_place_groups, cfg)
+
+    return True
+
+
+def index_place_groups(places: list, cfg: dict) -> bool:
+    records_to_index: deque = deque()
+
+    for place in places:
+        doc: dict = create_place_index_document(place, cfg)
         records_to_index.append(doc)
 
-    check: bool = True if cfg["dry"] else submit_to_solr(records_to_index, cfg)
+    check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)
 
     if not check:
         log.error("There was an error submitting places to Solr")

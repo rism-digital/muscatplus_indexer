@@ -6,11 +6,12 @@ from indexer.helpers.bibliography import (
     get_bibliographic_references_json,
 )
 from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.processors import work as work_processor
 from indexer.records.incipits import get_work_incipits
 
-work_profile: dict = yaml.full_load(open("profiles/works.yml"))  # noqa: SIM115
+raw_work_profile: dict = yaml.full_load(open("profiles/works.yml"))  # noqa: SIM115
+work_profile = compile_marc_profile(raw_work_profile, work_processor)
 
 
 def create_work_index_documents(record: dict, cfg: dict) -> list:
@@ -69,7 +70,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     }
 
     additional_fields: dict = process_marc_profile(
-        work_profile, work_id, marc_record, work_processor
+        work_profile, work_id, marc_record
     )
     work_core.update(additional_fields)
 

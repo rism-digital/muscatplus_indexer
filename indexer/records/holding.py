@@ -8,7 +8,7 @@ import yaml
 from indexer.helpers.bibliography import get_bibliographic_references_json
 from indexer.helpers.identifiers import get_record_type, get_source_type
 from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.helpers.utilities import (
     get_content_types,
     get_creator_name,
@@ -19,8 +19,10 @@ from indexer.helpers.utilities import (
 from indexer.processors import holding as holding_processor
 
 log = logging.getLogger("muscat_indexer")
-holding_profile: dict = yaml.full_load(open("profiles/holdings.yml"))  # noqa: SIM115
-mss_holding_profile: dict = yaml.full_load(open("profiles/holdingsmss.yml"))  # noqa: SIM115
+raw_holding_profile: dict = yaml.full_load(open("profiles/holdings.yml"))  # noqa: SIM115
+holding_profile = compile_marc_profile(raw_holding_profile, holding_processor)
+raw_mss_holding_profile: dict = yaml.full_load(open("profiles/holdingsmss.yml"))  # noqa: SIM115
+mss_holding_profile = compile_marc_profile(raw_mss_holding_profile, holding_processor)
 
 
 class HoldingIndexDocument(TypedDict):
@@ -223,11 +225,11 @@ def holding_index_document(
 
     if mss_profile:
         additional_fields = process_marc_profile(
-            mss_holding_profile, holding_id, marc_record, holding_processor
+            mss_holding_profile, holding_id, marc_record
         )
     else:
         additional_fields = process_marc_profile(
-            holding_profile, holding_id, marc_record, holding_processor
+            holding_profile, holding_id, marc_record
         )
 
     holding_core.update(additional_fields)

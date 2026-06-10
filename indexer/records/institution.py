@@ -10,7 +10,7 @@ from indexer.helpers.bibliography import (
     get_bibliographic_references_json,
 )
 from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.helpers.utilities import calculate_boost_value
 from indexer.processors import institution as institution_processor
 
@@ -22,7 +22,10 @@ log = logging.getLogger("muscat_indexer")
 INSTITUTION_UPPER_SOURCE_COUNT = 120_000
 
 with open("profiles/institutions.yml") as pi:
-    institution_profile: dict = yaml.full_load(pi)
+    raw_institution_profile: dict = yaml.full_load(pi)
+institution_profile = compile_marc_profile(
+    raw_institution_profile, institution_processor
+)
 
 
 class InstitutionIndexDocument(TypedDict):
@@ -220,7 +223,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     }
 
     additional_fields: dict = process_marc_profile(
-        institution_profile, institution_id, marc_record, institution_processor
+        institution_profile, institution_id, marc_record
     )
     institution_core.update(additional_fields)
 

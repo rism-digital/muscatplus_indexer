@@ -40,13 +40,12 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
     return process_date_statements(date_statements, record_id)
 
 
-def _get_earliest_latest_dates_dtr(record: pymarc.Record) -> str | None:
-    date_range: list[int] | None = _get_earliest_latest_dates(record)
-    if not date_range:
+def _get_earliest_latest_dates_dtr(previously_computed: list[int] | None) -> str | None:
+    if not previously_computed:
         return None
 
-    first = date_range[0]
-    last = date_range[1]
+    first = previously_computed[0]
+    last = previously_computed[1]
 
     return f"[{first} TO {last}]"
 

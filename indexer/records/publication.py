@@ -3,11 +3,14 @@ import pymarc
 import yaml
 
 from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.helpers.utilities import convert_work_catalogue_status, get_person_name
 from indexer.processors import publication as publication_processor
 
-publications_profile: dict = yaml.full_load(open("profiles/publications.yml"))  # noqa: SIM115
+raw_publications_profile: dict = yaml.full_load(open("profiles/publications.yml"))  # noqa: SIM115
+publications_profile = compile_marc_profile(
+    raw_publications_profile, publication_processor
+)
 
 
 def create_publication_index_document(record: dict, cfg: dict) -> dict:
@@ -40,7 +43,7 @@ def create_publication_index_document(record: dict, cfg: dict) -> dict:
     }
 
     additional_fields: dict = process_marc_profile(
-        publications_profile, publication_id, marc_record, publication_processor
+        publications_profile, publication_id, marc_record
     )
 
     catalogue_core.update(additional_fields)

@@ -17,7 +17,7 @@ from indexer.helpers.identifiers import (
     get_source_type,
 )
 from indexer.helpers.marc import create_marc, create_marc_list
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.helpers.utilities import (
     get_content_types,
     get_creator_name,
@@ -40,7 +40,8 @@ with open("index_config.yml") as idx_cf:
     index_config: dict = yaml.full_load(idx_cf)
 
 with open("profiles/sources.yml") as source_pf:
-    source_profile: dict = yaml.full_load(source_pf)
+    raw_source_profile: dict = yaml.full_load(source_pf)
+source_profile = compile_marc_profile(raw_source_profile, source_processor)
 
 
 def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
@@ -387,7 +388,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     # Process the MARC record and profile configuration and add additional fields
     additional_fields: dict = process_marc_profile(
-        source_profile, source_id, marc_record, source_processor, record
+        source_profile, source_id, marc_record, record
     )
     source_core.update(additional_fields)
 

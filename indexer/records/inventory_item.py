@@ -3,13 +3,16 @@ import pymarc
 import yaml
 
 from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.helpers.utilities import get_related_sources
 from indexer.processors import inventory_item as inventory_item_processor
 from indexer.records.incipits import get_inventory_item_incipits
 
 with open("profiles/inventory_items.yml") as pi:
-    inventory_items_profile: dict = yaml.full_load(pi)
+    raw_inventory_items_profile: dict = yaml.full_load(pi)
+inventory_items_profile = compile_marc_profile(
+    raw_inventory_items_profile, inventory_item_processor
+)
 
 
 def create_inventory_item_index_document(record: dict, cfg: dict) -> list[dict]:
@@ -43,7 +46,7 @@ def create_inventory_item_index_document(record: dict, cfg: dict) -> list[dict]:
     }
 
     additional_fields: dict = process_marc_profile(
-        inventory_items_profile, item_id, marc_record, inventory_item_processor
+        inventory_items_profile, item_id, marc_record
     )
     inventory_item.update(additional_fields)
 

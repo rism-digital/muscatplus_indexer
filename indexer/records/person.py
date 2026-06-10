@@ -10,7 +10,7 @@ from indexer.helpers.bibliography import (
     get_bibliographic_references_json,
 )
 from indexer.helpers.marc import create_marc
-from indexer.helpers.profiles import process_marc_profile
+from indexer.helpers.profiles import compile_marc_profile, process_marc_profile
 from indexer.helpers.utilities import (
     calculate_boost_value,
     get_work_node,
@@ -18,7 +18,8 @@ from indexer.helpers.utilities import (
 from indexer.processors import person as person_processor
 
 log = logging.getLogger("muscat_indexer")
-person_profile: dict = yaml.full_load(open("profiles/people.yml"))  # noqa: SIM115
+raw_person_profile: dict = yaml.full_load(open("profiles/people.yml"))  # noqa: SIM115
+person_profile = compile_marc_profile(raw_person_profile, person_processor)
 
 # The upper range of the number of sources the most "popular" person is attached to
 # which sets the range for boosting. At present, this is Mr. Mozart.
@@ -164,7 +165,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     }
 
     additional_fields: dict = process_marc_profile(
-        person_profile, person_id, marc_record, person_processor, dbdata=record
+        person_profile, person_id, marc_record, dbdata=record
     )
     core_person.update(additional_fields)
 

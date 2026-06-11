@@ -234,10 +234,11 @@ def get_external_ids(record: pymarc.Record) -> list[str] | None:
         if " " in identifier:
             record_id: str = record["001"].value()
             log.warning(
-                "024 $a contains a space for %s: %s",
+                "024 $a contains a space for %s: %s. This should be fixed, but normalizing with no spaces.",
                 record_id,
                 identifier,
             )
+            identifier = identifier.replace(" ", "")
 
         external_ids.append(f"{namespace.lower()}:{identifier}")
 

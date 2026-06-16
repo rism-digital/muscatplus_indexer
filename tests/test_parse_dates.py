@@ -53,6 +53,14 @@ def test_open_right_death_marker():
     assert parse_date_statement("1632p+") == (1632, 1682)
 
 
+def test_copied_between_range():
+    assert parse_date_statement("[copied between 1790 and 1810]") == (1790, 1810)
+
+
+def test_parenthetical_century_appendage_on_range():
+    assert parse_date_statement("1750-1799 (18.2d)") == (1750, 1799)
+
+
 def test_multi_statement_aggregation():
     statements = ["1811a", "1850"]
     assert process_date_statements(statements, "person_1") == [1761, 1850]

@@ -6,8 +6,16 @@ from psycopg.rows import dict_row
 
 from diamm_indexer.helpers.db import postgres_pool
 from diamm_indexer.records.organization import create_organization_index_document
-from indexer.helpers.solr import record_indexer, submit_to_solr
-from indexer.helpers.utilities import parallelise, update_rism_document
+from indexer.helpers.identifiers import transform_rism_id
+from indexer.helpers.solr import (
+    get_existing_document_ids,
+    record_indexer,
+    submit_to_solr,
+)
+from indexer.helpers.utilities import (
+    build_rism_update_document,
+    parallelise,
+)
 
 log = logging.getLogger("muscat_indexer")
 
@@ -124,10 +132,35 @@ def update_archives(cfg: dict) -> bool:
 def update_institution_records_with_diamm_info(archives: list, cfg: dict) -> bool:
     log.info("Updating RISM institution records with DIAMM info")
     records = []
+    records_by_document_id: dict[str, tuple[dict, str]] = {}
 
     for record in archives:
-        label: str = record.get("name")
-        doc = update_rism_document(record, "diamm", "institution", label, cfg)
+        if document_id := transform_rism_id(record.get("rism_id")):
+            label: str = record.get("name")
+            records_by_document_id[document_id] = (record, label)
+
+    existing_document_ids: set[str] = get_existing_document_ids(
+        list(records_by_document_id), cfg
+    )
+
+    for document_id, (record, label) in records_by_document_id.items():
+        if document_id not in existing_document_ids:
+            log.error(
+                "%s %s does not exist in RISM (%s ID: %s)",
+                "institution",
+                document_id,
+                "diamm",
+                record["id"],
+            )
+            continue
+
+        doc = build_rism_update_document(
+            record,
+            "diamm",
+            "institution",
+            label,
+            document_id=document_id,
+        )
         if not doc:
             continue
         records.append(doc)

@@ -872,6 +872,24 @@ def update_rism_document(
         )
         return None
 
+    return build_rism_update_document(
+        record, project, record_type, label, additional_fields, document_id
+    )
+
+
+def build_rism_update_document(
+    record,
+    project: str,
+    record_type: str,
+    label: str,
+    additional_fields: dict | None = None,
+    document_id: str | None = None,
+) -> dict | None:
+    if document_id is None:
+        document_id = transform_rism_id(record.get("rism_id"))
+    if not document_id:
+        return None
+
     project_id = record["id"]
     entry: dict = {
         "id": f"{project_id}",
@@ -897,6 +915,7 @@ def update_rism_document(
         update_document.update(
             {"source_count_i": {"inc": amount}, "total_sources_i": {"inc": amount}}
         )
+
     return update_document
 
 

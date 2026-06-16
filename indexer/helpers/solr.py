@@ -182,6 +182,39 @@ def exists(document_id: str, cfg: dict) -> bool:
     return False
 
 
+def get_existing_document_ids(document_ids: list[str], cfg: dict) -> set[str]:
+    if not document_ids:
+        return set()
+
+    solr_address = cfg["solr"]["server"]
+    solr_core = cfg["indexing_core"]
+    solr_idx_server: str = f"{solr_address}/{solr_core}"
+    existing_ids: set[str] = set()
+    chunk_size = 100
+
+    with SyncClientBuilder().build() as client:
+        for i in range(0, len(document_ids), chunk_size):
+            chunk = document_ids[i : i + chunk_size]
+            ids = ",".join(chunk)
+            res = (
+                client.post(f"{solr_idx_server}/get")
+                .headers({"Content-Type": "application/x-www-form-urlencoded"})
+                .body_text(f"ids={ids}&fl=id")
+                .build()
+                .send()
+            )
+
+            if 200 <= res.status < 400:
+                docs = res.json().get("response", {}).get("docs", [])
+                existing_ids.update(doc["id"] for doc in docs if "id" in doc)
+                continue
+
+            log.error("Error checking Solr in batch. %s: %s", res.status, res.text())
+            return set()
+
+    return existing_ids
+
+
 def record_indexer(records: list, converter: Callable, cfg: dict) -> bool:
     idx_records = []
 

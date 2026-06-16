@@ -2,7 +2,7 @@ import logging
 
 import pymarc
 
-from indexer.helpers.datelib import process_edtf_date
+from indexer.helpers.parse_dates import process_edtf_date
 from indexer.helpers.utilities import (
     get_external_ids,
     external_resource_data,

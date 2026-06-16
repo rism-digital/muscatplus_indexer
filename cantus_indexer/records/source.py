@@ -3,7 +3,7 @@ import re
 
 import orjson
 
-from indexer.helpers.datelib import parse_date_statement
+from indexer.helpers.parse_dates import parse_date_statement
 from indexer.helpers.identifiers import (
     COUNTRY_CODE_MAPPING,
     ProjectIdentifiers,

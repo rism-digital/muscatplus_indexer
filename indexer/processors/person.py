@@ -4,7 +4,7 @@ from collections import defaultdict
 import pymarc
 from orjson import orjson
 
-from indexer.helpers.datelib import process_date_statements
+from indexer.helpers.parse_dates import process_date_statements
 from indexer.helpers.utilities import (
     get_external_ids,
     external_resource_data,

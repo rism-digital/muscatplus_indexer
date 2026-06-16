@@ -5,7 +5,7 @@ from collections import defaultdict
 import orjson
 import pymarc
 
-from indexer.helpers.datelib import process_date_statements
+from indexer.helpers.parse_dates import process_date_statements
 from indexer.helpers.identifiers import country_code_from_siglum
 from indexer.helpers.utilities import (
     external_resource_data,

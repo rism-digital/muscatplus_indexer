@@ -7,7 +7,7 @@ requires-python = ">=3.13,<4.0"
 dependencies = [
     "dbutils (>=3.0,<4.0)",
     "pyyaml (>=6.0.0,<7.0.0)",
-    "edtf @ git+https://github.com/rism-digital/python-edtf.git@main",
+    "datelib @ git+https://github.com/rism-digital/datelib.git@main",
     "pyreqwest (>=0.11.1,<0.12.0)",
     "sentry-sdk (>=2.19.0,<3.0.0)",
     "orjson (>=3.10.3,<4.0.0)",

@@ -206,7 +206,7 @@ requires-dist = [
     { name = "mysqlclient", specifier = ">=2.2.7" },
     { name = "orjson", specifier = ">=3.10.3,<4.0.0" },
     { name = "psycopg", extras = ["pool"], specifier = ">=3.2.6" },
-    { name = "pymarc", git = "https://gitlab.com/pymarc/pymarc.git?rev=main" },
+    { name = "pymarc", git = "https://gitlab.com/ahankinson/pymarc.git?rev=constructor-searching-optimizations" },
     { name = "pyreqwest", specifier = ">=0.11.1,<0.12.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
     { name = "sentry-sdk", specifier = ">=2.19.0,<3.0.0" },
@@ -463,7 +463,7 @@ wheels = [
 [[package]]
 name = "pymarc"
 version = "5.3.1"
-source = { git = "https://gitlab.com/pymarc/pymarc.git?rev=main#881f94b36b76f01bf6c8859d906975916edb4393" }
+source = { git = "https://gitlab.com/ahankinson/pymarc.git?rev=constructor-searching-optimizations#8978fbffbeda50aa349d1d55ef19c055d89b0604" }
 
 [[package]]
 name = "pyreqwest"

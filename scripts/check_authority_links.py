@@ -906,7 +906,7 @@ def main() -> int:
             skipped_services=skipped_services,
         )
         print_progress(
-            f"[update] found {len(grouped_ids)} unique 429 external ids to retry in {update_path}"
+            f"[update] found {len(grouped_ids)} external ids to retry in {update_path}"
         )
         if args.max_links is not None:
             grouped_ids = dict(list(grouped_ids.items())[: args.max_links])
@@ -914,7 +914,9 @@ def main() -> int:
                 f"[update] limiting retry pass to first {len(grouped_ids)} unique external ids"
             )
         if not grouped_ids:
-            print_progress("[update] no matching 429 failures found; report left unchanged")
+            print_progress(
+                "[update] no matching 429 failures found; report left unchanged"
+            )
             return 0
 
         retry_failures, _ = build_failures(
@@ -934,7 +936,9 @@ def main() -> int:
             updated_failures=updated_failures,
             started_at=started_at,
         )
-        update_path.write_bytes(orjson.dumps(updated_report, option=orjson.OPT_INDENT_2))
+        update_path.write_bytes(
+            orjson.dumps(updated_report, option=orjson.OPT_INDENT_2)
+        )
         print_progress(
             f"[done] updated {update_path} with {updated_report['links_failed']} remaining failures"
         )

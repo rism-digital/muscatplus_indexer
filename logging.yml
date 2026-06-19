@@ -4,7 +4,7 @@ formatters:
   simple:
     format: "[%(asctime)s] [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
   colored:
-    (): indexer.helpers.logging_utils.ColorFormatter
+    (): color_formatter.ColorFormatter
     format: "[%(asctime)s] [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
     use_colors: true
 handlers:
@@ -27,6 +27,10 @@ handlers:
     backupCount: 7
 loggers:
   muscat_indexer:
+    level: INFO
+    handlers: [console, file]
+    propagate: no
+  authority_link_checker:
     level: INFO
     handlers: [console, file]
     propagate: no

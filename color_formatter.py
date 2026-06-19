@@ -32,7 +32,6 @@ class ColorFormatter(logging.Formatter):
         finally:
             record.levelname = original_levelname
 
-        # Color only the leading timestamp segment: "[...]" at the start.
         if formatted.startswith("["):
             ts_end = formatted.find("]")
             if ts_end != -1:
@@ -40,7 +39,6 @@ class ColorFormatter(logging.Formatter):
                 remainder = formatted[ts_end + 1 :]
                 formatted = f"{self.TIMESTAMP_COLOR}{timestamp}{self.RESET}{remainder}"
 
-        # Color trailing source location segment: "(filename:lineno)".
         location_start = formatted.rfind(" (")
         if location_start != -1 and formatted.endswith(")"):
             prefix = formatted[:location_start]

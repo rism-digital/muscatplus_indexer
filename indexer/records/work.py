@@ -25,13 +25,17 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     )
     attached_sources: list = orjson.loads(s) if (s := record["sources"]) else []
     source_count: int = len(attached_sources)
-    works_catalogue: list[dict] | None = get_bibliographic_references_json(
-        marc_record, "690", publications
+    works_catalogue: list[dict] = (
+        get_bibliographic_references_json(marc_record, "690", publications) or []
     )
 
     secondary_works_catalogue: list[dict] = (
         get_bibliographic_references_json(marc_record, "691", publications) or []
     )
+
+    works_catalogue_titles: list[str] = [
+        f"{w['short_name']} {w.get('pages')}" for w in works_catalogue
+    ]
 
     secondary_works_catalogue_titles: list[str] = [
         f"{w['short_name']} {w.get('pages')}" for w in secondary_works_catalogue
@@ -58,6 +62,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         "works_catalogue_json": orjson.dumps(works_catalogue).decode("utf-8")
         if works_catalogue
         else None,
+        "catalogue_numbers_sm": works_catalogue_titles,
         "secondary_works_catalogue_json": orjson.dumps(
             secondary_works_catalogue
         ).decode("utf-8")
@@ -69,9 +74,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
-    additional_fields: dict = process_marc_profile(
-        work_profile, work_id, marc_record
-    )
+    additional_fields: dict = process_marc_profile(work_profile, work_id, marc_record)
     work_core.update(additional_fields)
 
     creator_name: str | None = additional_fields.get("creator_name_s")

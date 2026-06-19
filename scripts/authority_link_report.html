@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Authority Link Checker Report</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --panel-strong: #ffffff;
+        --text: #111827;
+        --muted: #4b5563;
+        --line: #d1d5db;
+        --line-strong: #9ca3af;
+        --accent: #1d4ed8;
+        --accent-strong: #1e40af;
+        --warn: #92400e;
+        --error: #b91c1c;
+        --header-bg: #f3f4f6;
+        --row-alt: #f9fafb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        min-height: 100vh;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      a {
+        color: var(--accent-strong);
+      }
+
+      .page {
+        width: min(1400px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 16px 0 32px;
+      }
+
+      .hero {
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+      }
+
+      .hero-inner {
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 600;
+      }
+
+      .lede {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 10px;
+      }
+
+      .control {
+        display: grid;
+        gap: 6px;
+      }
+
+      .control label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .control input,
+      .control select,
+      .control button {
+        width: 100%;
+        border-radius: 0;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.85);
+        color: var(--text);
+        padding: 11px 14px;
+        font: inherit;
+      }
+
+      .control button {
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .control button.secondary {
+        background: rgba(255, 255, 255, 0.85);
+        color: var(--text);
+      }
+
+      .control-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .control-row > * {
+        flex: 1;
+      }
+
+      .status {
+        min-height: 20px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status.error {
+        color: var(--error);
+      }
+
+      .section {
+        margin-top: 12px;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        padding: 14px;
+      }
+
+      .section h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+      }
+
+      .stat {
+        background: var(--panel-strong);
+        border: 1px solid var(--line);
+        padding: 10px;
+      }
+
+      .stat-label {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.2;
+        font-weight: 600;
+      }
+
+      .grid-two {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+      }
+
+      .mini-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .mini-table th,
+      .mini-table td {
+        text-align: left;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      .mini-table th {
+        font-weight: 600;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
+      }
+
+      table.data {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 980px;
+      }
+
+      table.data th,
+      table.data td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      table.data th {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--line-strong);
+        position: sticky;
+        top: 0;
+      }
+
+      table.data tbody tr:nth-child(even) {
+        background: var(--row-alt);
+      }
+
+      table.data tbody tr.row-done td {
+        color: var(--muted);
+        text-decoration: line-through;
+      }
+
+      table.data tbody tr.row-done td.done-cell,
+      table.data tbody tr.row-done td.done-cell * {
+        text-decoration: none;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.1rem 0.35rem;
+        font-size: 11px;
+        border: 1px solid var(--line);
+        background: #eef2ff;
+        color: var(--accent-strong);
+        white-space: nowrap;
+      }
+
+      .pill.error {
+        background: #fef2f2;
+        color: var(--error);
+      }
+
+      .pill.warn {
+        background: #fff7ed;
+        color: var(--warn);
+      }
+
+      .done-toggle {
+        border: 1px solid #16a34a;
+        background: #16a34a;
+        color: #ffffff;
+        padding: 4px 8px;
+        font: inherit;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .done-toggle.is-done {
+        background: #dcfce7;
+        border-color: #86efac;
+        color: #166534;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .empty {
+        padding: 18px 10px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      @media (max-width: 700px) {
+        .page {
+          width: min(100vw - 20px, 1200px);
+          padding-top: 10px;
+        }
+
+        .hero-inner,
+        .section {
+          padding: 16px;
+        }
+
+        table.data {
+          min-width: 760px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="hero-inner">
+          <div>
+            <p class="eyebrow">RISM Maintenance</p>
+            <h1>Authority Link Checker</h1>
+            <p class="lede">
+              Inspect the current JSON output from the authority link checker, review
+              failures by service and type, and jump directly to the Muscat records
+              that need fixing.
+            </p>
+          </div>
+
+          <div class="toolbar">
+            <div class="control">
+              <label for="report-url">Report JSON URL</label>
+              <input id="report-url" type="text" value="authority_link_failures.json">
+            </div>
+            <div class="control">
+              <label for="muscat-base">Muscat Base URL</label>
+              <input id="muscat-base" type="text" value="https://muscat.rism.info/admin/">
+            </div>
+            <div class="control">
+              <label for="report-file">Load Local JSON File</label>
+              <input id="report-file" type="file" accept=".json,application/json">
+            </div>
+            <div class="control">
+              <label for="done-file">Load Done List</label>
+              <input id="done-file" type="file" accept=".json,application/json">
+            </div>
+            <div class="control">
+              <label>&nbsp;</label>
+              <div class="control-row">
+                <button id="load-button" type="button">Load Report</button>
+                <button id="download-done-button" class="secondary" type="button">Download Done List</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="status" id="status">Waiting for report.</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Run Summary</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="section grid-two">
+        <div>
+          <h2>Service Failures</h2>
+          <div id="service-failures"></div>
+        </div>
+        <div>
+          <h2>Skipped Services</h2>
+          <div id="service-skipped"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Failures</h2>
+        <div class="filters">
+          <div class="control">
+            <label for="service-filter">Service</label>
+            <select id="service-filter">
+              <option value="">All services</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="type-filter">Failure Type</label>
+            <select id="type-filter">
+              <option value="">All failure types</option>
+            </select>
+          </div>
+          <div class="control">
+              <label for="text-filter">Search</label>
+            <input id="text-filter" type="text" placeholder="Record path, identifier, reason">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Done</th>
+                <th>RISM</th>
+                <th>Record</th>
+                <th>Service</th>
+                <th>Identifier</th>
+                <th>Failure</th>
+                <th>Status</th>
+                <th>Reason</th>
+                <th>Authority Link</th>
+              </tr>
+            </thead>
+            <tbody id="results-body">
+              <tr>
+                <td colspan="9" class="empty">No report loaded.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const statsEl = document.getElementById("stats");
+      const serviceFailuresEl = document.getElementById("service-failures");
+      const serviceSkippedEl = document.getElementById("service-skipped");
+      const resultsBodyEl = document.getElementById("results-body");
+      const serviceFilterEl = document.getElementById("service-filter");
+      const typeFilterEl = document.getElementById("type-filter");
+      const textFilterEl = document.getElementById("text-filter");
+      const loadButtonEl = document.getElementById("load-button");
+      const downloadDoneButtonEl = document.getElementById("download-done-button");
+      const reportUrlEl = document.getElementById("report-url");
+      const reportFileEl = document.getElementById("report-file");
+      const doneFileEl = document.getElementById("done-file");
+      const muscatBaseEl = document.getElementById("muscat-base");
+
+      let currentReport = null;
+      let doneItems = new Map();
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle("error", isError);
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat().format(value || 0);
+      }
+
+      function formatDate(value) {
+        if (!value) {
+          return "Unknown";
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return new Intl.DateTimeFormat(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(date);
+      }
+
+      function makeFailureKey(item) {
+        return [
+          item.full_rism_id || "",
+          item.external_id || "",
+          item.failure_type || "",
+        ].join("::");
+      }
+
+      function isDone(item) {
+        return doneItems.has(makeFailureKey(item));
+      }
+
+      function markDone(item, done) {
+        const key = makeFailureKey(item);
+        if (done) {
+          doneItems.set(key, {
+            key,
+            rism_id: item.rism_id || "",
+            full_rism_id: item.full_rism_id || "",
+            external_id: item.external_id || "",
+            failure_type: item.failure_type || "",
+            marked_at: new Date().toISOString(),
+          });
+        } else {
+          doneItems.delete(key);
+        }
+      }
+
+      function getDoneCount() {
+        return currentReport
+          ? (currentReport.failures || []).filter((item) => isDone(item)).length
+          : 0;
+      }
+
+      function normalizeMuscatBase(base) {
+        if (!base) {
+          return "";
+        }
+        return base.endsWith("/") ? base : `${base}/`;
+      }
+
+      function renderKeyValueTable(target, entries, emptyMessage) {
+        if (!entries.length) {
+          target.innerHTML = `<div class="empty">${emptyMessage}</div>`;
+          return;
+        }
+
+        const rows = entries
+          .map(
+            ([key, value]) => `
+              <tr>
+                <th>${key}</th>
+                <td>${formatNumber(value)}</td>
+              </tr>
+            `
+          )
+          .join("");
+
+        target.innerHTML = `
+          <table class="mini-table">
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      function renderStats(report) {
+        const cards = [
+          ["Generated", formatDate(report.generated_at)],
+          ["Solr Core", report.solr_core || "Unknown"],
+          ["Duration", `${report.duration_seconds ?? 0}s`],
+          ["Documents", formatNumber(report.documents_scanned)],
+          ["Checked", formatNumber(report.links_checked)],
+          ["Failed", formatNumber(report.links_failed)],
+          ["Skipped", formatNumber(report.links_skipped)],
+          ["Done", formatNumber(getDoneCount())],
+          ["Visible Rows", formatNumber(getFilteredFailures().length)],
+        ];
+
+        statsEl.innerHTML = cards
+          .map(
+            ([label, value]) => `
+              <article class="stat">
+                <p class="stat-label">${label}</p>
+                <p class="stat-value">${value}</p>
+              </article>
+            `
+          )
+          .join("");
+      }
+
+      function populateFilters(report) {
+        const services = [...new Set((report.failures || []).map((item) => item.service).filter(Boolean))].sort();
+        const types = [...new Set((report.failures || []).map((item) => item.failure_type).filter(Boolean))].sort();
+
+        serviceFilterEl.innerHTML = `<option value="">All services</option>${services
+          .map((service) => `<option value="${service}">${service}</option>`)
+          .join("")}`;
+        typeFilterEl.innerHTML = `<option value="">All failure types</option>${types
+          .map((type) => `<option value="${type}">${type}</option>`)
+          .join("")}`;
+      }
+
+      function getFilteredFailures() {
+        if (!currentReport) {
+          return [];
+        }
+
+        const serviceFilter = serviceFilterEl.value.trim().toLowerCase();
+        const typeFilter = typeFilterEl.value.trim().toLowerCase();
+        const search = textFilterEl.value.trim().toLowerCase();
+
+        return (currentReport.failures || []).filter((item) => {
+          if (serviceFilter && item.service?.toLowerCase() !== serviceFilter) {
+            return false;
+          }
+          if (typeFilter && item.failure_type?.toLowerCase() !== typeFilter) {
+            return false;
+          }
+          if (!search) {
+            return true;
+          }
+
+          const haystack = [
+            item.rism_id,
+            item.full_rism_id,
+            item.record_type,
+            item.external_id,
+            item.service,
+            item.identifier,
+            item.failure_type,
+            item.reason,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return haystack.includes(search);
+        });
+      }
+
+      function renderFailures() {
+        const failures = getFilteredFailures();
+        renderStats(currentReport);
+
+        if (!failures.length) {
+          resultsBodyEl.innerHTML = `
+            <tr>
+              <td colspan="9" class="empty">No failures match the current filters.</td>
+            </tr>
+          `;
+          return;
+        }
+
+        const muscatBase = normalizeMuscatBase(muscatBaseEl.value.trim());
+        resultsBodyEl.innerHTML = failures
+          .map((item) => {
+            const muscatUrl = item.full_rism_id ? `${muscatBase}${item.full_rism_id}` : "";
+            const statusBadgeClass =
+              item.http_status && item.http_status >= 400 ? "pill error" : "pill warn";
+            const done = isDone(item);
+            const key = makeFailureKey(item);
+            return `
+              <tr class="${done ? "row-done" : ""}" data-failure-key="${key}">
+                <td class="done-cell"><button type="button" class="done-toggle ${done ? "is-done" : ""}" data-failure-key="${key}">${done ? "Done" : "Mark done"}</button></td>
+                <td><strong>${item.rism_id || ""}</strong></td>
+                <td>
+                  <div>${item.record_type || ""}</div>
+                  <div class="muted">${item.full_rism_id || ""}</div>
+                  ${muscatUrl ? `<div><a href="${muscatUrl}" target="_blank" rel="noreferrer">Open in Muscat</a></div>` : ""}
+                </td>
+                <td><span class="pill">${item.service || ""}</span></td>
+                <td>
+                  <div>${item.identifier || ""}</div>
+                  <div class="muted">${item.external_id || ""}</div>
+                </td>
+                <td><span class="pill error">${item.failure_type || "unknown"}</span></td>
+                <td>${item.http_status ? `<span class="${statusBadgeClass}">${item.http_status}</span>` : `<span class="muted">n/a</span>`}</td>
+                <td>${item.reason || ""}</td>
+                <td>${item.url ? `<a href="${item.url}" target="_blank" rel="noreferrer">Open authority</a>` : `<span class="muted">n/a</span>`}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function renderReport(report) {
+        currentReport = report;
+        populateFilters(report);
+        renderKeyValueTable(
+          serviceFailuresEl,
+          Object.entries(report.service_failures || {}).sort((a, b) => b[1] - a[1]),
+          "No service failures in this report."
+        );
+        renderKeyValueTable(
+          serviceSkippedEl,
+          Object.entries(report.service_skipped || {}).sort((a, b) => b[1] - a[1]),
+          "No skipped services in this report."
+        );
+        renderFailures();
+        setStatus(
+          `Loaded report from ${formatDate(report.generated_at)} with ${formatNumber(
+            report.links_failed
+          )} failures.`
+        );
+      }
+
+      async function loadFromUrl() {
+        const url = reportUrlEl.value.trim();
+        if (!url) {
+          setStatus("Enter a report URL first.", true);
+          return;
+        }
+
+        setStatus(`Loading ${url} ...`);
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Could not fetch report: HTTP ${response.status}`);
+        }
+        const report = await response.json();
+        renderReport(report);
+      }
+
+      async function loadFromFile(file) {
+        setStatus(`Loading ${file.name} ...`);
+        const text = await file.text();
+        renderReport(JSON.parse(text));
+      }
+
+      async function loadDoneFile(file) {
+        setStatus(`Loading done list ${file.name} ...`);
+        const text = await file.text();
+        const payload = JSON.parse(text);
+        doneItems = new Map(
+          (payload.done_items || []).map((item) => [item.key, item])
+        );
+        if (currentReport) {
+          renderFailures();
+        }
+        setStatus(
+          `Loaded done list with ${formatNumber(doneItems.size)} completed items.`
+        );
+      }
+
+      function buildDoneExport() {
+        return {
+          exported_at: new Date().toISOString(),
+          done_items: Array.from(doneItems.values()),
+        };
+      }
+
+      function downloadDoneList() {
+        const payload = buildDoneExport();
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "authority_link_done_list.json";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        setStatus(
+          `Downloaded done list with ${formatNumber(doneItems.size)} completed items.`
+        );
+      }
+
+      async function handleLoad() {
+        try {
+          if (reportFileEl.files && reportFileEl.files[0]) {
+            await loadFromFile(reportFileEl.files[0]);
+          } else {
+            await loadFromUrl();
+          }
+          if (doneFileEl.files && doneFileEl.files[0]) {
+            await loadDoneFile(doneFileEl.files[0]);
+          }
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      loadButtonEl.addEventListener("click", handleLoad);
+      downloadDoneButtonEl.addEventListener("click", downloadDoneList);
+      serviceFilterEl.addEventListener("change", renderFailures);
+      typeFilterEl.addEventListener("change", renderFailures);
+      textFilterEl.addEventListener("input", renderFailures);
+      muscatBaseEl.addEventListener("change", renderFailures);
+      doneFileEl.addEventListener("change", async () => {
+        if (!doneFileEl.files || !doneFileEl.files[0]) {
+          return;
+        }
+        try {
+          await loadDoneFile(doneFileEl.files[0]);
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      });
+      resultsBodyEl.addEventListener("click", (event) => {
+        const button = event.target.closest(".done-toggle");
+        if (!button || !currentReport) {
+          return;
+        }
+        const key = button.dataset.failureKey;
+        const item = (currentReport.failures || []).find(
+          (failure) => makeFailureKey(failure) === key
+        );
+        if (!item) {
+          return;
+        }
+        markDone(item, !isDone(item));
+        renderFailures();
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("data")) {
+        reportUrlEl.value = params.get("data");
+      }
+      if (params.get("muscat")) {
+        muscatBaseEl.value = params.get("muscat");
+      }
+
+      handleLoad();
+    </script>
+  </body>
+</html>

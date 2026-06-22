@@ -1,8 +1,8 @@
 """Date parsing helpers for the RISM MuscatPlus indexer.
 
-Thin adapter around the ``datelib`` EDTF parser. Bridges the
+Thin adapter around the ``antequem`` EDTF parser. Bridges the
 application-specific year-range heuristics (±200-year fallbacks,
-``NO_DATES`` filtering, etc.) with the ``datelib`` parser, natlang
+``NO_DATES`` filtering, etc.) with the ``antequem`` parser, natlang
 coercion, and public year-bounds API.
 """
 
@@ -10,8 +10,8 @@ import datetime
 import logging
 import re
 
-import datelib
-from datelib.natlang import coerce as natlang_coerce
+import antequem
+from antequem.natlang import coerce as natlang_coerce
 
 log = logging.getLogger("muscat_indexer")
 
@@ -69,7 +69,7 @@ def process_edtf_date(simplified_date_statement: str, date_statement: str) -> Da
 
     Tries strict parsing first, then falls back to natlang coercion.
     """
-    result = datelib.parse(simplified_date_statement)
+    result = antequem.parse(simplified_date_statement)
 
     if result.is_err:
         coerced = natlang_coerce(date_statement)
@@ -82,7 +82,7 @@ def process_edtf_date(simplified_date_statement: str, date_statement: str) -> Da
             return None, None
 
         log.debug("Coerced %s -> %s", date_statement, coerced)
-        result = datelib.parse(coerced)
+        result = antequem.parse(coerced)
         if result.is_err:
             log.debug(
                 "Parsing failed after coercion for %s (%s)",
@@ -92,8 +92,8 @@ def process_edtf_date(simplified_date_statement: str, date_statement: str) -> Da
             return None, None
 
     parsed = result.unwrap()
-    start_year = datelib.lower_year(parsed)
-    end_year = datelib.upper_year(parsed)
+    start_year = antequem.lower_year(parsed)
+    end_year = antequem.upper_year(parsed)
 
     if start_year is not None and end_year is not None and start_year > end_year:
         log.warning(
@@ -149,7 +149,7 @@ def parse_date_statement(date_statement: str) -> DateRange:
         return lower_bound, upper_bound
 
     # Skip known "no date" markers (handled by coerce returning None)
-    if datelib.natlang.is_no_date(date_statement):
+    if antequem.natlang.is_no_date(date_statement):
         return None, None
 
     return process_edtf_date(date_statement, date_statement)
@@ -163,7 +163,7 @@ def process_date_statements(
     latest_dates: list[int] = []
 
     for statement in date_statements:
-        if datelib.natlang.is_no_date(statement):
+        if antequem.natlang.is_no_date(statement):
             continue
 
         if statement.startswith("-"):

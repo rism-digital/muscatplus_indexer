@@ -3,17 +3,22 @@ from scripts.check_authority_links import (
     RecordReference,
     build_authority_url,
     build_grouped_ids_from_failures,
+    build_grouped_ids_from_refreshed_failures,
     build_request_url,
     build_report,
     build_updated_report,
     default_validator,
+    fetch_solr_records_by_full_rism_id,
     get_exception_retry_delay,
     get_retry_delay,
+    isni_validator,
     is_update_candidate,
+    merge_refreshed_failures,
     merge_updated_failures,
     orcid_validator,
     parse_external_id,
     summarize_failures,
+    service_matches_filters,
     validate_external_id,
     wait_for_service_rate_limit,
     wikidata_validator,
@@ -64,6 +69,14 @@ def test_build_request_url_uses_bne_jsonld_endpoint():
     assert build_request_url("bne", "XX4676341") == "https://datos.bne.es/resource/XX4676341.jsonld"
 
 
+def test_build_request_url_uses_isni_sru_endpoint():
+    assert build_request_url("isni", "0000000116557629") == (
+        "http://isni.oclc.org/sru/DB=1.2/?"
+        "query=pica.isn+%3D+%220000000116557629%22&"
+        "operation=searchRetrieve&recordSchema=isni-b"
+    )
+
+
 def test_default_validator_detects_cloudflare_block():
     response = FakeResponse(
         403,
@@ -99,6 +112,81 @@ def test_orcid_validator_accepts_matching_json():
         "orcid:0000-0002-1825-0097",
     )
     assert result.ok is True
+
+
+def test_isni_validator_accepts_matching_sru_xml():
+    response = FakeResponse(
+        200,
+        """<?xml version="1.0" encoding="UTF-8" ?>
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:numberOfRecords>1</srw:numberOfRecords>
+  <srw:records>
+    <srw:record>
+      <srw:recordData>
+        <responseRecord>
+          <ISNIAssigned>
+            <isniUnformatted>0000000116557629</isniUnformatted>
+          </ISNIAssigned>
+        </responseRecord>
+      </srw:recordData>
+    </srw:record>
+  </srw:records>
+</srw:searchRetrieveResponse>""",
+    )
+    result = isni_validator(
+        response,
+        "0000000116557629",
+        "https://isni.org/isni/0000000116557629",
+        "isni:0000000116557629",
+    )
+    assert result.ok is True
+
+
+def test_isni_validator_accepts_merged_isni():
+    response = FakeResponse(
+        200,
+        """<?xml version="1.0" encoding="UTF-8" ?>
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:numberOfRecords>1</srw:numberOfRecords>
+  <srw:records>
+    <srw:record>
+      <srw:recordData>
+        <responseRecord>
+          <ISNIAssigned>
+            <isniUnformatted>0000000439370260</isniUnformatted>
+            <mergedISNI>0000000116557629</mergedISNI>
+          </ISNIAssigned>
+        </responseRecord>
+      </srw:recordData>
+    </srw:record>
+  </srw:records>
+</srw:searchRetrieveResponse>""",
+    )
+    result = isni_validator(
+        response,
+        "0000000116557629",
+        "https://isni.org/isni/0000000116557629",
+        "isni:0000000116557629",
+    )
+    assert result.ok is True
+
+
+def test_isni_validator_reports_missing_record():
+    response = FakeResponse(
+        200,
+        """<?xml version="1.0" encoding="UTF-8" ?>
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:numberOfRecords>0</srw:numberOfRecords>
+</srw:searchRetrieveResponse>""",
+    )
+    result = isni_validator(
+        response,
+        "0000000116557629",
+        "https://isni.org/isni/0000000116557629",
+        "isni:0000000116557629",
+    )
+    assert result.ok is False
+    assert result.failure_type == "soft_404"
 
 
 def test_validate_external_id_marks_missing_template_as_skipped():
@@ -141,6 +229,12 @@ def test_wait_for_service_rate_limit_records_timestamp_for_lc():
     assert "lc" in REQUEST_TIMESTAMPS
 
 
+def test_wait_for_service_rate_limit_records_timestamp_for_iccu():
+    REQUEST_TIMESTAMPS.clear()
+    wait_for_service_rate_limit("iccu")
+    assert "iccu" in REQUEST_TIMESTAMPS
+
+
 def test_is_update_candidate_matches_retryable_update_statuses_and_filters():
     failure = {"service": "dnb", "http_status": 429}
     assert is_update_candidate(failure, None, None) is True
@@ -156,7 +250,15 @@ def test_is_update_candidate_matches_retryable_update_statuses_and_filters():
     ) is True
 
 
-def test_build_grouped_ids_from_failures_groups_only_matching_update_statuses():
+def test_service_matches_filters_only_checks_service_selection():
+    failure = {"service": "orcid", "http_status": 404}
+    assert service_matches_filters(failure, None, None) is True
+    assert service_matches_filters(failure, {"orcid"}, None) is True
+    assert service_matches_filters(failure, {"dnb"}, None) is False
+    assert service_matches_filters(failure, None, {"orcid"}) is False
+
+
+def test_build_grouped_ids_from_failures_groups_all_matching_services():
     failures = [
         {
             "rism_id": "100",
@@ -202,7 +304,161 @@ def test_build_grouped_ids_from_failures_groups_only_matching_update_statuses():
     assert sorted(grouped_all) == ["dnb:123", "wkp:Q1", "wkp:Q2"]
 
 
-def test_merge_updated_failures_replaces_and_removes_targeted_429s():
+def test_build_grouped_ids_from_refreshed_failures_uses_current_solr_ids():
+    failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "dnb:123",
+            "service": "dnb",
+            "http_status": 429,
+        },
+        {
+            "rism_id": "200",
+            "full_rism_id": "people/200",
+            "record_type": "person",
+            "external_id": "dnb:999",
+            "service": "dnb",
+            "http_status": 429,
+        },
+        {
+            "rism_id": "300",
+            "full_rism_id": "people/300",
+            "record_type": "person",
+            "external_id": "dnb:555",
+            "service": "dnb",
+            "http_status": 404,
+        },
+    ]
+    records_by_full_rism_id = {
+        "people/100": {
+            "full_rism_id": "people/100",
+            "type": "person",
+            "external_ids": ["dnb:123", "wkp:Q1"],
+        },
+        "people/200": {
+            "full_rism_id": "people/200",
+            "type": "person",
+            "external_ids": ["wkp:Q2"],
+        },
+        "people/300": {
+            "full_rism_id": "people/300",
+            "type": "person",
+            "external_ids": ["dnb:555"],
+        },
+    }
+    grouped_ids, removed_keys = build_grouped_ids_from_refreshed_failures(
+        failures,
+        records_by_full_rism_id,
+        None,
+        None,
+    )
+    assert sorted(grouped_ids) == ["dnb:123", "dnb:555"]
+    assert removed_keys == {("people/200", "dnb:999")}
+
+
+def test_merge_refreshed_failures_removes_stale_and_replaces_refreshed_rows():
+    existing_failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "dnb:123",
+            "service": "dnb",
+            "failure_type": "http_error",
+            "http_status": 429,
+            "reason": "Old 429",
+            "url": "https://d-nb.info/gnd/123",
+        },
+        {
+            "rism_id": "200",
+            "full_rism_id": "people/200",
+            "record_type": "person",
+            "external_id": "dnb:999",
+            "service": "dnb",
+            "failure_type": "http_error",
+            "http_status": 429,
+            "reason": "Will disappear",
+            "url": "https://d-nb.info/gnd/999",
+        },
+        {
+            "rism_id": "300",
+            "full_rism_id": "people/300",
+            "record_type": "person",
+            "external_id": "wkp:Q1",
+            "service": "wkp",
+            "failure_type": "http_error",
+            "http_status": 404,
+            "reason": "Keep me",
+            "url": "https://www.wikidata.org/wiki/Q1",
+        },
+        {
+            "rism_id": "400",
+            "full_rism_id": "people/400",
+            "record_type": "person",
+            "external_id": "orcid:0000-0002-1825-0097",
+            "service": "orcid",
+            "failure_type": "soft_404",
+            "http_status": 404,
+            "reason": "Old ORCID failure",
+            "url": "https://orcid.org/0000-0002-1825-0097",
+        },
+    ]
+    refreshed_failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "dnb:123",
+            "service": "dnb",
+            "identifier": "123",
+            "failure_type": "http_error",
+            "http_status": 404,
+            "reason": "Unexpected HTTP status 404.",
+            "url": "https://d-nb.info/gnd/123",
+        }
+    ]
+    merged = merge_refreshed_failures(
+        existing_failures,
+        refreshed_failures,
+        {
+            ("people/200", "dnb:999"),
+            ("people/400", "orcid:0000-0002-1825-0097"),
+        },
+        None,
+        None,
+    )
+    assert len(merged) == 1
+    assert merged[0]["external_id"] == "dnb:123"
+    assert merged[0]["http_status"] == 404
+
+
+def test_merge_refreshed_failures_drops_rows_that_now_validate():
+    existing_failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "iccu:MUSV051790",
+            "service": "iccu",
+            "failure_type": "request_error",
+            "http_status": None,
+            "reason": "Old transport failure",
+            "url": "http://id.sbn.it/bid/MUSV051790",
+        }
+    ]
+    merged = merge_refreshed_failures(
+        existing_failures,
+        refreshed_failures=[],
+        removed_keys=set(),
+        selected_services={"iccu"},
+        skipped_services=None,
+    )
+    assert merged == []
+
+
+def test_merge_updated_failures_replaces_and_removes_targeted_failures():
     existing_failures = [
         {
             "rism_id": "100",
@@ -253,10 +509,32 @@ def test_merge_updated_failures_replaces_and_removes_targeted_429s():
         }
     ]
     merged = merge_updated_failures(existing_failures, updated_failures, None, None)
-    assert len(merged) == 2
+    assert len(merged) == 1
     assert merged[0]["http_status"] == 404
     assert merged[0]["external_id"] == "dnb:123"
-    assert merged[1]["external_id"] == "wkp:Q1"
+
+
+def test_merge_updated_failures_drops_rows_that_now_validate():
+    existing_failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "orcid:0000-0002-1825-0097",
+            "service": "orcid",
+            "failure_type": "soft_404",
+            "http_status": 404,
+            "reason": "Old ORCID failure",
+            "url": "https://orcid.org/0000-0002-1825-0097",
+        }
+    ]
+    merged = merge_updated_failures(
+        existing_failures,
+        updated_failures=[],
+        selected_services={"orcid"},
+        skipped_services=None,
+    )
+    assert merged == []
 
 
 def test_summarize_failures_counts_by_service():

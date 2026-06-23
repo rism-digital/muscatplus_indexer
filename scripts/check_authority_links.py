@@ -4,6 +4,7 @@ import logging.config
 import sys
 import threading
 import time
+import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 import orjson
 import yaml
@@ -108,7 +110,7 @@ DEFAULT_RETRIES = 2
 RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 UPDATE_RETRY_STATUSES = {429, 503}
 SERVICE_TIMEOUTS: dict[str, int] = {"lc": 40}
-SERVICE_MIN_INTERVALS: dict[str, float] = {"lc": 1.0, "viaf": 1.0}
+SERVICE_MIN_INTERVALS: dict[str, float] = {"lc": 1.0, "viaf": 1.0, "iccu": 1.0}
 RETRYABLE_EXCEPTION_NAMES = {"ConnectTimeoutError"}
 IGNORE_RETRY_AFTER_SERVICES = {"viaf"}
 MAX_RETRY_DELAY_SECONDS = 30.0
@@ -183,6 +185,15 @@ def build_request_url(service: str, identifier: str) -> str | None:
     if not authority_url:
         return None
 
+    if service == "isni":
+        query = urlencode(
+            {
+                "query": f'pica.isn = "{identifier}"',
+                "operation": "searchRetrieve",
+                "recordSchema": "isni-b",
+            }
+        )
+        return f"http://isni.oclc.org/sru/DB=1.2/?{query}"
     if service == "lc":
         return f"{authority_url}.skos.json"
     if service == "bne":
@@ -371,13 +382,86 @@ def orcid_validator(
     )
 
 
+def isni_validator(
+    response: Any, identifier: str, url: str, external_id: str
+) -> ValidationResult:
+    if not (200 <= response.status < 400):
+        return default_validator(response, identifier, url, external_id)
+
+    try:
+        root = ET.fromstring(response.text())
+    except ET.ParseError as exc:
+        return ValidationResult(
+            service="isni",
+            identifier=identifier,
+            external_id=external_id,
+            url=url,
+            ok=False,
+            skipped=False,
+            failure_type="request_error",
+            reason=f"Could not parse ISNI SRU XML: {exc}",
+            http_status=response.status,
+        )
+
+    number_of_records = root.findtext(".//{http://www.loc.gov/zing/srw/}numberOfRecords")
+    if number_of_records == "0":
+        return ValidationResult(
+            service="isni",
+            identifier=identifier,
+            external_id=external_id,
+            url=url,
+            ok=False,
+            skipped=False,
+            failure_type="soft_404",
+            reason="ISNI SRU returned no matching records.",
+            http_status=response.status,
+        )
+
+    returned_isnis = {
+        element.text.strip()
+        for element in root.findall(".//isniUnformatted")
+        if element.text and element.text.strip()
+    }
+    merged_isnis = {
+        element.text.strip()
+        for element in root.findall(".//mergedISNI")
+        if element.text and element.text.strip()
+    }
+    if identifier in returned_isnis or identifier in merged_isnis:
+        return ValidationResult(
+            service="isni",
+            identifier=identifier,
+            external_id=external_id,
+            url=url,
+            ok=True,
+            skipped=False,
+            failure_type=None,
+            reason=None,
+            http_status=response.status,
+        )
+
+    return ValidationResult(
+        service="isni",
+        identifier=identifier,
+        external_id=external_id,
+        url=url,
+        ok=False,
+        skipped=False,
+        failure_type="soft_404",
+        reason="ISNI SRU response did not contain the requested identifier.",
+        http_status=response.status,
+    )
+
+
 VALIDATORS: dict[str, Any] = {
+    "isni": isni_validator,
     "wkp": wikidata_validator,
     "orcid": orcid_validator,
 }
 
 REQUEST_HEADERS: dict[str, dict[str, str]] = {
     "dnb": {"Accept": "application/ld+json"},
+    "isni": {"Accept": "application/xml"},
     "viaf": {"Accept": "application/json"},
     "orcid": {"Accept": "application/vnd.orcid+json"},
 }
@@ -579,15 +663,60 @@ def fetch_solr_documents(
     return grouped_ids, documents_scanned
 
 
+def fetch_solr_records_by_full_rism_id(
+    solr_url: str, full_rism_ids: set[str], batch_size: int = 200
+) -> dict[str, dict[str, Any]]:
+    records_by_full_rism_id: dict[str, dict[str, Any]] = {}
+    if not full_rism_ids:
+        return records_by_full_rism_id
+
+    identifiers = sorted(full_rism_ids)
+    with (
+        SyncClientBuilder()
+        .gzip(True)
+        .deflate(True)
+        .follow_redirects(True)
+        .build() as client
+    ):
+        for start in range(0, len(identifiers), batch_size):
+            chunk = identifiers[start : start + batch_size]
+            query = " OR ".join(f'full_rism_id:"{item}"' for item in chunk)
+            body = urlencode(
+                {
+                    "q": query,
+                    "fl": "full_rism_id,type,external_ids",
+                    "rows": str(len(chunk)),
+                    "wt": "json",
+                }
+            )
+            response = (
+                client.post(f"{solr_url}/select")
+                .headers({"Content-Type": "application/x-www-form-urlencoded"})
+                .body_text(body)
+                .build()
+                .send()
+            )
+            if not (200 <= response.status < 400):
+                raise RuntimeError(
+                    f"Could not query Solr. Status {response.status}: {response.text()}"
+                )
+
+            body = response.json()
+            docs = body.get("response", {}).get("docs", [])
+            for doc in docs:
+                full_rism_id = str(doc.get("full_rism_id", ""))
+                if full_rism_id:
+                    records_by_full_rism_id[full_rism_id] = doc
+
+    return records_by_full_rism_id
+
+
 def is_update_candidate(
     failure: dict[str, Any],
     selected_services: set[str] | None,
     skipped_services: set[str] | None,
 ) -> bool:
-    service = str(failure.get("service", "")).strip().lower()
-    if skipped_services and service in skipped_services:
-        return False
-    if selected_services and service not in selected_services:
+    if not service_matches_filters(failure, selected_services, skipped_services):
         return False
     if failure.get("http_status") in UPDATE_RETRY_STATUSES:
         return True
@@ -597,6 +726,19 @@ def is_update_candidate(
     )
 
 
+def service_matches_filters(
+    failure: dict[str, Any],
+    selected_services: set[str] | None,
+    skipped_services: set[str] | None,
+) -> bool:
+    service = str(failure.get("service", "")).strip().lower()
+    if skipped_services and service in skipped_services:
+        return False
+    if selected_services and service not in selected_services:
+        return False
+    return True
+
+
 def build_grouped_ids_from_failures(
     failures: list[dict[str, Any]],
     selected_services: set[str] | None,
@@ -604,7 +746,7 @@ def build_grouped_ids_from_failures(
 ) -> dict[str, list[RecordReference]]:
     grouped_ids: dict[str, list[RecordReference]] = defaultdict(list)
     for failure in failures:
-        if not is_update_candidate(failure, selected_services, skipped_services):
+        if not service_matches_filters(failure, selected_services, skipped_services):
             continue
 
         external_id = str(failure.get("external_id", "")).strip()
@@ -620,6 +762,44 @@ def build_grouped_ids_from_failures(
         )
 
     return grouped_ids
+
+
+def build_grouped_ids_from_refreshed_failures(
+    failures: list[dict[str, Any]],
+    records_by_full_rism_id: dict[str, dict[str, Any]],
+    selected_services: set[str] | None,
+    skipped_services: set[str] | None,
+) -> tuple[dict[str, list[RecordReference]], set[tuple[str, str]]]:
+    grouped_ids: dict[str, list[RecordReference]] = defaultdict(list)
+    removed_keys: set[tuple[str, str]] = set()
+
+    for failure in failures:
+        if not service_matches_filters(failure, selected_services, skipped_services):
+            continue
+
+        full_rism_id = str(failure.get("full_rism_id", ""))
+        external_id = str(failure.get("external_id", "")).strip()
+        if not full_rism_id or not external_id:
+            continue
+
+        record = records_by_full_rism_id.get(full_rism_id)
+        if record is None:
+            continue
+
+        current_external_ids = record.get("external_ids") or []
+        if external_id not in current_external_ids:
+            removed_keys.add((full_rism_id, external_id))
+            continue
+
+        grouped_ids[external_id].append(
+            RecordReference(
+                rism_id=str(failure.get("rism_id", "")),
+                full_rism_id=full_rism_id,
+                record_type=str(record.get("type") or failure.get("record_type", "")),
+            )
+        )
+
+    return grouped_ids, removed_keys
 
 
 def build_failures(
@@ -797,7 +977,7 @@ def merge_updated_failures(
     merged_failures: list[dict[str, Any]] = []
 
     for failure in existing_failures:
-        if not is_update_candidate(failure, selected_services, skipped_services):
+        if not service_matches_filters(failure, selected_services, skipped_services):
             merged_failures.append(failure)
             continue
 
@@ -806,6 +986,35 @@ def merge_updated_failures(
             merged_failures.append(updated_by_key.pop(key))
 
     merged_failures.extend(updated_by_key.values())
+    return merged_failures
+
+
+def merge_refreshed_failures(
+    existing_failures: list[dict[str, Any]],
+    refreshed_failures: list[dict[str, Any]],
+    removed_keys: set[tuple[str, str]],
+    selected_services: set[str] | None,
+    skipped_services: set[str] | None,
+) -> list[dict[str, Any]]:
+    refreshed_by_key = {
+        (failure.get("full_rism_id"), failure.get("external_id")): failure
+        for failure in refreshed_failures
+    }
+    merged_failures: list[dict[str, Any]] = []
+
+    for failure in existing_failures:
+        if not service_matches_filters(failure, selected_services, skipped_services):
+            merged_failures.append(failure)
+            continue
+
+        key = (failure.get("full_rism_id"), failure.get("external_id"))
+        if key in removed_keys:
+            continue
+        if key in refreshed_by_key:
+            merged_failures.append(refreshed_by_key.pop(key))
+            continue
+
+    merged_failures.extend(refreshed_by_key.values())
     return merged_failures
 
 
@@ -885,7 +1094,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--update",
-        help="Update an existing JSON report in place by retrying 429 failures.",
+        help="Update an existing JSON report in place by retrying matching failures from the report.",
+    )
+    parser.add_argument(
+        "--refresh",
+        help="Refresh an existing JSON report in place by re-fetching failed records from Solr before retrying current identifiers.",
     )
     return parser.parse_args()
 
@@ -915,7 +1128,7 @@ def main() -> int:
             )
         if not grouped_ids:
             print_progress(
-                "[update] no matching 429 failures found; report left unchanged"
+                "[update] no matching failures found; report left unchanged"
             )
             return 0
 
@@ -946,6 +1159,83 @@ def main() -> int:
             "Updated %s. %s failures remain.",
             update_path,
             updated_report["links_failed"],
+        )
+        return 0
+
+    if args.refresh:
+        refresh_path = Path(args.refresh)
+        report = load_report(refresh_path)
+        config = yaml.full_load(Path(args.config).read_text())
+        solr_core = choose_solr_core(config, args.core)
+        solr_url = f"{config['solr']['server']}/{solr_core}"
+        full_rism_ids = {
+            str(failure.get("full_rism_id", "")).strip()
+            for failure in report.get("failures", [])
+            if service_matches_filters(
+                failure,
+                selected_services,
+                skipped_services,
+            )
+            and str(failure.get("full_rism_id", "")).strip()
+        }
+        print_progress(
+            f"[refresh] fetching {len(full_rism_ids)} Solr records from {solr_core} for {refresh_path}"
+        )
+        records_by_full_rism_id = fetch_solr_records_by_full_rism_id(
+            solr_url=solr_url,
+            full_rism_ids=full_rism_ids,
+        )
+        grouped_ids, removed_keys = build_grouped_ids_from_refreshed_failures(
+            report.get("failures", []),
+            records_by_full_rism_id=records_by_full_rism_id,
+            selected_services=selected_services,
+            skipped_services=skipped_services,
+        )
+        print_progress(
+            f"[refresh] found {len(grouped_ids)} external ids to retry and {len(removed_keys)} stale failures to remove"
+        )
+        if args.max_links is not None:
+            grouped_ids = dict(list(grouped_ids.items())[: args.max_links])
+            print_progress(
+                f"[refresh] limiting retry pass to first {len(grouped_ids)} unique external ids"
+            )
+        if not grouped_ids and not removed_keys:
+            print_progress(
+                "[refresh] no matching failures found after Solr refresh; report left unchanged"
+            )
+            return 0
+
+        refreshed_failures: list[dict[str, Any]] = []
+        if grouped_ids:
+            refreshed_failures, _ = build_failures(
+                grouped_ids=grouped_ids,
+                timeout=args.timeout,
+                workers=args.workers,
+                retries=args.retries,
+            )
+
+        merged_failures = merge_refreshed_failures(
+            existing_failures=report.get("failures", []),
+            refreshed_failures=refreshed_failures,
+            removed_keys=removed_keys,
+            selected_services=selected_services,
+            skipped_services=skipped_services,
+        )
+        refreshed_report = build_updated_report(
+            report=report,
+            updated_failures=merged_failures,
+            started_at=started_at,
+        )
+        refresh_path.write_bytes(
+            orjson.dumps(refreshed_report, option=orjson.OPT_INDENT_2)
+        )
+        print_progress(
+            f"[done] refreshed {refresh_path} with {refreshed_report['links_failed']} remaining failures"
+        )
+        log.info(
+            "Refreshed %s. %s failures remain.",
+            refresh_path,
+            refreshed_report["links_failed"],
         )
         return 0
 

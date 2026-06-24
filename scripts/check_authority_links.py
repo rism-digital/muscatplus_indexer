@@ -680,10 +680,10 @@ def fetch_solr_records_by_full_rism_id(
     ):
         for start in range(0, len(identifiers), batch_size):
             chunk = identifiers[start : start + batch_size]
-            query = " OR ".join(f'full_rism_id:"{item}"' for item in chunk)
             body = urlencode(
                 {
-                    "q": query,
+                    "q": "*:*",
+                    "fq": "{!terms f=full_rism_id}" + ",".join(chunk),
                     "fl": "full_rism_id,type,external_ids",
                     "rows": str(len(chunk)),
                     "wt": "json",
@@ -769,37 +769,61 @@ def build_grouped_ids_from_refreshed_failures(
     records_by_full_rism_id: dict[str, dict[str, Any]],
     selected_services: set[str] | None,
     skipped_services: set[str] | None,
-) -> tuple[dict[str, list[RecordReference]], set[tuple[str, str]]]:
+) -> tuple[dict[str, list[RecordReference]], set[tuple[str, str]], int]:
     grouped_ids: dict[str, list[RecordReference]] = defaultdict(list)
-    removed_keys: set[tuple[str, str]] = set()
+    rebuilt_scopes: set[tuple[str, str]] = set()
+    services_by_full_rism_id: dict[str, set[str]] = defaultdict(set)
+    references_by_full_rism_id: dict[str, RecordReference] = {}
 
     for failure in failures:
         if not service_matches_filters(failure, selected_services, skipped_services):
             continue
 
         full_rism_id = str(failure.get("full_rism_id", ""))
-        external_id = str(failure.get("external_id", "")).strip()
-        if not full_rism_id or not external_id:
+        service = str(failure.get("service", "")).strip().lower()
+        if not full_rism_id or not service:
             continue
 
+        services_by_full_rism_id[full_rism_id].add(service)
+        references_by_full_rism_id.setdefault(
+            full_rism_id,
+            RecordReference(
+                rism_id=str(failure.get("rism_id", "")),
+                full_rism_id=full_rism_id,
+                record_type=str(failure.get("record_type", "")),
+            ),
+        )
+
+    discovered_current_ids = 0
+    for full_rism_id, services in services_by_full_rism_id.items():
+        rebuilt_scopes.update((full_rism_id, service) for service in services)
         record = records_by_full_rism_id.get(full_rism_id)
         if record is None:
             continue
 
         current_external_ids = record.get("external_ids") or []
-        if external_id not in current_external_ids:
-            removed_keys.add((full_rism_id, external_id))
-            continue
-
-        grouped_ids[external_id].append(
-            RecordReference(
-                rism_id=str(failure.get("rism_id", "")),
-                full_rism_id=full_rism_id,
-                record_type=str(record.get("type") or failure.get("record_type", "")),
-            )
+        existing_reference = references_by_full_rism_id[full_rism_id]
+        reference = RecordReference(
+            rism_id=str(
+                record.get("id")
+                or record.get("rism_id")
+                or existing_reference.rism_id
+            ),
+            full_rism_id=full_rism_id,
+            record_type=str(record.get("type") or existing_reference.record_type),
         )
+        for external_id in current_external_ids:
+            external_id = str(external_id).strip()
+            if not external_id:
+                continue
+            service, _, _ = external_id.partition(":")
+            service = service.strip().lower()
+            if service not in services:
+                continue
+            grouped_ids[external_id].append(reference)
+            discovered_current_ids += 1
 
-    return grouped_ids, removed_keys
+    return grouped_ids, rebuilt_scopes, discovered_current_ids
 
 
 def build_failures(
@@ -992,30 +1016,34 @@ def merge_updated_failures(
 def merge_refreshed_failures(
     existing_failures: list[dict[str, Any]],
     refreshed_failures: list[dict[str, Any]],
-    removed_keys: set[tuple[str, str]],
+    rebuilt_scopes: set[tuple[str, str]],
     selected_services: set[str] | None,
     skipped_services: set[str] | None,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], int]:
     refreshed_by_key = {
         (failure.get("full_rism_id"), failure.get("external_id")): failure
         for failure in refreshed_failures
     }
     merged_failures: list[dict[str, Any]] = []
+    removed_count = 0
 
     for failure in existing_failures:
         if not service_matches_filters(failure, selected_services, skipped_services):
             merged_failures.append(failure)
             continue
 
-        key = (failure.get("full_rism_id"), failure.get("external_id"))
-        if key in removed_keys:
-            continue
-        if key in refreshed_by_key:
-            merged_failures.append(refreshed_by_key.pop(key))
+        scope = (failure.get("full_rism_id"), failure.get("service"))
+        if scope not in rebuilt_scopes:
+            merged_failures.append(failure)
             continue
 
+        removed_count += 1
+        key = (failure.get("full_rism_id"), failure.get("external_id"))
+        if key in refreshed_by_key:
+            merged_failures.append(refreshed_by_key.pop(key))
+
     merged_failures.extend(refreshed_by_key.values())
-    return merged_failures
+    return merged_failures, removed_count
 
 
 def build_updated_report(
@@ -1098,7 +1126,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--refresh",
-        help="Refresh an existing JSON report in place by re-fetching failed records from Solr before retrying current identifiers.",
+        help="Refresh an existing JSON report in place by re-fetching failed records from Solr, rebuilding matching services from current identifiers, and retrying those current ids.",
     )
     return parser.parse_args()
 
@@ -1185,23 +1213,27 @@ def main() -> int:
             solr_url=solr_url,
             full_rism_ids=full_rism_ids,
         )
-        grouped_ids, removed_keys = build_grouped_ids_from_refreshed_failures(
-            report.get("failures", []),
-            records_by_full_rism_id=records_by_full_rism_id,
-            selected_services=selected_services,
-            skipped_services=skipped_services,
+        grouped_ids, rebuilt_scopes, discovered_current_ids = (
+            build_grouped_ids_from_refreshed_failures(
+                report.get("failures", []),
+                records_by_full_rism_id=records_by_full_rism_id,
+                selected_services=selected_services,
+                skipped_services=skipped_services,
+            )
         )
         print_progress(
-            f"[refresh] found {len(grouped_ids)} external ids to retry and {len(removed_keys)} stale failures to remove"
+            "[refresh] fetched "
+            f"{len(records_by_full_rism_id)} records, discovered {discovered_current_ids} "
+            f"current service ids, and will rebuild {len(rebuilt_scopes)} record/service scopes"
         )
         if args.max_links is not None:
             grouped_ids = dict(list(grouped_ids.items())[: args.max_links])
             print_progress(
-                f"[refresh] limiting retry pass to first {len(grouped_ids)} unique external ids"
+                f"[refresh] limiting rebuild pass to first {len(grouped_ids)} unique external ids"
             )
-        if not grouped_ids and not removed_keys:
+        if not grouped_ids and not rebuilt_scopes:
             print_progress(
-                "[refresh] no matching failures found after Solr refresh; report left unchanged"
+                "[refresh] no matching failures found after Solr rebuild; report left unchanged"
             )
             return 0
 
@@ -1214,12 +1246,16 @@ def main() -> int:
                 retries=args.retries,
             )
 
-        merged_failures = merge_refreshed_failures(
+        merged_failures, removed_count = merge_refreshed_failures(
             existing_failures=report.get("failures", []),
             refreshed_failures=refreshed_failures,
-            removed_keys=removed_keys,
+            rebuilt_scopes=rebuilt_scopes,
             selected_services=selected_services,
             skipped_services=skipped_services,
+        )
+        print_progress(
+            f"[refresh] removed {removed_count} stale service failures; "
+            f"{len(merged_failures)} failures remain after rebuild"
         )
         refreshed_report = build_updated_report(
             report=report,

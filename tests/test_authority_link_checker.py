@@ -258,6 +258,82 @@ def test_service_matches_filters_only_checks_service_selection():
     assert service_matches_filters(failure, None, {"orcid"}) is False
 
 
+def test_fetch_solr_records_by_full_rism_id_uses_terms_filter_query(monkeypatch):
+    captured = {}
+
+    class FakeRequestBuilder:
+        def __init__(self):
+            self._headers = {}
+            self._body = ""
+
+        def headers(self, headers):
+            self._headers = headers
+            return self
+
+        def body_text(self, body):
+            self._body = body
+            return self
+
+        def build(self):
+            return self
+
+        def send(self):
+            captured["headers"] = self._headers
+            captured["body"] = self._body
+            return FakeResponse(
+                200,
+                json_body={
+                    "response": {
+                        "docs": [
+                            {
+                                "full_rism_id": "people/100",
+                                "type": "person",
+                                "external_ids": ["lc:n1"],
+                            }
+                        ]
+                    }
+                },
+            )
+
+    class FakeClient:
+        def post(self, url):
+            captured["url"] = url
+            return FakeRequestBuilder()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeBuilder:
+        def gzip(self, enabled):
+            return self
+
+        def deflate(self, enabled):
+            return self
+
+        def follow_redirects(self, enabled):
+            return self
+
+        def build(self):
+            return FakeClient()
+
+    monkeypatch.setattr("scripts.check_authority_links.SyncClientBuilder", FakeBuilder)
+    records = fetch_solr_records_by_full_rism_id(
+        "http://localhost:8983/solr/muscatplus_live",
+        {"people/100", "works/200"},
+    )
+    assert records["people/100"]["external_ids"] == ["lc:n1"]
+    assert captured["url"].endswith("/select")
+    assert captured["headers"] == {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    assert "q=%2A%3A%2A" in captured["body"]
+    assert "fq=%7B%21terms+f%3Dfull_rism_id%7D" in captured["body"]
+    assert "people%2F100%2Cworks%2F200" in captured["body"]
+
+
 def test_build_grouped_ids_from_failures_groups_all_matching_services():
     failures = [
         {
@@ -333,29 +409,66 @@ def test_build_grouped_ids_from_refreshed_failures_uses_current_solr_ids():
     ]
     records_by_full_rism_id = {
         "people/100": {
+            "id": "100",
             "full_rism_id": "people/100",
             "type": "person",
-            "external_ids": ["dnb:123", "wkp:Q1"],
+            "external_ids": ["dnb:123", "dnb:456", "wkp:Q1"],
         },
         "people/200": {
+            "id": "200",
             "full_rism_id": "people/200",
             "type": "person",
             "external_ids": ["wkp:Q2"],
         },
         "people/300": {
+            "id": "300",
             "full_rism_id": "people/300",
             "type": "person",
-            "external_ids": ["dnb:555"],
+            "external_ids": ["dnb:777"],
         },
     }
-    grouped_ids, removed_keys = build_grouped_ids_from_refreshed_failures(
-        failures,
-        records_by_full_rism_id,
-        None,
-        None,
+    grouped_ids, rebuilt_scopes, discovered_current_ids = (
+        build_grouped_ids_from_refreshed_failures(
+            failures,
+            records_by_full_rism_id,
+            None,
+            None,
+        )
     )
-    assert sorted(grouped_ids) == ["dnb:123", "dnb:555"]
-    assert removed_keys == {("people/200", "dnb:999")}
+    assert sorted(grouped_ids) == ["dnb:123", "dnb:456", "dnb:777"]
+    assert rebuilt_scopes == {
+        ("people/100", "dnb"),
+        ("people/200", "dnb"),
+        ("people/300", "dnb"),
+    }
+    assert discovered_current_ids == 3
+    assert [reference.full_rism_id for reference in grouped_ids["dnb:456"]] == [
+        "people/100"
+    ]
+
+
+def test_build_grouped_ids_from_refreshed_failures_marks_missing_solr_records_for_removal():
+    failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "lc:n1",
+            "service": "lc",
+            "http_status": 404,
+        }
+    ]
+    grouped_ids, rebuilt_scopes, discovered_current_ids = (
+        build_grouped_ids_from_refreshed_failures(
+            failures,
+            records_by_full_rism_id={},
+            selected_services={"lc"},
+            skipped_services=None,
+        )
+    )
+    assert grouped_ids == {}
+    assert rebuilt_scopes == {("people/100", "lc")}
+    assert discovered_current_ids == 0
 
 
 def test_merge_refreshed_failures_removes_stale_and_replaces_refreshed_rows():
@@ -419,19 +532,22 @@ def test_merge_refreshed_failures_removes_stale_and_replaces_refreshed_rows():
             "url": "https://d-nb.info/gnd/123",
         }
     ]
-    merged = merge_refreshed_failures(
+    merged, removed_count = merge_refreshed_failures(
         existing_failures,
         refreshed_failures,
         {
-            ("people/200", "dnb:999"),
-            ("people/400", "orcid:0000-0002-1825-0097"),
+            ("people/100", "dnb"),
+            ("people/200", "dnb"),
+            ("people/400", "orcid"),
         },
         None,
         None,
     )
-    assert len(merged) == 1
+    assert removed_count == 3
+    assert len(merged) == 2
     assert merged[0]["external_id"] == "dnb:123"
     assert merged[0]["http_status"] == 404
+    assert merged[1]["external_id"] == "wkp:Q1"
 
 
 def test_merge_refreshed_failures_drops_rows_that_now_validate():
@@ -448,14 +564,51 @@ def test_merge_refreshed_failures_drops_rows_that_now_validate():
             "url": "http://id.sbn.it/bid/MUSV051790",
         }
     ]
-    merged = merge_refreshed_failures(
+    merged, removed_count = merge_refreshed_failures(
         existing_failures,
         refreshed_failures=[],
-        removed_keys=set(),
+        rebuilt_scopes={("people/100", "iccu")},
         selected_services={"iccu"},
         skipped_services=None,
     )
+    assert removed_count == 1
     assert merged == []
+
+
+def test_merge_refreshed_failures_preserves_untargeted_service_on_same_record():
+    existing_failures = [
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "dnb:123",
+            "service": "dnb",
+            "failure_type": "http_error",
+            "http_status": 429,
+            "reason": "Old DNB failure",
+            "url": "https://d-nb.info/gnd/123",
+        },
+        {
+            "rism_id": "100",
+            "full_rism_id": "people/100",
+            "record_type": "person",
+            "external_id": "wkp:Q1",
+            "service": "wkp",
+            "failure_type": "http_error",
+            "http_status": 404,
+            "reason": "Keep me",
+            "url": "https://www.wikidata.org/wiki/Q1",
+        },
+    ]
+    merged, removed_count = merge_refreshed_failures(
+        existing_failures,
+        refreshed_failures=[],
+        rebuilt_scopes={("people/100", "dnb")},
+        selected_services={"dnb"},
+        skipped_services=None,
+    )
+    assert removed_count == 1
+    assert merged == [existing_failures[1]]
 
 
 def test_merge_updated_failures_replaces_and_removes_targeted_failures():

@@ -82,7 +82,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     )
     all_count = len(all_related_ids)
     total_count = all_count if rism_id != "40009305" else 0
-    source_count_doc_boost = calculate_boost_value(total_count, INSTITUTION_UPPER_SOURCE_COUNT)
+    source_count_doc_boost = calculate_boost_value(
+        total_count, INSTITUTION_UPPER_SOURCE_COUNT
+    )
 
     people_contribution_count: int = record.get("people_contribution_count", 0)
 
@@ -107,7 +109,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         }
 
         if ap := reli.get("a_place"):
-            a_institution["place"] = f"{ap}"
+            a_institution["city"] = f"{ap}"
 
         if ris := reli.get("a_siglum"):
             a_institution["siglum"] = f"{ris}"
@@ -121,7 +123,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         }
 
         if bp := reli.get("b_place"):
-            b_institution["place"] = bp
+            b_institution["city"] = bp
 
         if ribs := reli.get("b_siglum"):
             b_institution["siglum"] = f"{ribs}"

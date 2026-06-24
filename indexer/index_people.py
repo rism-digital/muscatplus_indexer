@@ -78,7 +78,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                                       JSON_OBJECT('id', CONCAT('institution_', reli.id),
                                                                   'siglum', reli.siglum,
                                                                   'name', reli.corporate_name,
-                                                                  'place', reli.place))
+                                                                  'city', reli.place))
                                     FROM {dbname}.people_to_institutions AS rela
                                     LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
                                     WHERE rela.person_id = p.id AND rela.marc_tag = '510'

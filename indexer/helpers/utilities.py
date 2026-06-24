@@ -464,7 +464,7 @@ class InstitutionRelationshipIndexDocument(TypedDict, total=False):
     this_type: str
     name: str | None
     type: str
-    place: str | None
+    city: str | None
     department: str | None
     institution_id: str | None
     relationship: str | None
@@ -500,7 +500,7 @@ def related_institution(
         "this_id": this_id,
         "this_type": this_type,
         "name": field.get("a", "[Unknown name]"),
-        "place": field.get("c"),
+        "city": field.get("c"),
         "department": field.get("d"),
         "institution_id": institution_id,
         "relationship": relationship_code,

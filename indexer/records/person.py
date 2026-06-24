@@ -95,24 +95,6 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
             orjson.dumps(all_work_nodes).decode("utf-8") if all_work_nodes else None
         )
 
-    # related: list = []
-    # related_institutions: list = (
-    #     orjson.loads(ii) if (ii := record.get("related_institutions")) else []
-    # )
-    # for i, reli in enumerate(related_institutions, 1):
-    #     institution_record: dict = {
-    #         "id": f"{i}",
-    #         "institution_id": f"{reli['institution_id']}",
-    #         "type": "institution",
-    #         "name": f"{reli['name']}",
-    #         "place": f"{reli['place']}",
-    #         "siglum": reli["siglum"],
-    #         "relationship": "xi",
-    #         "this_id": person_id,
-    #         "this_type": "person",
-    #     }
-    #     related.append({k: v for k, v in institution_record.items() if v})
-
     related_places_db: list = (
         orjson.loads(ii) if (ii := record.get("related_places")) else []
     )

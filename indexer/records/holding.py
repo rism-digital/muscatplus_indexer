@@ -156,7 +156,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
             "institution_id": f"{reli['institution_id']}",
             "type": "institution",
             "name": f"{reli['name']}",
-            "place": f"{reli['place']}",
+            "city": f"{reli['place']}",
             "siglum": reli["siglum"],
             "relationship": reli["relator"],
             "this_id": holding_id,

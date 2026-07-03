@@ -113,18 +113,7 @@ def _get_people_groups(cfg: dict) -> Generator[dict]:
                                     LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
                                     WHERE wpt.person_id = p.id AND wpt.marc_tag = '670'
                                ) AS source_data_found
-                        FROM {dbname}.people AS p
-                        WHERE
-                            EXISTS (SELECT 1 FROM {dbname}.people_to_institutions pi WHERE pi.person_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.people_to_people pp1 WHERE pp1.person_a_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.people_to_people pp2 WHERE pp2.person_b_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.sources_to_people sp WHERE sp.person_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.holdings_to_people hp WHERE hp.person_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.institutions_to_people ip WHERE ip.person_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.people_to_publications pubp WHERE pubp.person_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.publications_to_people ppub WHERE ppub.person_id = p.id)
-                            OR EXISTS (SELECT 1 FROM {dbname}.works_to_people wpub WHERE wpub.person_id = p.id)
-                            {id_where_clause};"""  # noqa: S608
+                        FROM {dbname}.people AS p;"""  # noqa: S608
 
     curs.execute(sql_statement)
 

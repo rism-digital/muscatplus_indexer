@@ -31,14 +31,7 @@ def _get_place_groups(cfg: dict) -> Generator[dict]:
                     (SELECT COUNT(DISTINCT(pp.person_id)) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) AS people_count,
                     (SELECT COUNT(DISTINCT(ip.institution_id)) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) AS institutions_count,
                     (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
-                FROM {dbname}.places AS p
-                WHERE
-                    EXISTS (SELECT 1 FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) OR
-                    EXISTS (SELECT 1 FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) OR
-                    EXISTS (SELECT 1 FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) OR
-                    EXISTS (SELECT 1 FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) OR
-                    EXISTS (SELECT 1 FROM {dbname}.works_to_places AS wp WHERE wp.place_id = p.id)
-                    {id_where_clause};"""  # noqa: S608
+                FROM {dbname}.places AS p;"""  # noqa: S608
 
     curs.execute(sql_statement)
 

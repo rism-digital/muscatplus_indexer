@@ -8,14 +8,16 @@ from indexer.helpers.identifiers import ProjectIdentifiers
 log = logging.getLogger("muscat_indexer")
 
 
-def create_person_index_document(record, cfg: dict) -> list[dict]:
+def create_person_index_document(record: dict, cfg: dict) -> list[dict]:
     related_sources: list = get_related_sources_json(record["related_sources"])
     copied_sources: list = get_related_sources_json(record["copied_sources"])
     all_related_sources = related_sources + copied_sources
     num_related_sources = len(all_related_sources)
+    pers_id: str = f"diamm_person_{record['id']}"
 
     d = {
-        "id": f"diamm_person_{record['id']}",
+        "id": pers_id,
+        "person_id": pers_id,
         "type": "person",
         "project_s": ProjectIdentifiers.DIAMM,
         "record_uri_sni": f"https://www.diamm.ac.uk/people/{record['id']}",
@@ -34,7 +36,7 @@ def create_person_index_document(record, cfg: dict) -> list[dict]:
     return [d]
 
 
-def get_date_statement(record) -> str | None:
+def get_date_statement(record: dict) -> str | None:
     earliest_approx = record.get("earliest_approx")
     latest_approx = record.get("latest_approx")
     earliest = record.get("earliest_year")

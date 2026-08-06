@@ -63,8 +63,8 @@ def test_parenthetical_century_appendage_on_range():
 
 def test_multi_statement_aggregation():
     statements = ["1811a", "1850"]
-    assert process_date_statements(statements, "person_1") == [1761, 1850]
+    assert process_date_statements(statements, "person_1", "person") == [1761, 1850]
 
 
 def test_no_date_statement_list_returns_none():
-    assert process_date_statements(["s.d.", "unknown"], "person_2") is None
+    assert process_date_statements(["s.d.", "unknown"], "person_2", "person") is None

@@ -5,8 +5,8 @@ from collections import defaultdict
 import orjson
 import pymarc
 
-from indexer.helpers.parse_dates import process_date_statements
 from indexer.helpers.identifiers import country_code_from_siglum
+from indexer.helpers.parse_dates import process_date_statements
 from indexer.helpers.utilities import (
     external_resource_data,
     get_catalogue_numbers,
@@ -134,7 +134,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
 
     record_id: str = record["001"].value()
 
-    return process_date_statements(date_statements, record_id)
+    return process_date_statements(date_statements, record_id, "source")
 
 
 def _get_earliest_latest_dates_dtr(previously_computed: list[int] | None) -> str | None:

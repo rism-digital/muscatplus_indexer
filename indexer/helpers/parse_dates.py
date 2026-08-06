@@ -156,7 +156,7 @@ def parse_date_statement(date_statement: str) -> DateRange:
 
 
 def process_date_statements(
-    date_statements: list[str], record_id: str
+    date_statements: list[str], record_id: str, record_type: str
 ) -> list[int] | None:
     """Process multiple date statements and return [earliest, latest]."""
     earliest_dates: list[int] = []
@@ -168,26 +168,36 @@ def process_date_statements(
 
         if statement.startswith("-"):
             log.warning(
-                "Leading hyphen in date %s for record %s",
+                "Leading hyphen in date %s for %s %s",
                 statement,
+                record_type,
                 record_id,
             )
 
         if "\u200f" in statement:
             log.warning(
-                "RTL character in date %s for record %s",
+                "RTL character in date %s for %s %s",
                 statement,
+                record_type,
                 record_id,
             )
 
         try:
             earliest, latest = parse_date_statement(statement)
         except Exception as e:
-            log.warning("Error parsing date '%s' for %s: %s", statement, record_id, e)
+            log.warning(
+                "Error parsing date '%s' for %s %s: %s",
+                statement,
+                record_type,
+                record_id,
+                e,
+            )
             return None
 
         if earliest is None and latest is None:
-            log.warning("Problem with date '%s' for record %s", statement, record_id)
+            log.warning(
+                "Problem with date '%s' for %s %s", statement, record_type, record_id
+            )
             return None
 
         if earliest is not None:
@@ -209,19 +219,21 @@ def process_date_statements(
 
     if earliest_date > latest_date:
         log.warning(
-            "Earliest %s > latest %s for record %s",
+            "Earliest %s > latest %s for %s %s",
             earliest_date,
             latest_date,
+            record_type,
             record_id,
         )
         return None
 
     if earliest_date < 0 and latest_date > 300:
         log.warning(
-            "Unlikely earliest date %s; setting to [%s, %s] for record %s",
+            "Unlikely earliest date %s; setting to [%s, %s] for %s %s",
             earliest_date,
             latest_date - _DECADE_GAP,
             latest_date,
+            record_type,
             record_id,
         )
         # Set the earliest date a decade earlier than the latest

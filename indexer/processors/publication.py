@@ -26,7 +26,7 @@ def _get_earliest_latest_dates(record: pymarc.Record) -> list[int] | None:
 
     record_id: str = record["001"].value()
 
-    return process_date_statements(date_statements, record_id)
+    return process_date_statements(date_statements, record_id, "publication")
 
 
 def _get_earliest_latest_dates_dtr(previously_computed: list[int] | None) -> str | None:

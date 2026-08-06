@@ -8,6 +8,7 @@ from psycopg.rows import dict_row
 from cantus_indexer.helpers.db import postgres_pool
 from cantus_indexer.records.source import create_source_index_documents
 from indexer.exceptions import RequiredFieldException
+from indexer.helpers.metrics import record_error
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 
@@ -56,6 +57,7 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
             docs = create_source_index_documents(record, cfg)
         except RequiredFieldException:
             log.error("Could not index source %s", record["id"])
+            record_error(cfg)
             continue
 
         records_to_index.extend(docs)

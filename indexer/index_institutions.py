@@ -4,6 +4,7 @@ from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
+from indexer.helpers.metrics import record_error
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.institution import (
@@ -155,6 +156,7 @@ def index_institution_groups(institutions: list, cfg: dict) -> bool:
             log.error(
                 "A required field was not found, so this document was not indexed."
             )
+            record_error(cfg)
             continue
 
         records_to_index.append(doc)

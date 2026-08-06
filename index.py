@@ -1,13 +1,17 @@
 import argparse
+import dataclasses
 import faulthandler
 import logging.config
+import multiprocessing
 import os.path
 import sys
 import time
 import timeit
 import traceback
 from collections.abc import Callable
+from multiprocessing.managers import SyncManager
 from pathlib import Path
+from queue import Queue
 
 import sentry_sdk
 import yaml
@@ -18,13 +22,17 @@ from cantus_indexer.latest_record import get_latest_cantus_datetime
 from diamm_indexer.index import clean_diamm, index_diamm
 from diamm_indexer.latest_record import get_latest_diamm_datetime
 from indexer.helpers.db import run_preflight_queries
+from indexer.helpers.metrics import (
+    drain_events,
+    render_metrics,
+    write_metrics_atomically,
+)
 from indexer.helpers.solr import (
     empty_solr_core,
     reload_core,
     submit_to_solr,
     swap_cores,
 )
-from indexer.helpers.utilities import elapsedtime
 from indexer.index_digital_objects import index_digital_objects
 from indexer.index_holdings import index_holdings
 from indexer.index_institutions import index_institutions
@@ -44,6 +52,110 @@ log_config: dict = yaml.full_load(open("logging.yml"))  # noqa: SIM115
 
 logging.config.dictConfig(log_config)
 log = logging.getLogger("muscat_indexer")
+
+
+@dataclasses.dataclass
+class MetricsSession:
+    directory: str
+    job_name: str
+    manager: SyncManager
+    queue: Queue
+
+
+@dataclasses.dataclass
+class MainResult:
+    success: bool
+    metrics_session: MetricsSession | None
+    duration_seconds: float
+
+
+IndexStep = tuple[str, Callable[[dict], bool]]
+
+
+def selected_index_steps(
+    include: list[str] | None,
+    exclude: list[str],
+    index_groups: dict[str, tuple[IndexStep, ...]],
+) -> list[IndexStep]:
+    selected_groups = include or list(index_groups)
+    selected_steps: list[IndexStep] = []
+    seen_steps: set[tuple[str, Callable[[dict], bool]]] = set()
+
+    for group_name in selected_groups:
+        if group_name in exclude or group_name not in index_groups:
+            continue
+
+        for step in index_groups[group_name]:
+            if step not in seen_steps:
+                selected_steps.append(step)
+                seen_steps.add(step)
+
+    return selected_steps
+
+
+def run_index_step(
+    cfg: dict,
+    metrics_queue: object | None,
+    project: str,
+    record_type: str,
+    fn: Callable[[dict], bool],
+) -> bool:
+    return fn(metrics_config(cfg, metrics_queue, project, record_type))
+
+
+def metrics_config(
+    cfg: dict,
+    metrics_queue: object | None,
+    project: str,
+    record_type: str,
+) -> dict:
+    return (
+        cfg
+        if metrics_queue is None
+        else cfg
+        | {
+            "metrics_context": {
+                "queue": metrics_queue,
+                "project": project,
+                "record_type": record_type,
+            }
+        }
+    )
+
+
+def initialise_metrics(args: argparse.Namespace, cfg: dict) -> MetricsSession | None:
+    metrics_cfg = cfg.get("metrics", {})
+    metrics_dir = args.metrics_dir or metrics_cfg.get("directory", "")
+    metrics_job_name = args.metrics_job_name or metrics_cfg.get(
+        "job_name", "muscatplus_indexer"
+    )
+
+    if not metrics_dir:
+        return None
+
+    manager = multiprocessing.Manager()
+    return MetricsSession(
+        directory=metrics_dir,
+        job_name=metrics_job_name,
+        manager=manager,
+        queue=manager.Queue(),
+    )
+
+
+def make_main_result(
+    success: bool, metrics_session: MetricsSession | None, started_at: float
+) -> MainResult:
+    return MainResult(
+        success=success,
+        metrics_session=metrics_session,
+        duration_seconds=timeit.default_timer() - started_at,
+    )
+
+
+def format_duration(duration_seconds: float) -> str:
+    hours, remainder = divmod(duration_seconds, 60 * 60)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02.0f}:{minutes:02.0f}:{seconds:05.2f}"
 
 
 def index_indexer(
@@ -102,8 +214,7 @@ def only_cantus(cfg: dict) -> bool:
     return res
 
 
-@elapsedtime
-def main(args: argparse.Namespace) -> bool:
+def main(args: argparse.Namespace) -> MainResult:
     idx_start: float = timeit.default_timer()
 
     cfg_filename: str = "./index_config.yml" if not args.config else args.config
@@ -112,9 +223,11 @@ def main(args: argparse.Namespace) -> bool:
 
     if not os.path.exists(cfg_filename):
         log.fatal("Could not find config file %s.", cfg_filename)
-        return False
+        return make_main_result(False, None, idx_start)
 
     idx_config: dict = yaml.full_load(open(cfg_filename))  # noqa: SIM115
+    metrics_session = initialise_metrics(args, idx_config)
+    metrics_queue = metrics_session.queue if metrics_session else None
 
     # Set up sentry logging
     sentry_logging = LoggingIntegration(
@@ -136,13 +249,11 @@ def main(args: argparse.Namespace) -> bool:
         swap_after_indexing = args.swap_cores
 
     # Add a parameter indicating whether this is a dry run to the config.
-    idx_config.update(
-        {
-            "dry": args.dry,
-            "swap_cores": swap_after_indexing,
-            "indexing_core": actual_indexing_core,
-        }
-    )
+    idx_config = idx_config | {
+        "dry": args.dry,
+        "swap_cores": swap_after_indexing,
+        "indexing_core": actual_indexing_core,
+    }
 
     debug_mode: bool = idx_config["common"]["debug"]
     if debug_mode is False:
@@ -158,57 +269,57 @@ def main(args: argparse.Namespace) -> bool:
 
     if args.only_diamm:
         log.info("Only running the DIAMM indexer.")
-        res &= only_diamm(idx_config)
+        res &= only_diamm(metrics_config(idx_config, metrics_queue, "diamm", "all"))
         # force a core reload to ensure it's up-to-date
-        return res
+        return make_main_result(res, metrics_session, idx_start)
 
     if args.only_cantus:
         log.info("Only running the Cantus indexer.")
-        res &= only_cantus(idx_config)
-        return res
+        res &= only_cantus(metrics_config(idx_config, metrics_queue, "cantus", "all"))
+        return make_main_result(res, metrics_session, idx_start)
 
-    fn_map: dict[str, tuple[Callable[[dict], bool], ...]] = {
-        "sources": (index_sources,),
-        "people": (index_people,),
-        "places": (index_places,),
-        "institutions": (index_institutions,),
-        "holdings": (index_holdings,),
-        "subjects": (index_subjects,),
-        "festivals": (index_liturgical_festivals,),
-        "digital-objects": (index_digital_objects,),
-        "works": (index_publications, index_works),
-        "publications": (index_publications,),
-        "inventory-items": (index_inventory_items,),
-        "tombstones": (index_tombstones,),
+    index_groups: dict[str, tuple[IndexStep, ...]] = {
+        "sources": (("sources", index_sources),),
+        "people": (("people", index_people),),
+        "places": (("places", index_places),),
+        "institutions": (("institutions", index_institutions),),
+        "holdings": (("holdings", index_holdings),),
+        "subjects": (("subjects", index_subjects),),
+        "festivals": (("festivals", index_liturgical_festivals),),
+        "digital-objects": (("digital-objects", index_digital_objects),),
+        "works": (("publications", index_publications), ("works", index_works)),
+        "publications": (("publications", index_publications),),
+        "inventory-items": (("inventory-items", index_inventory_items),),
+        "tombstones": (("tombstones", index_tombstones),),
     }
-
-    inc: list = args.include or fn_map.keys()
 
     if args.empty and not args.dry:
         log.info("Emptying Solr indexing core")
         res &= empty_solr_core(idx_config)
 
     if args.only_id:
-        idx_config.update({"id": args.only_id})
+        idx_config = idx_config | {"id": args.only_id}
 
     if not args.dry:
         res &= run_preflight_queries(idx_config)
 
-    for record_type in inc:
-        if record_type in args.exclude or record_type not in fn_map:
-            continue
-
-        for fn in fn_map[record_type]:
-            res &= fn(idx_config)
+    for metric_type, fn in selected_index_steps(
+        args.include, args.exclude, index_groups
+    ):
+        res &= run_index_step(idx_config, metrics_queue, "muscat", metric_type, fn)
 
     if not args.skip_diamm:
-        res &= index_diamm(idx_config)
+        res &= index_diamm(metrics_config(idx_config, metrics_queue, "diamm", "all"))
 
     if not args.skip_cantus:
-        res &= index_cantus(idx_config)
+        res &= index_cantus(metrics_config(idx_config, metrics_queue, "cantus", "all"))
 
     log.info("Finished indexing records, cleaning up.")
     idx_end: float = timeit.default_timer()
+    # The bookkeeping document is not a record-type indexing result.
+    idx_config = {
+        key: value for key, value in idx_config.items() if key != "metrics_context"
+    }
 
     # If, so far, all the results have been successful, and we're not in a dry run, then
     # add the final index record and reload the core.
@@ -243,13 +354,21 @@ def main(args: argparse.Namespace) -> bool:
         log.error("Indexing failed.")
 
     log.info("Indexing successful.")
-    return res
+    return make_main_result(res, metrics_session, idx_start)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose output"
+    )
+    parser.add_argument(
+        "--metrics-dir",
+        help="Directory where Prometheus textfile metrics are written. Overrides config.",
+    )
+    parser.add_argument(
+        "--metrics-job-name",
+        help="Prometheus metric prefix and output filename. Overrides config.",
     )
     parser.add_argument(
         "-e",
@@ -344,19 +463,46 @@ if __name__ == "__main__":
     if not input_args.dry:
         pid_file.write_text(idx_pid)
 
-    success: bool = False
+    main_result = MainResult(success=False, metrics_session=None, duration_seconds=0)
+    unhandled_errors = 0
     try:
-        success = main(input_args)
+        main_result = main(input_args)
+        log.info("Total time to index main: %s", format_duration(main_result.duration_seconds))
     except Exception as e:
         log.critical("Main method raised an exception and could not continue: %s", e)
         traceback.print_exc()
-        success = False
+        unhandled_errors = 1
+    finally:
+        session = main_result.metrics_session
+        if session:
+            try:
+                counts, errors = drain_events(session.queue)
+                errors += unhandled_errors
+                if not main_result.success and errors == 0:
+                    errors = 1
+                metric_success = main_result.success and errors == 0
+                write_metrics_atomically(
+                    session.directory,
+                    session.job_name,
+                    render_metrics(
+                        session.job_name,
+                        metric_success,
+                        int(time.time()),
+                        main_result.duration_seconds,
+                        errors,
+                        counts,
+                    ),
+                )
+            except Exception as e:
+                log.error("Could not write Prometheus metrics: %s", e)
+            finally:
+                session.manager.shutdown()
 
     if not input_args.dry:
         # Remove the PID file
         pid_file.unlink()
 
-    if success:
+    if main_result.success:
         # Exit with status 0 (success).
         faulthandler.disable()
         sys.exit()

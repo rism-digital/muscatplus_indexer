@@ -5,6 +5,7 @@ from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
+from indexer.helpers.metrics import record_error
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.source import create_source_index_documents
@@ -175,6 +176,7 @@ def index_source_groups(sources: list, cfg: dict) -> bool:
             docs = create_source_index_documents(record, cfg)
         except RequiredFieldException:
             log.critical("Could not index source %s", record["id"])
+            record_error(cfg)
             continue
         log.debug("Appending source document")
         records_to_index.extend(docs)

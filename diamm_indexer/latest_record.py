@@ -13,7 +13,10 @@ def get_latest_diamm_datetime() -> str | None:
         )
         res = curs.fetchone()
 
-    updated_dt: datetime | None = res.get("updated")
+    if not res:
+        return None
+
+    updated_dt: datetime.datetime | None = res.get("updated")
     if updated_dt:
         utc_tz = updated_dt.astimezone(datetime.UTC)
         return utc_tz.strftime("%Y-%m-%dT%H:%M:%SZ")

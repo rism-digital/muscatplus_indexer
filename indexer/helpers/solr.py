@@ -5,6 +5,7 @@ import orjson
 from pyreqwest.client import SyncClientBuilder
 
 from indexer.exceptions import RequiredFieldException
+from indexer.helpers.metrics import record_error, record_submission
 
 log = logging.getLogger("muscat_indexer")
 
@@ -83,9 +84,11 @@ def _submit_to_solr(records: list, cfg: dict, core: str) -> bool:
 
     if 200 <= res.status < 400:
         log.debug("Indexing was successful")
+        record_submission(cfg, len(records), successful=True)
         return True
 
     log.error("Could not index to Solr. %s: %s", res.status, res.text())
+    record_submission(cfg, len(records), successful=False)
 
     return False
 
@@ -223,6 +226,7 @@ def record_indexer(records: list, converter: Callable, cfg: dict) -> bool:
             docs: list = converter(record, cfg)
         except RequiredFieldException:
             log.error("Could not index %s %s", record["type"], record["id"])
+            record_error(cfg)
             continue
 
         idx_records.extend(docs)

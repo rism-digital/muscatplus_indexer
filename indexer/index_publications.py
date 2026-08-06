@@ -3,6 +3,7 @@ from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.db import mysql_pool
+from indexer.helpers.metrics import record_error
 from indexer.helpers.identifiers import WorkPublicationStatusIdentifiers
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
@@ -69,6 +70,7 @@ def index_publication_groups(publications: list, cfg: dict) -> bool:
             doc = create_publication_index_document(record, cfg)
         except RequiredFieldException:
             log.critical("Could not index publication %s", record["id"])
+            record_error(cfg)
             continue
 
         records_list.append(doc)

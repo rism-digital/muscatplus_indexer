@@ -7,5 +7,6 @@ mp.tar.gz
 *.sql
 db_small.sql.gz
 index_config_remote_dev.yml
+index_config.yml
 .DS_Store
 authority_link_failures.json

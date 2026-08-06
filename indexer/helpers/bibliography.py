@@ -114,15 +114,17 @@ def reference_author(marc_ref: pymarc.Record) -> str:
         f for f in additional_authors_struct if f.get("relationship") == "aut"
     ]
     filt_edt = [f for f in additional_authors_struct if f.get("relationship") == "edt"]
-    additional_authors: list = get_people_names(filt_add_auth, suppress_dates=True)
-    editors: list = get_people_names(filt_edt, suppress_dates=True)
+    additional_authors: list[str] | None = get_people_names(
+        filt_add_auth, suppress_dates=True
+    )
+    editors: list[str] | None = get_people_names(filt_edt, suppress_dates=True)
     rel_corp: str | None = to_solr_single(marc_ref, "710", "a")
 
     if author and additional_authors:
         return f"{author}; {'; '.join(additional_authors)}."
     elif author:
         return f"{author}."
-    elif not author and filt_edt:
+    elif not author and editors:
         # Maybe we have an editor?
         return f"{'; '.join(editors)} ({'ed.' if len(editors) == 1 else 'eds.'})."
     elif not author and rel_corp:

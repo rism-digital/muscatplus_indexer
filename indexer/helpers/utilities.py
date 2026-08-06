@@ -3,10 +3,8 @@ import dataclasses
 import logging
 import math
 import re
-import timeit
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
-from functools import wraps
 from typing import TypedDict
 
 import orjson
@@ -21,34 +19,6 @@ from indexer.helpers.marc import create_marc
 from indexer.helpers.solr import exists
 
 log = logging.getLogger("muscat_indexer")
-
-
-def elapsedtime(func) -> Callable:
-    """
-    Simpler method that just provides the elapsed time for a method call. Used only for the 'main' method
-    to provide an elapsed total time for indexing
-    :param func:
-    :return:
-    """
-
-    @wraps(func)
-    def timed_f(*args, **kwargs) -> Callable:
-        fname = func.__name__
-        log.debug(" --- Timing execution for %s ---", fname)
-        start = timeit.default_timer()
-        ret = func(*args, **kwargs)
-        end = timeit.default_timer()
-        elapsed: float = end - start
-
-        hours, remainder = divmod(elapsed, 60 * 60)
-        minutes, seconds = divmod(remainder, 60)
-
-        log.info(
-            "Total time to index %s: %02i:%02i:%02.2f", fname, hours, minutes, seconds
-        )
-        return ret
-
-    return timed_f
 
 
 def parallelise(records: Iterable, func: Callable, *args, **kwargs) -> None:

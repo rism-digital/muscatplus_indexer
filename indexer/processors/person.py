@@ -6,8 +6,8 @@ from orjson import orjson
 
 from indexer.helpers.parse_dates import process_date_statements
 from indexer.helpers.utilities import (
-    get_external_ids,
     external_resource_data,
+    get_external_ids,
     get_related_institutions,
     get_related_people,
     to_solr_multi,

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import orjson
 import pymarc
@@ -25,13 +25,19 @@ raw_mss_holding_profile: dict = yaml.full_load(open("profiles/holdingsmss.yml"))
 mss_holding_profile = compile_marc_profile(raw_mss_holding_profile, holding_processor)
 
 
-class HoldingIndexDocument(TypedDict):
+class HoldingIndexDocument(TypedDict, total=False):
     id: str
     type: str
     source_id: str
     main_title_s: str
+    record_type_s: str
+    source_type_s: str
+    content_types_sm: list[str]
+    creator_name_s: str | None
+    has_digital_objects_b: bool
+
     # Convenience for URL construction; should not be used for lookups.
-    holding_id_sni: str
+    holding_id: str
     siglum_s: str | None
     department_s: str | None
     city_s: str | None
@@ -52,11 +58,14 @@ class HoldingIndexDocument(TypedDict):
     external_resources_json: str | None
     source_membership_order_i: int | None
     bibliographic_references_json: str | None
+    standard_titles_json: str | None
+    related_institutions_json: str | None
+    digital_object_ids: list[str] | None
     created: str
     updated: str
 
 
-def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
+def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocument:
     record_id: str = f"{record['id']}"
     membership_id: str = f"source_{record['source_id']}"
     marc_record: pymarc.Record = create_marc(record["marc_source"])
@@ -73,7 +82,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> dict[str, object]:
     creator_name: str | None = get_creator_name(source_marc_record)
     record_type_id: int = record["record_type"]
 
-    idx_document: dict[str, Any] = holding_index_document(
+    idx_document: HoldingIndexDocument = holding_index_document(
         marc_record,
         holding_id,
         membership_id,
@@ -191,7 +200,7 @@ def holding_index_document(
     record_type_id: int,
     source_single_item: bool,
     mss_profile: bool,
-) -> dict[str, Any]:
+) -> HoldingIndexDocument:
     """
     The holding index documents are used for indexing BOTH holding records AND source records for manuscripts. In this
     way we can ensure that the structure of the index is the same for both of these types of holdings.
@@ -211,7 +220,7 @@ def holding_index_document(
     else:
         holding_id_alone = holding_id
 
-    holding_core: dict = {
+    holding_core: HoldingIndexDocument = {
         "id": holding_id,
         "type": "holding",
         "source_id": source_id,

@@ -20,7 +20,7 @@ handlers:
     stream: ext://sys.stdout
   file:
     class: logging.handlers.TimedRotatingFileHandler
-    level: ERROR
+    level: WARNING
     formatter: simple
     filename: ./logs/indexer.log
     when: D

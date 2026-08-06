@@ -19,12 +19,10 @@ handlers:
     formatter: colored
     stream: ext://sys.stdout
   file:
-    class: logging.handlers.TimedRotatingFileHandler
+    class: logging.handlers.WatchedFileHandler
     level: WARNING
     formatter: simple
     filename: ./logs/indexer.log
-    when: D
-    backupCount: 7
 loggers:
   muscat_indexer:
     level: INFO

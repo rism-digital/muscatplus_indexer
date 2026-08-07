@@ -5,7 +5,6 @@ import os
 import queue
 import re
 import tempfile
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +17,8 @@ def validate_job_name(job_name: str) -> str:
     return job_name
 
 
-def record_submission(cfg: dict, documents: int, successful: bool) -> None:
-    """Send a safe, aggregate batch outcome to the parent process when enabled."""
+def record_submission(cfg: dict, successful: bool) -> None:
+    """Send a safe batch outcome to the parent process when enabled."""
     context: dict[str, Any] | None = cfg.get("metrics_context")
     if context is None:
         return
@@ -27,7 +26,6 @@ def record_submission(cfg: dict, documents: int, successful: bool) -> None:
         {
             "project": context["project"],
             "record_type": context["record_type"],
-            "documents": documents if successful else 0,
             "errors": 0 if successful else 1,
         }
     )
@@ -40,23 +38,31 @@ def record_error(cfg: dict) -> None:
             {
                 "project": context["project"],
                 "record_type": context["record_type"],
-                "documents": 0,
                 "errors": 1,
             }
         )
 
 
-def drain_events(events_queue: Any) -> tuple[dict[tuple[str, str], int], int]:
-    counts: dict[tuple[str, str], int] = defaultdict(int)
+def drain_event_errors(events_queue: Any) -> int:
     errors = 0
     while True:
         try:
             event = events_queue.get_nowait()
         except queue.Empty:
             break
-        counts[(event["project"], event["record_type"])] += event["documents"]
         errors += event["errors"]
-    return dict(counts), errors
+    return errors
+
+
+def calculate_metric_outcome(
+    index_success: bool, indexing_errors: int, count_errors: int
+) -> tuple[bool, int]:
+    adjusted_indexing_errors = (
+        1 if not index_success and indexing_errors == 0 else indexing_errors
+    )
+    return index_success and adjusted_indexing_errors == 0, (
+        adjusted_indexing_errors + count_errors
+    )
 
 
 def render_metrics(
@@ -65,7 +71,7 @@ def render_metrics(
     finished_unixtime: int,
     duration_seconds: float,
     errors: int,
-    counts: dict[tuple[str, str], int],
+    indexed_counts: dict[tuple[str, str], int],
 ) -> str:
     prefix = validate_job_name(job_name)
     lines = [
@@ -81,10 +87,10 @@ def render_metrics(
         f"# HELP {prefix}_last_run_errors Number of indexing errors in the most recent run.",
         f"# TYPE {prefix}_last_run_errors gauge",
         f"{prefix}_last_run_errors {errors}",
-        f"# HELP {prefix}_last_run_records_indexed Number of Solr documents accepted in the most recent run.",
+        f"# HELP {prefix}_last_run_records_indexed Final number of indexed records in Solr.",
         f"# TYPE {prefix}_last_run_records_indexed gauge",
     ]
-    for (project, record_type), count in sorted(counts.items()):
+    for (project, record_type), count in sorted(indexed_counts.items()):
         lines.append(
             f'{prefix}_last_run_records_indexed{{project="{project}",record_type="{record_type}"}} {count}'
         )

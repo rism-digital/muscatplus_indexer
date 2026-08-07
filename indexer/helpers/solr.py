@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from urllib.parse import urlencode
 
 import orjson
 from pyreqwest.client import SyncClientBuilder
@@ -8,6 +9,65 @@ from indexer.exceptions import RequiredFieldException
 from indexer.helpers.metrics import record_error, record_submission
 
 log = logging.getLogger("muscat_indexer")
+
+FINAL_RECORD_COUNT_QUERIES: dict[tuple[str, str], str] = {
+    ("muscat", "sources"): "type:source AND -project_s:[* TO *]",
+    ("muscat", "people"): "type:person AND -project_s:[* TO *]",
+    ("muscat", "places"): "type:place AND -project_s:[* TO *]",
+    ("muscat", "institutions"): "type:institution AND -project_s:[* TO *]",
+    (
+        "muscat",
+        "printed_holdings",
+    ): "type:holding AND source_type_s:printed AND -project_s:[* TO *]",
+    (
+        "muscat",
+        "manuscript_holdings",
+    ): "type:holding AND source_type_s:manuscript AND -project_s:[* TO *]",
+    ("muscat", "subjects"): "type:subject AND -project_s:[* TO *]",
+    ("muscat", "festivals"): "type:liturgical_festival AND -project_s:[* TO *]",
+    ("muscat", "digital-objects"): "type:dobject AND -project_s:[* TO *]",
+    ("muscat", "works"): "type:work AND -project_s:[* TO *]",
+    ("muscat", "publications"): "type:publication AND -project_s:[* TO *]",
+    ("muscat", "inventory-items"): "type:inventory_item AND -project_s:[* TO *]",
+    ("muscat", "tombstones"): "type:tombstone AND -project_s:[* TO *]",
+    (
+        "muscat",
+        "source_incipits",
+    ): "type:incipit AND parent_type_s:source AND -project_s:[* TO *]",
+    (
+        "muscat",
+        "work_incipits",
+    ): "type:incipit AND parent_type_s:work AND -project_s:[* TO *]",
+    ("diamm", "sources"): "project_s:diamm AND type:source",
+    ("diamm", "institutions"): "project_s:diamm AND type:institution",
+    ("diamm", "people"): "project_s:diamm AND type:person",
+    ("cantus", "sources"): "project_s:cantus AND type:source",
+    ("cantus", "institutions"): "project_s:cantus AND type:institution",
+}
+
+
+def get_final_record_counts(cfg: dict) -> tuple[dict[tuple[str, str], int], int]:
+    """Return final Solr counts and the number of queries that failed."""
+    server = cfg["solr"]["server"]
+    core = cfg["indexing_core"]
+    counts: dict[tuple[str, str], int] = {}
+    errors = 0
+
+    with SyncClientBuilder().build() as client:
+        for label, query in FINAL_RECORD_COUNT_QUERIES.items():
+            params = urlencode({"q": query, "rows": 0, "wt": "json"})
+            response = client.get(f"{server}/{core}/select?{params}").build().send()
+            if 200 <= response.status < 400:
+                try:
+                    counts[label] = int(response.json()["response"]["numFound"])
+                    continue
+                except (KeyError, TypeError, ValueError):
+                    pass
+
+            log.error("Could not get final Solr count for %s/%s", *label)
+            errors += 1
+
+    return counts, errors
 
 
 def empty_solr_core(cfg: dict) -> bool:
@@ -84,11 +144,11 @@ def _submit_to_solr(records: list, cfg: dict, core: str) -> bool:
 
     if 200 <= res.status < 400:
         log.debug("Indexing was successful")
-        record_submission(cfg, len(records), successful=True)
+        record_submission(cfg, successful=True)
         return True
 
     log.error("Could not index to Solr. %s: %s", res.status, res.text())
-    record_submission(cfg, len(records), successful=False)
+    record_submission(cfg, successful=False)
 
     return False
 

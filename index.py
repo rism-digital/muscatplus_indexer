@@ -23,12 +23,14 @@ from diamm_indexer.index import clean_diamm, index_diamm
 from diamm_indexer.latest_record import get_latest_diamm_datetime
 from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.metrics import (
-    drain_events,
+    calculate_metric_outcome,
+    drain_event_errors,
     render_metrics,
     write_metrics_atomically,
 )
 from indexer.helpers.solr import (
     empty_solr_core,
+    get_final_record_counts,
     reload_core,
     submit_to_solr,
     swap_cores,
@@ -67,6 +69,8 @@ class MainResult:
     success: bool
     metrics_session: MetricsSession | None
     duration_seconds: float
+    final_record_counts: dict[tuple[str, str], int]
+    count_errors: int
 
 
 IndexStep = tuple[str, Callable[[dict], bool]]
@@ -143,12 +147,18 @@ def initialise_metrics(args: argparse.Namespace, cfg: dict) -> MetricsSession | 
 
 
 def make_main_result(
-    success: bool, metrics_session: MetricsSession | None, started_at: float
+    success: bool,
+    metrics_session: MetricsSession | None,
+    started_at: float,
+    final_record_counts: dict[tuple[str, str], int] | None = None,
+    count_errors: int = 0,
 ) -> MainResult:
     return MainResult(
         success=success,
         metrics_session=metrics_session,
         duration_seconds=timeit.default_timer() - started_at,
+        final_record_counts=final_record_counts or {},
+        count_errors=count_errors,
     )
 
 
@@ -323,6 +333,8 @@ def main(args: argparse.Namespace) -> MainResult:
 
     # If, so far, all the results have been successful, and we're not in a dry run, then
     # add the final index record and reload the core.
+    final_record_counts: dict[tuple[str, str], int] = {}
+    count_errors = 0
     if res and not args.dry:
         # Add a single record that records some metadata about this index run
         log.info("Adding indexer record.")
@@ -339,6 +351,8 @@ def main(args: argparse.Namespace) -> MainResult:
 
         # force a core reload to ensure it's up-to-date
         res &= reload_core(idx_config["solr"]["server"], idx_config["indexing_core"])
+        if res and metrics_session:
+            final_record_counts, count_errors = get_final_record_counts(idx_config)
 
     # Finally, if all the previous statuses are True, we're supposed to swap the cores, and we're not in a dry run,
     # then consider that indexing was successful and swap the indexer core with the live core.
@@ -354,7 +368,9 @@ def main(args: argparse.Namespace) -> MainResult:
         log.error("Indexing failed.")
 
     log.info("Indexing successful.")
-    return make_main_result(res, metrics_session, idx_start)
+    return make_main_result(
+        res, metrics_session, idx_start, final_record_counts, count_errors
+    )
 
 
 if __name__ == "__main__":
@@ -463,7 +479,13 @@ if __name__ == "__main__":
     if not input_args.dry:
         pid_file.write_text(idx_pid)
 
-    main_result = MainResult(success=False, metrics_session=None, duration_seconds=0)
+    main_result = MainResult(
+        success=False,
+        metrics_session=None,
+        duration_seconds=0,
+        final_record_counts={},
+        count_errors=0,
+    )
     unhandled_errors = 0
     try:
         main_result = main(input_args)
@@ -476,11 +498,10 @@ if __name__ == "__main__":
         session = main_result.metrics_session
         if session:
             try:
-                counts, errors = drain_events(session.queue)
-                errors += unhandled_errors
-                if not main_result.success and errors == 0:
-                    errors = 1
-                metric_success = main_result.success and errors == 0
+                indexing_errors = drain_event_errors(session.queue) + unhandled_errors
+                metric_success, errors = calculate_metric_outcome(
+                    main_result.success, indexing_errors, main_result.count_errors
+                )
                 write_metrics_atomically(
                     session.directory,
                     session.job_name,
@@ -490,7 +511,7 @@ if __name__ == "__main__":
                         int(time.time()),
                         main_result.duration_seconds,
                         errors,
-                        counts,
+                        main_result.final_record_counts,
                     ),
                 )
             except Exception as e:

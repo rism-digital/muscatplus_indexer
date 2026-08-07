@@ -128,6 +128,9 @@ def metrics_config(
 
 
 def initialise_metrics(args: argparse.Namespace, cfg: dict) -> MetricsSession | None:
+    if args.dry:
+        return None
+
     metrics_cfg = cfg.get("metrics", {})
     metrics_dir = args.metrics_dir or metrics_cfg.get("directory", "")
     metrics_job_name = args.metrics_job_name or metrics_cfg.get(

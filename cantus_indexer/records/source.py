@@ -91,7 +91,7 @@ def create_source_index_documents(record, cfg: dict) -> list[dict]:
     }
 
     manuscript_holding: dict = {
-        "id": "",
+        "id": f"cantus_holding_{record['id']}",
         "type": "holding",
         "project_s": ProjectIdentifiers.CANTUS,
         "source_id": f"cantus_source_{record['id']}",

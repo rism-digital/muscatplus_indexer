@@ -10,3 +10,4 @@ index_config_remote_dev.yml
 index_config.yml
 .DS_Store
 authority_link_failures.json
+metrics/muscatplus_indexer.prom

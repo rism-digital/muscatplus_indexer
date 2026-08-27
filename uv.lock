@@ -42,15 +42,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dbutils"
-version = "3.1.2"
-source = { registry = "https://pypi.org/simple/" }
-sdist = { url = "https://files.pythonhosted.org/packages/55/33/b739e991d8234b3fb0602d501b4aacda88ad1fd5d061b5b9d6022fa35ed6/dbutils-3.1.2.tar.gz", hash = "sha256:160b5788154f1adeddc61080daff1530b4df2ba0d45af1c3bfbac76db24186b3", size = 95869, upload-time = "2025-09-07T17:01:31.713Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/a7/4fe7da3082241028e62c390bf9357d60522dd03d9329e3a560045fe14dfd/dbutils-3.1.2-py3-none-any.whl", hash = "sha256:0cb388a89eeecf04089aef113a7007c3fac9199e9580c8549829f954870c403a", size = 32936, upload-time = "2025-09-07T17:01:30.466Z" },
-]
-
-[[package]]
 name = "executing"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple/" }
@@ -180,8 +171,6 @@ version = "1.0.4"
 source = { virtual = "." }
 dependencies = [
     { name = "antequem" },
-    { name = "dbutils" },
-    { name = "mysqlclient" },
     { name = "orjson" },
     { name = "psycopg", extra = ["pool"] },
     { name = "pymarc" },
@@ -204,8 +193,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "antequem", git = "https://github.com/rism-digital/antequem.git?rev=main" },
-    { name = "dbutils", specifier = ">=3.0,<4.0" },
-    { name = "mysqlclient", specifier = ">=2.2.7" },
     { name = "orjson", specifier = ">=3.10.3,<4.0.0" },
     { name = "psycopg", extras = ["pool"], specifier = ">=3.2.6" },
     { name = "pymarc", git = "https://gitlab.com/ahankinson/pymarc.git?rev=constructor-searching-optimizations" },
@@ -268,17 +255,6 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/6e/371856a3fb9d31ca8dac321cda606860fa4548858c0cc45d9d1d4ca2628b/mypy_extensions-1.1.0.tar.gz", hash = "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558", size = 6343, upload-time = "2025-04-22T14:54:24.164Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505", size = 4963, upload-time = "2025-04-22T14:54:22.983Z" },
-]
-
-[[package]]
-name = "mysqlclient"
-version = "2.2.8"
-source = { registry = "https://pypi.org/simple/" }
-sdist = { url = "https://files.pythonhosted.org/packages/eb/b0/9df076488cb2e536d40ce6dbd4273c1f20a386e31ffe6e7cb613902b3c2a/mysqlclient-2.2.8.tar.gz", hash = "sha256:8ed20c5615a915da451bb308c7d0306648a4fd9a2809ba95c992690006306199", size = 92287, upload-time = "2026-02-10T10:58:37.405Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/d5/76e369b0fdccd2eb9ed7d890e4e3e23aa1344fea62f0180d7f1574285e54/mysqlclient-2.2.8-cp313-cp313-win_amd64.whl", hash = "sha256:a81f5e12f8d05439709cb02fba97f9f76d1a6c528164f2260d8798fec969e300", size = 207158, upload-time = "2026-02-10T10:58:38.663Z" },
-    { url = "https://files.pythonhosted.org/packages/42/44/6ae21b4e8490eb5167d04fa7452c462ffd72a502b96bf531477ef044a380/mysqlclient-2.2.8-cp314-cp314-win_amd64.whl", hash = "sha256:9bed7c8d3b629bdc09e17fb628d5b3b0a5fd1f12b09432b464b9126c727bedc0", size = 211644, upload-time = "2026-02-10T10:58:45.022Z" },
-    { url = "https://files.pythonhosted.org/packages/66/e5/037d55623be9f681236e04abe12e1290847c06bd48270c3f19ac33493cbf/mysqlclient-2.2.8-cp314-cp314t-win_amd64.whl", hash = "sha256:260cce0e81446c83bf0a389e0fae38d68547d9f8fc0833bc733014e10ce28a99", size = 213067, upload-time = "2026-02-10T10:58:43.389Z" },
 ]
 
 [[package]]

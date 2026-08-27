@@ -127,7 +127,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
         idx_document.update(additional_institution_fields)
 
     if p := record.get("publication_entries"):
-        publication_entries: list = [d for d in orjson.loads(p) if d] if p else []
+        publication_entries: list = [d for d in p if d] if p else []
         bibliographic_references: list[dict] | None = get_bibliographic_references_json(
             marc_record, "691", publication_entries
         )
@@ -143,7 +143,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
         idx_document.update(
             {
                 "has_digital_objects_b": True,
-                "digital_object_ids": orjson.loads(d),
+                "digital_object_ids": d,
             }
         )
 
@@ -156,9 +156,7 @@ def create_holding_index_document(record: dict, cfg: dict) -> HoldingIndexDocume
         )
 
     related: list = []
-    related_institutions: list = (
-        orjson.loads(ii) if (ii := record["related_institutions"]) else []
-    )
+    related_institutions: list = record["related_institutions"] or []
     for i, reli in enumerate(related_institutions, 1):
         institution_record: dict = {
             "id": f"{i}",

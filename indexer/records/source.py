@@ -75,9 +75,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     is_single_item: bool = parent_id is None and child_count == 0
 
     log.debug("Indexing %s", source_id)
-    child_marc: list = (
-        orjson.loads(ch) if (ch := record.get("child_marc_records")) else []
-    )
+    child_marc: list = record.get("child_marc_records") or []
     child_marc_records: list[pymarc.Record] = create_marc_list(child_marc)
     child_composers: set[str] = set()
     for child_record in child_marc_records:
@@ -88,10 +86,8 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     creator_name: str | None = get_creator_name(marc_record)
 
-    holding_info: list[dict] = orjson.loads(m) if (m := record.get("holdings")) else []
-    parent_holding_info: list[dict] = (
-        orjson.loads(mp) if (mp := record.get("parent_holdings")) else []
-    )
+    holding_info: list[dict] = record.get("holdings") or []
+    parent_holding_info: list[dict] = record.get("parent_holdings") or []
 
     holdings_marc: list[pymarc.Record] = create_marc_list(
         [m["marc_source"] for m in holding_info]
@@ -118,9 +114,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     related_institution_sigla = []
     institution_places: list = []
-    ms_holding_institutions: list = (
-        orjson.loads(a) if (a := record.get("ms_holding_institutions")) else []
-    )
+    ms_holding_institutions: list = record.get("ms_holding_institutions") or []
     for inst in ms_holding_institutions:
         if s := inst.get("siglum"):
             related_institution_sigla.append(s)
@@ -218,7 +212,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
         else None
     )
 
-    people: list = orjson.loads(d) if (d := record.get("people")) else []
+    people: list = record.get("people") or []
     people_names: list | None = get_people_names(people)
 
     variant_people_names: list | None = _get_variant_people_names(people)
@@ -231,15 +225,11 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     related_people_ids: list[str] = list(source_people_ids)
 
     variant_standard_terms: list | None = _get_variant_standard_terms(
-        orjson.loads(st) if (st := record.get("alt_standard_terms")) else []
+        record.get("alt_standard_terms") or []
     )
     related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
 
-    publication_entries: list = (
-        [p for p in orjson.loads(d) if p]
-        if (d := record.get("publication_entries"))
-        else []
-    )
+    publication_entries: list = [p for p in record.get("publication_entries") or [] if p]
     bibliographic_references: list[dict] | None = get_bibliographic_references_json(
         marc_record, "691", publication_entries
     )
@@ -261,13 +251,9 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     num_physical_copies: int = len(manuscript_holdings) + len(all_print_holding_records)
     has_digital_objects: bool = record.get("digital_objects") is not None
     num_inventory_items: int = record.get("num_inventory_items", 0)
-    digital_object_ids: list[str] = (
-        orjson.loads(d) if (d := record.get("digital_objects")) else []
-    )
+    digital_object_ids: list[str] = record.get("digital_objects") or []
 
-    work_catalogue_for_source: list[dict] = (
-        orjson.loads(d) if (d := record.get("work_catalogue_entries")) else []
-    )
+    work_catalogue_for_source: list[dict] = record.get("work_catalogue_entries") or []
     work_ids = [g["id"] for g in work_catalogue_for_source if g]
     works_list = []
     for wk in work_catalogue_for_source:
@@ -278,8 +264,7 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
     works_json = orjson.dumps(works_list).decode("utf-8") if works_list else None
 
     related_sources = None
-    if t := record.get("related_sources"):
-        source_list: list = orjson.loads(t)
+    if source_list := record.get("related_sources"):
         related_sources = get_related_sources(
             source_list, related_source_fields, source_id
         )
@@ -295,17 +280,14 @@ def create_source_index_documents(record: dict, cfg: dict) -> list[dict]:
 
     work_node_json = None
     work_node_id = None
-    if w := record.get("work_node"):
-        wndata = orjson.loads(w)
+    if wndata := record.get("work_node"):
         wn_record: pymarc.Record = create_marc(wndata["marc_source"])
         work_node: dict | None = get_work_node(wn_record, source_id, "source")
         if work_node and "external_id" in work_node:
             work_node_id = work_node["external_id"]
             work_node_json = orjson.dumps(work_node).decode("utf-8")
 
-    locations_peformances_db: list = (
-        orjson.loads(ii) if (ii := record.get("locations_of_performances")) else []
-    )
+    locations_peformances_db: list = record.get("locations_of_performances") or []
 
     locations_peformances: list = [
         {k: v for k, v in it.items() if v} for it in locations_peformances_db
@@ -486,7 +468,11 @@ def _get_variant_people_names(people: list | None) -> list | None:
         return None
 
     variant_names: list[str] = [
-        v for p in people for v in p["alternate_names"].splitlines() if p
+        variant
+        for person in people
+        if person
+        for variant in (person.get("alternate_names") or "").splitlines()
+        if variant
     ]
     return tokenize_variants(variant_names)
 

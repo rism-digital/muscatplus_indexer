@@ -2,9 +2,10 @@ import gc
 import logging
 from collections import deque
 from collections.abc import Generator
+from typing import Any
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.db import mysql_pool
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.metrics import record_error
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
@@ -13,95 +14,92 @@ from indexer.records.source import create_source_index_documents
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_sources(cfg: dict) -> Generator[dict]:
+def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]]]:
     log.info("Getting list of sources to index")
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
+    record_id = int(cfg["id"]) if "id" in cfg else None
 
-    id_where_clause: str = ""
-    query_params: tuple[int, ...] = ()
-    if "id" in cfg:
-        id_where_clause = "AND child.id = %s"
-        query_params = (int(cfg["id"]),)
-
-    sql_query: str = f"""
+    sql_query = """
+    WITH holdings_counts AS (
+        SELECT source_id, COUNT(*) AS count
+        FROM holdings
+        GROUP BY source_id
+    )
     SELECT child.id AS id, child.title AS title, child.std_title AS std_title,
         child.source_id AS source_id, child.marc_source AS marc_source, child.composer AS creator_name,
         child.created_at AS created, child.updated_at AS updated, parent.marc_source AS parent_marc_source,
         child.record_type AS record_type, parent.std_title AS parent_title, parent.shelf_mark AS parent_shelfmark,
         parent.lib_siglum AS parent_siglum, parent.record_type AS parent_record_type,
-        COUNT(DISTINCT h.id) AS child_holdings_count,
-        COUNT(DISTINCT hp.id) AS parent_holdings_count,
-        (SELECT COUNT(ss.id) FROM {dbname}.sources AS ss WHERE ss.source_id = child.id) as child_count,
-        (SELECT COUNT(ii.id) FROM {dbname}.inventory_items AS ii WHERE ii.source_id = child.id) AS num_inventory_items,
-        (SELECT JSON_ARRAYAGG(DISTINCT srm2.marc_source)
-            FROM {dbname}.sources AS srm2
+        COALESCE(child_holdings.count, 0) AS child_holdings_count,
+        COALESCE(parent_holdings.count, 0) AS parent_holdings_count,
+        (SELECT COUNT(ss.id) FROM sources AS ss WHERE ss.source_id = child.id) as child_count,
+        (SELECT COUNT(ii.id) FROM inventory_items AS ii WHERE ii.source_id = child.id) AS num_inventory_items,
+        (SELECT jsonb_agg(DISTINCT srm2.marc_source)
+            FROM sources AS srm2
             WHERE srm2.source_id = child.id
         ) AS child_marc_records,
         (SELECT mshi.full_name
-            FROM {dbname}.sources_to_institutions mssti
-            LEFT JOIN {dbname}.institutions mshi ON mssti.institution_id = mshi.id
+            FROM sources_to_institutions mssti
+            LEFT JOIN institutions mshi ON mssti.institution_id = mshi.id
             WHERE mssti.marc_tag = '852' AND parent.id = mssti.source_id
         ) AS parent_lib_name,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('id', CONCAT('institution_', ins.id),
+        (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('id', concat('institution_', ins.id),
                                         'name', ins.corporate_name,
                                         'relator_code', ssi.relator_code,
                                         'siglum', ins.siglum,
                                         'place', ins.place))
-            FROM {dbname}.sources_to_institutions ssi
-            LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id
+            FROM sources_to_institutions ssi
+            LEFT JOIN institutions ins ON ssi.institution_id = ins.id
             WHERE ssi.marc_tag = '852' AND child.id = ssi.source_id
         ) AS ms_holding_institutions,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('id', CONCAT('institution_', ins.id),
+        (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('id', concat('institution_', ins.id),
                                         'name', ins.corporate_name,
                                         'relator_code', ssi.relator_code,
                                         'siglum', ins.siglum,
                                         'place', ins.place))
-            FROM {dbname}.sources_to_institutions ssi
-            LEFT JOIN {dbname}.institutions ins ON ssi.institution_id = ins.id
+            FROM sources_to_institutions ssi
+            LEFT JOIN institutions ins ON ssi.institution_id = ins.id
             WHERE ssi.marc_tag = '710' AND child.id = ssi.source_id
         ) AS related_institutions,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('relator_code', stos.relator_code,
+        (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('relator_code', stos.relator_code,
                                          'marc_source', sours.marc_source))
-            FROM {dbname}.sources_to_sources AS stos
-            LEFT JOIN {dbname}.sources AS sours ON stos.source_b_id = sours.id
+            FROM sources_to_sources AS stos
+            LEFT JOIN sources AS sours ON stos.source_b_id = sours.id
             WHERE stos.marc_tag = '787' AND stos.source_a_id = child.id
         ) AS related_sources,
-        (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
-                FROM {dbname}.digital_object_links AS do
-                WHERE do.object_link_type = 'Source' AND do.object_link_id = child.id
+        (SELECT jsonb_agg(DISTINCT concat('dobject_', dol.digital_object_id))
+                FROM digital_object_links AS dol
+                WHERE dol.object_link_type = 'Source' AND dol.object_link_id = child.id
         ) AS digital_objects,
         -- NB: Only one work node is permitted on a source, even though this technically allows for more. To ensure we only have 0 or 1 record, a LIMIT clause is added.
-        (SELECT JSON_OBJECT('id', CONCAT('work_node_', wn.id),
+        (SELECT jsonb_build_object('id', concat('work_node_', wn.id),
                            'marc_source', wn.marc_source)
-            FROM {dbname}.sources_to_work_nodes AS swn
-            LEFT JOIN {dbname}.work_nodes AS wn ON swn.work_node_id = wn.id
+            FROM sources_to_work_nodes AS swn
+            LEFT JOIN work_nodes AS wn ON swn.work_node_id = wn.id
             WHERE swn.source_id = child.id LIMIT 1
         ) AS work_node,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                    JSON_OBJECT('id', CONCAT('work_', sw.work_id),
+        (SELECT jsonb_agg(DISTINCT
+                    jsonb_build_object('id', concat('work_', sw.work_id),
                                 'marc_source', wk.marc_source))
-            FROM {dbname}.sources_to_works AS sw
-            LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
-            LEFT JOIN {dbname}.works AS wk ON sw.work_id = wk.id
+            FROM sources_to_works AS sw
+            LEFT JOIN sources AS ss ON sw.source_id = ss.id
+            LEFT JOIN works AS wk ON sw.work_id = wk.id
             WHERE sw.source_id = child.id AND ss.wf_stage = 1 AND wk.wf_stage = 1
         ) AS work_catalogue_entries,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('lib_siglum', h2.lib_siglum,
+        (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('lib_siglum', h2.lib_siglum,
                                          'marc_source', h2.marc_source))
-            FROM {dbname}.holdings h2 WHERE h2.source_id = child.id
+            FROM holdings h2 WHERE h2.source_id = child.id
         ) AS holdings,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('lib_siglum', hp2.lib_siglum,
+        (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('lib_siglum', hp2.lib_siglum,
                                          'marc_source', hp2.marc_source))
-            FROM {dbname}.holdings hp2 WHERE hp2.source_id = parent.id
+            FROM holdings hp2 WHERE hp2.source_id = parent.id
         ) AS parent_holdings,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                                JSON_OBJECT('id', pub.id,
+        (SELECT jsonb_agg(DISTINCT
+                                jsonb_build_object('id', pub.id,
                                      'author', pub.author,
                                      'title', pub.title,
                                      'journal', pub.journal,
@@ -109,54 +107,48 @@ def _get_sources(cfg: dict) -> Generator[dict]:
                                      'place', pub.place,
                                      'short_name', pub.short_name,
                                      'marc_source', pub.marc_source))
-            FROM {dbname}.sources_to_publications spt
-            LEFT JOIN {dbname}.publications pub ON spt.publication_id = pub.id
+            FROM sources_to_publications spt
+            LEFT JOIN publications pub ON spt.publication_id = pub.id
             WHERE spt.source_id = child.id
         ) AS publication_entries,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                    JSON_OBJECT('id', CONCAT('person_', p2.id),
+        (SELECT jsonb_agg(DISTINCT
+                    jsonb_build_object('id', concat('person_', p2.id),
                                'name', p2.full_name,
                                'life_dates', p2.life_dates,
                                'alternate_names', p2.alternate_names))
-            FROM {dbname}.people p2
-            LEFT JOIN {dbname}.sources_to_people sp ON p2.id = sp.person_id
+            FROM people p2
+            LEFT JOIN sources_to_people sp ON p2.id = sp.person_id
             WHERE sp.source_id = child.id
         ) AS people,
-        (SELECT JSON_ARRAYAGG(DISTINCT st2.alternate_terms)
-            FROM {dbname}.standard_terms st2
-            LEFT JOIN {dbname}.sources_to_standard_terms sst2 ON st2.id = sst2.standard_term_id
+        (SELECT jsonb_agg(DISTINCT st2.alternate_terms)
+            FROM standard_terms st2
+            LEFT JOIN sources_to_standard_terms sst2 ON st2.id = sst2.standard_term_id
             WHERE sst2.source_id = child.id AND st2.alternate_terms != ''
         ) AS alt_standard_terms,
-        (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('place_id', CONCAT('place_', reli.id),
+        (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('place_id', concat('place_', reli.id),
                                           'relationship', COALESCE(rela.relator_code, 'xp'),
                                           'name', reli.name,
                                           'country', reli.country,
                                           'district', reli.district,
                                           'id', rela.id,
-                                          'this_type', 'person',
-                                          'this_id', CONCAT('person_', p.id)))
-            FROM {dbname}.sources_to_places AS rela
-            LEFT JOIN {dbname}.places AS reli ON reli.id = rela.place_id
+                                          'this_type', 'source',
+                                          'this_id', CONCAT('source_', child.id)))
+            FROM sources_to_places AS rela
+            LEFT JOIN places AS reli ON reli.id = rela.place_id
             WHERE rela.source_id = child.id AND rela.marc_tag = '651'
        ) AS locations_of_performances
-FROM {dbname}.sources AS child
-    LEFT JOIN {dbname}.sources AS parent ON parent.id = child.source_id
-    LEFT JOIN {dbname}.holdings h on child.id = h.source_id
-    LEFT JOIN {dbname}.holdings hp on parent.id = hp.source_id
-    LEFT JOIN {dbname}.sources_to_people sp on sp.source_id = child.id
-    LEFT JOIN {dbname}.people p on sp.person_id = p.id
-WHERE child.wf_stage = 1 {id_where_clause}
-GROUP BY child.id
-ORDER BY child.id asc;"""  # noqa: S608
+FROM sources AS child
+    LEFT JOIN sources AS parent ON parent.id = child.source_id
+    LEFT JOIN holdings_counts AS child_holdings ON child_holdings.source_id = child.id
+    LEFT JOIN holdings_counts AS parent_holdings ON parent_holdings.source_id = parent.id
+WHERE child.wf_stage = 1 AND (%s::bigint IS NULL OR child.id = %s)
+ORDER BY child.id asc;"""
 
-    curs.execute(sql_query, query_params)
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
-        yield rows
-
-    curs.close()
-    conn.close()
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "sources") as curs:
+            curs.execute(sql_query, (record_id, record_id))
+            while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+                yield rows
 
 
 def index_sources(cfg: dict) -> bool:

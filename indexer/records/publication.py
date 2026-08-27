@@ -19,10 +19,10 @@ def create_publication_index_document(record: dict, cfg: dict) -> dict:
     rism_id: str = marc_record["001"].value()
     publication_id: str = f"publication_{rism_id}"
 
-    work_ids: list = orjson.loads(w) if (w := record["work_ids"]) else []
-    composer: str | None = c if (c := record["composer"]) else None
-    composer_json: dict | None = orjson.loads(cc) if (cc := record["composer"]) else {}
-    composer_name = get_person_name(composer_json) if composer_json else None
+    work_ids: list = record["work_ids"] or []
+    composer: dict | None = record["composer"] or None
+    composer_name = get_person_name(composer) if composer else None
+    composer_json = orjson.dumps(composer).decode("utf-8") if composer else None
 
     work_catalogue_status: int = record["work_catalogue_status"]
 
@@ -35,7 +35,7 @@ def create_publication_index_document(record: dict, cfg: dict) -> dict:
         "work_ids": work_ids,
         "works_count_i": len(work_ids),
         "work_catalogue_status_s": convert_work_catalogue_status(work_catalogue_status),
-        "composer_json": composer,
+        "composer_json": composer_json,
         "composer_name_s": composer_name,
         "composer_name_ans": composer_name,
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),

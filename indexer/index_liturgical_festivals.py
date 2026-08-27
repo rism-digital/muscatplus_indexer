@@ -1,6 +1,8 @@
 import logging
 
-from indexer.helpers.db import mysql_pool
+from psycopg.rows import dict_row
+
+from indexer.helpers.db import postgres_pool
 from indexer.helpers.solr import submit_to_solr
 from indexer.records.liturgical_festival import (
     LiturgicalFestivalIndexDocument,
@@ -12,25 +14,16 @@ log = logging.getLogger("muscat_indexer")
 
 def index_liturgical_festivals(cfg: dict) -> bool:
     log.info("Indexing Liturgical Festivals")
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
-
-    id_where_clause: str = ""
-    if "id" in cfg:
-        id_where_clause = f"WHERE id = {cfg['id']}"
-
-    curs.execute(
-        f"""SELECT
-            id,
-            name,
-            alternate_terms,
-            notes
-            FROM {dbname}.liturgical_feasts
-            {id_where_clause};"""
-    )
-
-    all_festivals: list[dict] = curs._cursor.fetchall()
+    record_id = int(cfg["id"]) if "id" in cfg else None
+    with postgres_pool.connection() as conn, conn.cursor(row_factory=dict_row) as curs:
+        curs.execute(
+            """SELECT id, name, alternate_terms, notes
+                FROM liturgical_feasts
+                WHERE (%s::bigint IS NULL OR id = %s)
+                ORDER BY id;""",
+            (record_id, record_id),
+        )
+        all_festivals: list[dict] = curs.fetchall()
 
     records_to_index: list = []
 

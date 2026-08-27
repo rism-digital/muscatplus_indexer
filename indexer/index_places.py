@@ -1,8 +1,9 @@
 import logging
 from collections import deque
 from collections.abc import Generator
+from typing import Any
 
-from indexer.helpers.db import mysql_pool
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.place import create_place_index_document
@@ -10,16 +11,8 @@ from indexer.records.place import create_place_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_place_groups(cfg: dict) -> Generator[dict]:
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
-
-    id_where_clause: str = ""
-    if "id" in cfg:
-        id_where_clause = f"AND p.id = {cfg['id']}"
-
-    sql_statement = f"""SELECT
+def _get_place_groups(cfg: dict) -> Generator[list[dict[str, Any]]]:
+    sql_statement = """SELECT
                     p.id AS id,
                     p.name AS name,
                     p.country AS country,
@@ -27,19 +20,19 @@ def _get_place_groups(cfg: dict) -> Generator[dict]:
                     p.marc_source AS marc_source,
                     p.notes AS notes,
                     p.alternate_terms AS alternate_terms,
-                    (SELECT COUNT(DISTINCT(sp.source_id)) FROM {dbname}.sources_to_places AS sp WHERE sp.place_id = p.id) AS sources_count,
-                    (SELECT COUNT(DISTINCT(pp.person_id)) FROM {dbname}.people_to_places AS pp WHERE pp.place_id = p.id) AS people_count,
-                    (SELECT COUNT(DISTINCT(ip.institution_id)) FROM {dbname}.institutions_to_places AS ip WHERE ip.place_id = p.id) AS institutions_count,
-                    (SELECT COUNT(DISTINCT(hp.holding_id)) FROM {dbname}.holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
-                FROM {dbname}.places AS p;"""  # noqa: S608
+                    (SELECT COUNT(DISTINCT sp.source_id) FROM sources_to_places AS sp WHERE sp.place_id = p.id) AS sources_count,
+                    (SELECT COUNT(DISTINCT pp.person_id) FROM people_to_places AS pp WHERE pp.place_id = p.id) AS people_count,
+                    (SELECT COUNT(DISTINCT ip.institution_id) FROM institutions_to_places AS ip WHERE ip.place_id = p.id) AS institutions_count,
+                    (SELECT COUNT(DISTINCT hp.holding_id) FROM holdings_to_places AS hp WHERE hp.place_id = p.id) AS holdings_count
+                FROM places AS p
+                WHERE (%s::bigint IS NULL OR p.id = %s)
+                ORDER BY p.id;"""
 
-    curs.execute(sql_statement)
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
-        yield rows
-
-    curs.close()
-    conn.close()
+    record_id = int(cfg["id"]) if "id" in cfg else None
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "places") as curs:
+        curs.execute(sql_statement, (record_id, record_id))
+        while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+            yield rows
 
 
 def index_places(cfg: dict) -> bool:

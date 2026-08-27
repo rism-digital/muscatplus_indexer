@@ -22,9 +22,8 @@ def create_inventory_item_index_document(record: dict, cfg: dict) -> list[dict]:
     source_id = f"source_{record['source_id']}"
 
     related_sources = None
-    if t := record.get("related_sources"):
+    if source_list := record.get("related_sources"):
         related_source_fields: list[pymarc.Field] = marc_record.get_fields("787")
-        source_list: list = orjson.loads(t)
         related_sources = get_related_sources(
             source_list, related_source_fields, source_id
         )

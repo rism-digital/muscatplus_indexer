@@ -2,7 +2,7 @@ import logging
 from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.db import mysql_pool
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.metrics import record_error
 from indexer.helpers.identifiers import WorkPublicationStatusIdentifiers
 from indexer.helpers.solr import submit_to_solr
@@ -16,9 +16,7 @@ log = logging.getLogger("muscat_indexer")
 
 def _get_works(cfg: dict) -> Generator[dict]:
     log.info("Getting list of works to index")
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
+    dbname = "public"
 
     id_where_clause: str = ""
     if "id" in cfg:
@@ -27,13 +25,13 @@ def _get_works(cfg: dict) -> Generator[dict]:
     sql_query: str = f"""
 SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
     work.created_at AS created, work.updated_at AS updated,
-    (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('source_', ss.id))
+    (SELECT jsonb_agg(DISTINCT CONCAT('source_', ss.id))
         FROM {dbname}.sources_to_works AS sw
         LEFT JOIN {dbname}.sources AS ss ON sw.source_id = ss.id
         WHERE sw.work_id = work.id AND ss.wf_stage = 1
     ) AS sources,
-    (SELECT JSON_ARRAYAGG(DISTINCT
-                JSON_OBJECT('id', (CAST(pub.id AS CHAR)),
+    (SELECT jsonb_agg(DISTINCT
+                jsonb_build_object('id', (pub.id::text),
                      'author', pub.author,
                      'title', pub.title,
                      'journal', pub.journal,
@@ -46,9 +44,9 @@ SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
         LEFT JOIN {dbname}.publications pub ON wpt.publication_id = pub.id
         WHERE wpt.work_id = work.id AND pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {WorkPublicationStatusIdentifiers.PARTIALLY_COMPLETED}, {WorkPublicationStatusIdentifiers.ALTERNATE})
     ) AS publication_entries,
-    JSON_OBJECT('name', peep.full_name, 'dates', peep.life_dates) AS person_name,
-    (SELECT JSON_ARRAYAGG(DISTINCT
-                JSON_OBJECT('id', (CAST(pub.id AS CHAR)),
+    jsonb_build_object('name', peep.full_name, 'dates', peep.life_dates) AS person_name,
+    (SELECT jsonb_agg(DISTINCT
+                jsonb_build_object('id', (pub.id::text),
                      'author', pub.author,
                      'title', pub.title,
                      'journal', pub.journal,
@@ -63,16 +61,12 @@ SELECT work.id AS id, work.marc_source AS marc_source, peep.id AS person_id,
 FROM {dbname}.works AS work
     LEFT JOIN {dbname}.people peep ON work.person_id = peep.id
     WHERE work.wf_stage = 1 {id_where_clause}
-GROUP BY work.id
 ORDER BY work.id;"""  # noqa: S608
 
-    curs.execute(sql_query)
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
-        yield rows
-
-    curs.close()
-    conn.close()
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "works") as curs:
+            curs.execute(sql_query)
+            while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+                yield rows
 
 
 def index_works(cfg: dict) -> bool:

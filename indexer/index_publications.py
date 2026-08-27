@@ -2,9 +2,9 @@ import logging
 from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.db import mysql_pool
-from indexer.helpers.metrics import record_error
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.identifiers import WorkPublicationStatusIdentifiers
+from indexer.helpers.metrics import record_error
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.publication import create_publication_index_document
@@ -14,19 +14,17 @@ log = logging.getLogger("muscat_indexer")
 
 def _get_publications(cfg: dict) -> Generator[dict]:
     log.info("Getting list of publications to index")
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
+    dbname = "public"
 
     sql_query: str = f"""
 SELECT pub.id AS pub_id, pub.marc_source AS marc_source, pub.created_at AS created,
         pub.updated_at AS updated, pub.work_catalogue AS work_catalogue_status,
-        (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('work_', wks.id))
+        (SELECT jsonb_agg(DISTINCT CONCAT('work_', wks.id))
             FROM {dbname}.works_to_publications AS wtp
             LEFT JOIN {dbname}.works AS wks ON wtp.work_id = wks.id
             WHERE wtp.publication_id = pub.id AND wks.wf_stage = 1
        ) AS work_ids,
-        (SELECT JSON_OBJECT('id', CONCAT('person_', p2.id),
+        (SELECT jsonb_build_object('id', CONCAT('person_', p2.id),
                            'name', p2.full_name,
                            'life_dates', p2.life_dates)
         FROM {dbname}.people p2
@@ -43,13 +41,13 @@ WHERE pub.work_catalogue IN ({WorkPublicationStatusIdentifiers.COMPLETED}, {Work
 GROUP BY pub.id
 ORDER BY pub.id;"""  # noqa: S608
 
-    curs.execute(sql_query)
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
-        yield rows
-
-    curs.close()
-    conn.close()
+    with (
+        postgres_pool.connection() as conn,
+        server_side_cursor(conn, "publications") as curs,
+    ):
+        curs.execute(sql_query)
+        while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+            yield rows
 
 
 def index_publications(cfg: dict) -> bool:

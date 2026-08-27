@@ -2,9 +2,7 @@ import logging
 from collections.abc import Generator
 from typing import Any
 
-from psycopg.rows import dict_row
-
-from diamm_indexer.helpers.db import postgres_pool
+from diamm_indexer.helpers.db import postgres_pool, server_side_cursor
 from diamm_indexer.records.organization import create_organization_index_document
 from indexer.helpers.identifiers import transform_rism_id
 from indexer.helpers.solr import (
@@ -21,8 +19,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "organizations") as curs:
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddo.name AS name, ddo.created AS created, ddo.updated AS updated,
                         (SELECT jsonb_agg(DISTINCT
                                 jsonb_build_object(
@@ -79,8 +76,7 @@ def _get_organizations(cfg: dict) -> Generator[list[dict[str, Any]]]:
 def _get_linked_diamm_organizations(
     cfg: dict,
 ) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "linked_organizations") as curs:
         curs.execute("""SELECT DISTINCT ddo.id AS id, ddoi.identifier AS rism_id, ddo.name AS name,
                         'organizations' AS project_type
                         FROM diamm_data_organization ddo
@@ -105,8 +101,7 @@ def index_organizations(cfg: dict) -> bool:
 def _get_linked_diamm_archives(
     cfg: dict,
 ) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "linked_archives") as curs:
         curs.execute("""SELECT DISTINCT dda.id AS id, ddai.identifier AS rism_id, dda.name AS name,
                         'archives' AS project_type,
                         (SELECT COUNT(*)

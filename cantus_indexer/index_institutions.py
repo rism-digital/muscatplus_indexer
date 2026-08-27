@@ -2,9 +2,7 @@ import logging
 from collections.abc import Generator
 from typing import Any
 
-from psycopg.rows import dict_row
-
-from cantus_indexer.helpers.db import postgres_pool
+from cantus_indexer.helpers.db import postgres_pool, server_side_cursor
 from cantus_indexer.records.institution import create_institution_index_document
 from indexer.helpers.solr import record_indexer, submit_to_solr
 from indexer.helpers.utilities import parallelise, update_rism_document
@@ -15,8 +13,9 @@ log = logging.getLogger("muscat_indexer")
 def _get_unlinked_cantus_institutions(
     cfg: dict,
 ) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(
+        conn, "unlinked_institutions"
+    ) as curs:
         # Only select institutions that have *published* sources attached to them.
         curs.execute("""SELECT DISTINCT cti.id AS id, cti.name AS name, cti.date_created AS created,
                         cti.date_updated AS updated, cti.city AS city, cti.country AS country
@@ -27,15 +26,16 @@ def _get_unlinked_cantus_institutions(
                            FROM main_app_source cts
                            WHERE cts.holding_institution_id = cti.id AND cts.published is TRUE) > 0""")
 
-    while rows := curs.fetchmany(size=500):
-        yield rows
+        while rows := curs.fetchmany(size=500):
+            yield rows
 
 
 def _get_linked_cantus_institutions(
     cfg: dict,
 ) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(
+        conn, "linked_institutions"
+    ) as curs:
         curs.execute("""SELECT DISTINCT cti.id AS id, ctii.identifier AS rism_id, cti.name AS name,
                         'institution' AS project_type,
                         (SELECT COUNT(*)

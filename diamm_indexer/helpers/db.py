@@ -1,7 +1,10 @@
 import atexit
 import logging
+from uuid import uuid4
 
 import orjson
+from psycopg import Connection
+from psycopg.rows import dict_row
 import yaml
 from psycopg.types.json import set_json_loads
 from psycopg_pool import ConnectionPool
@@ -24,8 +27,17 @@ else:
 
 
 postgres_pool = ConnectionPool(
-    f"{server_connection} dbname={config['db']} user={config['user']} password={config['password']}"
+    f"{server_connection} dbname={config['db']} user={config['user']} password={config['password']}",
+    min_size=0,
+    max_size=1,
 )
 set_json_loads(orjson.loads)
 
 atexit.register(postgres_pool.close)
+
+
+def server_side_cursor(conn: Connection, record_type: str):
+    """Create a uniquely named, transaction-bound cursor for streamed indexing."""
+    return conn.cursor(
+        name=f"diamm_{record_type}_{uuid4().hex}", row_factory=dict_row
+    )

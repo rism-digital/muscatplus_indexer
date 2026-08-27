@@ -3,7 +3,7 @@ from collections import deque
 from collections.abc import Generator
 
 from indexer.exceptions import RequiredFieldException
-from indexer.helpers.db import mysql_pool
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.metrics import record_error
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
@@ -15,9 +15,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_institution_groups(cfg: dict) -> Generator[dict]:
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
+    dbname = "public"
 
     id_where_clause: str = ""
     if "id" in cfg:
@@ -26,14 +24,14 @@ def _get_institution_groups(cfg: dict) -> Generator[dict]:
     sql: str = f"""
 SELECT i.id, i.marc_source, i.siglum,
     i.created_at AS created, i.updated_at AS updated,
-    (SELECT JSON_ARRAYAGG(DISTINCT si.source_id)
+    (SELECT jsonb_agg(DISTINCT si.source_id)
         FROM {dbname}.sources_to_institutions AS si
         LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
         WHERE si.institution_id = i.id
             AND si.marc_tag = '852'
             AND ss.wf_stage = 1
     ) AS source_count,
-    (SELECT JSON_ARRAYAGG(DISTINCT hh.source_id)
+    (SELECT jsonb_agg(DISTINCT hh.source_id)
         FROM {dbname}.holdings_to_institutions AS hi
         LEFT JOIN {dbname}.holdings AS hh ON hi.holding_id = hh.id
         LEFT JOIN {dbname}.sources AS ss ON hh.source_id = ss.id
@@ -41,14 +39,14 @@ SELECT i.id, i.marc_source, i.siglum,
             AND hi.marc_tag = '852'
             AND ss.wf_stage = 1
     ) AS holdings_count,
-    (SELECT JSON_ARRAYAGG(DISTINCT si.source_id)
+    (SELECT jsonb_agg(DISTINCT si.source_id)
         FROM {dbname}.sources_to_institutions AS si
         LEFT JOIN {dbname}.sources AS ss ON si.source_id = ss.id
         WHERE si.institution_id = i.id
             AND si.marc_tag = '710'
             AND ss.wf_stage = 1
     ) AS other_count,
-    (SELECT JSON_ARRAYAGG(DISTINCT hh.source_id)
+    (SELECT jsonb_agg(DISTINCT hh.source_id)
         FROM {dbname}.holdings_to_institutions AS hi
         LEFT JOIN {dbname}.holdings AS hh ON hi.holding_id = hh.id
         LEFT JOIN {dbname}.sources AS ss ON hh.source_id = ss.id
@@ -61,8 +59,8 @@ SELECT i.id, i.marc_source, i.siglum,
         WHERE pc.institution_id = i.id
             AND pc.marc_tag = '910'
     ) AS people_contribution_count,
-    (SELECT JSON_ARRAYAGG(DISTINCT
-                 JSON_OBJECT('id', pub.id,
+    (SELECT jsonb_agg(DISTINCT
+                 jsonb_build_object('id', pub.id,
                              'author', pub.author,
                              'title', pub.title,
                              'journal', pub.journal,
@@ -74,8 +72,8 @@ SELECT i.id, i.marc_source, i.siglum,
         LEFT JOIN {dbname}.publications pub ON ipt2.publication_id = pub.id
         WHERE ipt2.institution_id = i.id
     ) AS publication_entries,
-    (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('a_id', CONCAT('institution_', reli.id),
+    (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('a_id', CONCAT('institution_', reli.id),
                                          'b_id', CONCAT('institution_', relj.id),
                                          'a_siglum', reli.siglum,
                                          'b_siglum', relj.siglum,
@@ -92,25 +90,25 @@ SELECT i.id, i.marc_source, i.siglum,
         LEFT JOIN {dbname}.institutions AS relj ON relj.id = rela.institution_b_id
         WHERE rela.institution_a_id = i.id OR rela.institution_b_id = i.id
     ) AS institution_relationships,
-    (SELECT JSON_ARRAYAGG(DISTINCT
-                         JSON_OBJECT('place_id', CONCAT('place_', reli.id),
-                                      'relationship', COALESCE(rela.relator_code, "xp"),
+    (SELECT jsonb_agg(DISTINCT
+                         jsonb_build_object('place_id', CONCAT('place_', reli.id),
+                                      'relationship', COALESCE(rela.relator_code, 'xp'),
                                       'name', reli.name,
                                       'country', reli.country,
                                       'district', reli.district,
-                                      'id', CAST(rela.id AS CHAR),
+                                      'id', rela.id::text,
                                       'this_type', 'institution',
                                       'this_id', CONCAT('institution_', i.id)))
         FROM {dbname}.institutions_to_places AS rela
         LEFT JOIN {dbname}.places AS reli ON reli.id = rela.place_id
         WHERE rela.institution_id = i.id AND rela.marc_tag = '551'
    ) AS related_places,
-    (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id))
-        FROM {dbname}.digital_object_links AS do
-        WHERE do.object_link_type = 'Institution'
-            AND do.object_link_id = i.id
+    (SELECT jsonb_agg(DISTINCT CONCAT('dobject_', dol.digital_object_id))
+        FROM {dbname}.digital_object_links AS dol
+        WHERE dol.object_link_type = 'Institution'
+            AND dol.object_link_id = i.id
     ) AS digital_objects,
-    (SELECT JSON_ARRAYAGG(DISTINCT ssi.relator_code)
+    (SELECT jsonb_agg(DISTINCT ssi.relator_code)
         FROM {dbname}.sources_to_institutions AS ssi
         LEFT JOIN {dbname}.sources AS sss ON ssi.source_id = sss.id
         WHERE i.id = ssi.institution_id AND sss.wf_stage = 1
@@ -129,13 +127,10 @@ GROUP BY i.id
 ORDER BY i.id ASC;
 """  # noqa: S608
 
-    curs.execute(sql)
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):
-        yield rows
-
-    curs.close()
-    conn.close()
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "institutions") as curs:
+            curs.execute(sql)
+            while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+                yield rows
 
 
 def index_institutions(cfg: dict) -> bool:

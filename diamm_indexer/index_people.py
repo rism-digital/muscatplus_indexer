@@ -2,9 +2,7 @@ import logging
 from collections.abc import Generator
 from typing import Any
 
-from psycopg.rows import dict_row
-
-from diamm_indexer.helpers.db import postgres_pool
+from diamm_indexer.helpers.db import postgres_pool, server_side_cursor
 from diamm_indexer.records.person import (
     create_person_index_document,
     get_date_statement,
@@ -17,8 +15,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_people(cfg: dict) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "people") as curs:
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddp.last_name AS last_name,
                         ddp.first_name AS first_name, ddp.earliest_year AS earliest_year,
                         ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,
@@ -65,8 +62,7 @@ def _get_people(cfg: dict) -> Generator[list[dict[str, Any]]]:
 
 
 def _get_linked_diamm_people(cfg: dict) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "linked_people") as curs:
         curs.execute("""SELECT DISTINCT ddp.id AS id, ddpi.identifier AS rism_id,ddp.last_name AS last_name,
                             ddp.first_name AS first_name, ddp.earliest_year AS earliest_year,
                             ddp.latest_year AS latest_year, ddp.earliest_year_approximate AS earliest_approx,

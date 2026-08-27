@@ -2,26 +2,23 @@ import logging
 from collections import deque
 from collections.abc import Generator
 
-from indexer.helpers.db import mysql_pool
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
-from indexer.records.holding import create_holding_index_document
+from indexer.records.holding import HoldingIndexDocument, create_holding_index_document
 
 log = logging.getLogger("muscat_indexer")
 
 
 def _get_holdings_groups(cfg: dict) -> Generator[dict]:
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
+    dbname = "public"
 
     id_where_clause: str = ""
     if "id" in cfg:
         id_where_clause = f"AND holdings.id = {cfg['id']}"
 
     # The published / unpublished state is ignored for holding records, so we just take any and all holding records.
-    curs.execute(
-        f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
+    sql = f"""SELECT holdings.id AS id, holdings.source_id AS source_id, holdings.marc_source AS marc_source,
                 holdings.created_at AS created, holdings.updated_at AS updated,
                 sources.std_title AS source_title, sources.composer AS creator_name,
                 sources.record_type as record_type, sources.marc_source AS source_record_marc,
@@ -30,8 +27,8 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict]:
                     FROM institutions AS inst
                     WHERE holdings.lib_siglum = inst.siglum
                 ) AS institution_record_marc,
-                (SELECT JSON_ARRAYAGG(DISTINCT
-                             JSON_OBJECT('institution_id', CONCAT('institution_', reli.id),
+                (SELECT jsonb_agg(DISTINCT
+                             jsonb_build_object('institution_id', CONCAT('institution_', reli.id),
                                          'siglum', reli.siglum,
                                          'name', reli.corporate_name,
                                          'place', reli.place,
@@ -40,8 +37,8 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict]:
                     LEFT JOIN {dbname}.institutions AS reli ON reli.id = rela.institution_id
                     WHERE rela.holding_id = holdings.id AND rela.marc_tag = '710'
                 ) AS related_institutions,
-                (SELECT JSON_ARRAYAGG(DISTINCT
-                                JSON_OBJECT('id', pub.id,
+                (SELECT jsonb_agg(DISTINCT
+                                jsonb_build_object('id', pub.id,
                                      'author', pub.author,
                                      'title', pub.title,
                                      'journal', pub.journal,
@@ -53,23 +50,21 @@ def _get_holdings_groups(cfg: dict) -> Generator[dict]:
                              LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
                              WHERE hpt.holding_id = holdings.id
                 ) AS publication_entries,
-                (SELECT JSON_ARRAYAGG(DISTINCT CONCAT('dobject_', do.digital_object_id)) 
-                    FROM {dbname}.digital_object_links AS do 
-                    WHERE do.object_link_type = 'Holding' AND do.object_link_id = holdings.id
+                (SELECT jsonb_agg(DISTINCT CONCAT('dobject_', dol.digital_object_id))
+                    FROM {dbname}.digital_object_links AS dol
+                    WHERE dol.object_link_type = 'Holding' AND dol.object_link_id = holdings.id
                 ) AS digital_objects
                 FROM {dbname}.holdings AS holdings
                 LEFT JOIN {dbname}.sources AS sources ON holdings.source_id = sources.id
-                LEFT JOIN {dbname}.holdings_to_publications hpt on hpt.holding_id = holdings.id
-                LEFT JOIN {dbname}.publications pub ON hpt.publication_id = pub.id
                 WHERE sources.marc_source IS NOT NULL AND sources.wf_stage = 1 {id_where_clause}
-                GROUP BY holdings.id;"""  # noqa: S608
-    )
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
-        yield rows
-
-    curs.close()
-    conn.close()
+                ORDER BY holdings.id;"""  # noqa: S608
+    with (
+        postgres_pool.connection() as conn,
+        server_side_cursor(conn, "holdings") as curs,
+    ):
+        curs.execute(sql)
+        while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+            yield rows
 
 
 def index_holdings(cfg: dict) -> bool:
@@ -84,7 +79,7 @@ def index_holdings_groups(holdings: list, cfg: dict) -> bool:
     records_to_index: deque = deque()
 
     for record in holdings:
-        doc: dict[str, object] = create_holding_index_document(record, cfg)
+        doc: HoldingIndexDocument = create_holding_index_document(record, cfg)
         records_to_index.append(doc)
 
     check: bool = True if cfg["dry"] else submit_to_solr(list(records_to_index), cfg)

@@ -1,8 +1,9 @@
 import logging
 from collections import deque
 from collections.abc import Generator
+from typing import Any
 
-from indexer.helpers.db import mysql_pool
+from indexer.helpers.db import postgres_pool, server_side_cursor
 from indexer.helpers.solr import submit_to_solr
 from indexer.helpers.utilities import parallelise
 from indexer.records.tombstone import create_tombstone_index_document
@@ -10,64 +11,25 @@ from indexer.records.tombstone import create_tombstone_index_document
 log = logging.getLogger("muscat_indexer")
 
 
-def _get_tombstone_groups(cfg: dict) -> Generator[dict]:
-    conn = mysql_pool.connection()
-    curs = conn.cursor()
-    dbname: str = cfg["mysql"]["database"]
+def _get_tombstone_groups(cfg: dict) -> Generator[list[dict[str, Any]]]:
 
-    curs.execute(
-        f"""SELECT v.item_type AS item_type, v.item_id AS item_id,
+    sql = """SELECT v.item_type AS item_type, v.item_id AS item_id,
                         v.created_at AS deleted,
-                        (SELECT TRIM(
-                            CASE
-                                WHEN v.object LIKE '%std_title:%' THEN
-                                    SUBSTRING_INDEX(
-                                            SUBSTRING_INDEX(v.object, 'std_title:', -1),
-                                            '\n',
-                                            1
-                                    )
-                                WHEN v.object LIKE '%source_id:%' THEN
-                                    SUBSTRING_INDEX(
-                                            CONCAT('sources/', SUBSTRING_INDEX(v.object, 'source_id: ', -1)),
-                                            '\n',
-                                            1
-                                    )
-                                WHEN v.object LIKE '%full_name:%' THEN
-                                    SUBSTRING_INDEX(
-                                            SUBSTRING_INDEX(v.object, 'full_name:', -1),
-                                            '\n',
-                                            1
-                                    )
-                                WHEN v.object LIKE '%title:%' THEN
-                                    SUBSTRING_INDEX(
-                                            SUBSTRING_INDEX(v.object, 'title:', -1),
-                                            '\n',
-                                            1
-                                    )
-
-                                WHEN v.object LIKE '%name:%' THEN
-                                    SUBSTRING_INDEX(
-                                            SUBSTRING_INDEX(v.object, 'name:', -1),
-                                            '\n',
-                                            1
-                                    )
-                                ELSE NULL
-                            END)) AS name,
-                            (TRIM(
-                                BOTH '"' FROM SUBSTRING_INDEX(SUBSTRING_INDEX(v.object, 'marc_source: ', -1),
-                                '\n',
-                                1))) AS marc_source
-                 FROM {dbname}.versions AS v
+                        CASE
+                            WHEN v.object ~ '(?m)^std_title:' THEN btrim(substring(v.object FROM '(?m)^std_title:[[:space:]]*([^\n]*)'))
+                            WHEN v.object ~ '(?m)^source_id:' THEN 'sources/' || btrim(substring(v.object FROM '(?m)^source_id:[[:space:]]*([^\n]*)'))
+                            WHEN v.object ~ '(?m)^full_name:' THEN btrim(substring(v.object FROM '(?m)^full_name:[[:space:]]*([^\n]*)'))
+                            WHEN v.object ~ '(?m)^title:' THEN btrim(substring(v.object FROM '(?m)^title:[[:space:]]*([^\n]*)'))
+                            WHEN v.object ~ '(?m)^name:' THEN btrim(substring(v.object FROM '(?m)^name:[[:space:]]*([^\n]*)'))
+                        END AS name
+                 FROM versions AS v
                  WHERE v.event = 'destroy'
                    AND v.item_type IN ('Source', 'Person', 'Institution', 'Holding')
-                 ORDER BY item_type DESC"""  # noqa: S608
-    )
-
-    while rows := curs._cursor.fetchmany(cfg["mysql"]["resultsize"]):  # noqa
-        yield rows
-
-    curs.close()
-    conn.close()
+                 ORDER BY item_type DESC;"""
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "tombstones") as curs:
+            curs.execute(sql)
+            while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+                yield rows
 
 
 def index_tombstones(cfg: dict) -> bool:

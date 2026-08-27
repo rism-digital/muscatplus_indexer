@@ -5,7 +5,6 @@ description = ""
 authors = [{ name = "Andrew Hankinson", email = "andrew.hankinson@rism.digital" }]
 requires-python = ">=3.13,<4.0"
 dependencies = [
-    "dbutils (>=3.0,<4.0)",
     "pyyaml (>=6.0.0,<7.0.0)",
     "antequem @ git+https://github.com/rism-digital/antequem.git@main",
     "pyreqwest (>=0.11.1,<0.12.0)",
@@ -14,7 +13,6 @@ dependencies = [
     "psycopg[pool] (>=3.2.6)",
     "pymarc (>=5.3.1)",
     "verovio (>=5.2.1)",
-    "mysqlclient>=2.2.7",
 ]
 
 [dependency-groups]

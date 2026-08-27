@@ -2,9 +2,7 @@ import logging
 from collections.abc import Generator
 from typing import Any
 
-from psycopg.rows import dict_row
-
-from diamm_indexer.helpers.db import postgres_pool
+from diamm_indexer.helpers.db import postgres_pool, server_side_cursor
 from diamm_indexer.records.source import create_source_index_documents
 from indexer.helpers.solr import record_indexer, submit_to_solr
 from indexer.helpers.utilities import parallelise, update_rism_document
@@ -13,8 +11,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "sources") as curs:
         curs.execute("""SELECT DISTINCT dds.id AS id, dds.name AS name, dds.shelfmark AS shelfmark, dds.start_date AS start_date,
                 dds.end_date AS end_date, dds.date_statement AS date_statement, dds.measurements AS measurements,
                 dds.format AS book_format,
@@ -80,8 +77,7 @@ def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]]]:
 
 
 def _get_diamm_concordance(cfg: dict) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "concordance") as curs:
         curs.execute("""SELECT DISTINCT dds.id AS id, ddsa.identifier AS rism_id,
                         dds.name AS name, dds.shelfmark AS shelfmark, dda.siglum AS siglum,
                         'sources' AS project_type

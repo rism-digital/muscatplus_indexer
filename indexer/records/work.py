@@ -20,10 +20,8 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
     rism_id: str = marc_record["001"].value()
     work_id: str = f"work_{rism_id}"
 
-    publications: list = (
-        orjson.loads(d) if (d := record.get("publication_entries")) else []
-    )
-    attached_sources: list = orjson.loads(s) if (s := record["sources"]) else []
+    publications: list = record.get("publication_entries") or []
+    attached_sources: list = record["sources"] or []
     source_count: int = len(attached_sources)
     works_catalogue: list[dict] = (
         get_bibliographic_references_json(marc_record, "690", publications) or []
@@ -41,9 +39,7 @@ def create_work_index_documents(record: dict, cfg: dict) -> list:
         f"{w['short_name']} {w.get('pages')}" for w in secondary_works_catalogue
     ]
 
-    source_data_entries: list = (
-        orjson.loads(s) if (s := record["source_data_found"]) else []
-    )
+    source_data_entries: list = record["source_data_found"] or []
 
     source_data_found: list[dict] | None = get_bibliographic_references_json(
         marc_record, "670", source_data_entries, control_subf="w"

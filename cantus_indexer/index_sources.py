@@ -3,9 +3,7 @@ from collections import deque
 from collections.abc import Generator
 from typing import Any
 
-from psycopg.rows import dict_row
-
-from cantus_indexer.helpers.db import postgres_pool
+from cantus_indexer.helpers.db import postgres_pool, server_side_cursor
 from cantus_indexer.records.source import create_source_index_documents
 from indexer.exceptions import RequiredFieldException
 from indexer.helpers.metrics import record_error
@@ -16,8 +14,7 @@ log = logging.getLogger("muscat_indexer")
 
 
 def _get_sources(cfg: dict) -> Generator[list[dict[str, Any]]]:
-    with postgres_pool.connection() as conn:
-        curs = conn.cursor(row_factory=dict_row)
+    with postgres_pool.connection() as conn, server_side_cursor(conn, "sources") as curs:
         curs.execute("""SELECT cts.id AS id, cts.shelfmark AS shelfmark, cts.date AS source_date, cts.summary AS source_summary,
                     cts.description AS html_source_description, cts.image_link AS digital_images, cts.name AS source_name,
                     cts.date_created AS created, cts.date_updated AS updated,

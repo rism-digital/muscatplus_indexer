@@ -80,12 +80,12 @@ def _get_related_people_data(record: pymarc.Record) -> list | None:
 
 
 def _get_related_institutions_data(
-    record: pymarc.Record, related: str | None
+    record: pymarc.Record, related: list[dict] | None
 ) -> list | None:
     if "510" not in record:
         return None
     person_id: str = f"person_{record['001'].value()}"
-    additional_info: list[dict] = orjson.loads(related) if related else []
+    additional_info: list[dict] = related or []
     institutions = get_related_institutions(
         record, person_id, "person", fields=("510",), additional_info=additional_info
     )

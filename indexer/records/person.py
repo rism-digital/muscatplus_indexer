@@ -57,12 +57,8 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     source_relationships: list[dict]
     holding_relationships: list[dict]
 
-    source_relationships = (
-        orjson.loads(s) if (s := record.get("source_relationships")) else []
-    )
-    holding_relationships = (
-        orjson.loads(h) if (h := record.get("holding_relationships")) else []
-    )
+    source_relationships = record.get("source_relationships") or []
+    holding_relationships = record.get("holding_relationships") or []
 
     source_roles: list[str] = [o["rel"] for o in source_relationships]
     holding_roles: list[str] = [o["rel"] for o in holding_relationships]
@@ -74,11 +70,9 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     total_count: int = len(all_related_sources)
 
     has_digital_objects: bool = record.get("digital_objects") is not None
-    digital_object_ids: list[str] = (
-        orjson.loads(d) if (d := record.get("digital_objects")) else []
-    )
+    digital_object_ids: list[str] = record.get("digital_objects") or []
 
-    work_catalogues: list = orjson.loads(w) if (w := record["work_catalogues"]) else []
+    work_catalogues: list = record["work_catalogues"] or []
     formatted_catalogues = _get_work_catalogues(work_catalogues)
     works_catalogue_json: str | None = None
     if formatted_catalogues:
@@ -95,17 +89,13 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
             orjson.dumps(all_work_nodes).decode("utf-8") if all_work_nodes else None
         )
 
-    related_places_db: list = (
-        orjson.loads(ii) if (ii := record.get("related_places")) else []
-    )
+    related_places_db: list = record.get("related_places") or []
 
     related_places: list = [
         {k: v for k, v in it.items() if v} for it in related_places_db
     ]
 
-    source_data_entries: list = (
-        orjson.loads(s) if (s := record["source_data_found"]) else []
-    )
+    source_data_entries: list = record["source_data_found"] or []
 
     source_data_found: list[dict] | None = get_bibliographic_references_json(
         marc_record, "670", source_data_entries, control_subf="w"
@@ -161,8 +151,7 @@ def create_person_index_document(record: dict, cfg: dict) -> dict:
     return core_person
 
 
-def _get_work_nodes(work_nodes_marc: str, person_id: str) -> list[dict]:
-    record_data = orjson.loads(work_nodes_marc)
+def _get_work_nodes(record_data: list[dict], person_id: str) -> list[dict]:
     work_nodes = []
     for r in record_data:
         count, marc = r["count"], create_marc(r["marc_source"])

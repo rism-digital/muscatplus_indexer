@@ -51,26 +51,18 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     rism_id: str = marc_record["001"].value()
     institution_id: str = f"institution_{rism_id}"
 
-    related_source_ids: list[int] = (
-        orjson.loads(r) if (r := record["source_count"]) else []
-    )
+    related_source_ids: list[int] = record["source_count"] or []
     source_count = len(related_source_ids)
     # source_count: int = record.get("source_count", 0)
-    related_holding_source_ids: list[int] = (
-        orjson.loads(h) if (h := record["holdings_count"]) else []
-    )
+    related_holding_source_ids: list[int] = record["holdings_count"] or []
     holdings_count: int = len(related_holding_source_ids)
     # holdings_count: int = record.get("holdings_count", 0)
 
-    related_source_other_ids: list[int] = (
-        orjson.loads(o) if (o := record["other_count"]) else []
-    )
+    related_source_other_ids: list[int] = record["other_count"] or []
     other_count: int = len(related_source_other_ids)
     # other_count: int = record.get("other_count", 0)
 
-    related_source_other_holding_ids: list[int] = (
-        orjson.loads(p) if (p := record["other_holdings_count"]) else []
-    )
+    related_source_other_holding_ids: list[int] = record["other_holdings_count"] or []
     # other_holdings_count: int = len(related_source_other_holding_ids)
     # other_holdings_count: int = record.get("other_holdings_count", 0)
 
@@ -88,9 +80,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
 
     people_contribution_count: int = record.get("people_contribution_count", 0)
 
-    related_institutions: list = (
-        orjson.loads(ii) if (ii := record["institution_relationships"]) else []
-    )
+    related_institutions: list = record["institution_relationships"] or []
 
     now_in: list[dict] = []
     now_in_sigla: list = []
@@ -158,24 +148,16 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         else:
             continue
 
-    related_places_db: list = (
-        orjson.loads(ii) if (ii := record.get("related_places")) else []
-    )
+    related_places_db: list = record.get("related_places") or []
     related_places: list = [
         {k: v for k, v in it.items() if v} for it in related_places_db
     ]
 
     has_digital_objects: bool = record.get("digital_objects") is not None
-    digital_object_ids: list[str] = (
-        orjson.loads(d) if (d := record.get("digital_objects")) else []
-    )
-    roles: list[str] = (
-        orjson.loads(s) if (s := record.get("source_relationships")) else []
-    )
+    digital_object_ids: list[str] = record.get("digital_objects") or []
+    roles: list[str] = record.get("source_relationships") or []
 
-    publication_entries: list = (
-        orjson.loads(d) if (d := record.get("publication_entries")) else []
-    )
+    publication_entries: list = record.get("publication_entries") or []
     bibliographic_references: list[dict] | None = get_bibliographic_references_json(
         marc_record, "670", publication_entries
     )

@@ -31,12 +31,6 @@ def server_side_cursor(conn: Connection, record_type: str):
     return conn.cursor(name=cursor_name, row_factory=dict_row)
 
 
-def run_preflight_queries(cfg: dict) -> bool:
-    """Retain the indexing hook; PostgreSQL requires no MariaDB collation workaround."""
-    log.info("No Muscat database preflight queries are required for PostgreSQL.")
-    return True
-
-
 def load_index_config(path: str | Path = "index_config.yml") -> dict[str, Any]:
     with Path(path).open() as config_file:
         return yaml.full_load(config_file)

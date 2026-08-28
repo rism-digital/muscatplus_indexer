@@ -21,7 +21,6 @@ from cantus_indexer.index import clean_cantus, index_cantus
 from cantus_indexer.latest_record import get_latest_cantus_datetime
 from diamm_indexer.index import clean_diamm, index_diamm
 from diamm_indexer.latest_record import get_latest_diamm_datetime
-from indexer.helpers.db import run_preflight_queries
 from indexer.helpers.metrics import (
     calculate_metric_outcome,
     drain_event_errors,
@@ -313,9 +312,6 @@ def main(args: argparse.Namespace) -> MainResult:
     if args.only_id:
         idx_config = idx_config | {"id": args.only_id}
 
-    if not args.dry:
-        res &= run_preflight_queries(idx_config)
-
     for metric_type, fn in selected_index_steps(
         args.include, args.exclude, index_groups
     ):
@@ -492,7 +488,10 @@ if __name__ == "__main__":
     unhandled_errors = 0
     try:
         main_result = main(input_args)
-        log.info("Total time to index main: %s", format_duration(main_result.duration_seconds))
+        log.info(
+            "Total time to index main: %s",
+            format_duration(main_result.duration_seconds),
+        )
     except Exception as e:
         log.critical("Main method raised an exception and could not continue: %s", e)
         traceback.print_exc()

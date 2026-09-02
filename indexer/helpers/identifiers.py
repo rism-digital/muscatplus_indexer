@@ -241,6 +241,7 @@ COUNTRY_CODE_MAPPING = {
     "SRB": ["Serbia"],
     "SYR": ["Syria"],
     "TA": ["Tajikistan"],
+    "TN": ["Tunisia"],
     "TR": ["Turkey"],
     "TT": ["Trinidad and Tobago"],
     "UA": ["Ukraine"],

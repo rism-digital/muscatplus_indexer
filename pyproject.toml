@@ -43,8 +43,8 @@ url = "https://test.pypi.org/simple/"
 explicit = true
 
 [tool.uv.sources]
-# pymarc = { git = "https://gitlab.com/pymarc/pymarc.git", rev = "main" }
- pymarc = { git = "https://gitlab.com/ahankinson/pymarc.git", rev = "constructor-searching-optimizations" }
+ pymarc = { git = "https://gitlab.com/pymarc/pymarc.git", rev = "main" }
+# pymarc = { git = "https://gitlab.com/ahankinson/pymarc.git", rev = "constructor-searching-optimizations" }
 
 [tool.ruff]
 target-version = "py313"

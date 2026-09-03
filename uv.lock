@@ -232,7 +232,7 @@ requires-dist = [
     { name = "antequem", git = "https://github.com/rism-digital/antequem.git?rev=main" },
     { name = "orjson", specifier = ">=3.10.3,<4.0.0" },
     { name = "psycopg", extras = ["pool"], specifier = ">=3.2.6" },
-    { name = "pymarc", git = "https://gitlab.com/ahankinson/pymarc.git?rev=constructor-searching-optimizations" },
+    { name = "pymarc", git = "https://gitlab.com/pymarc/pymarc.git?rev=main" },
     { name = "pyreqwest", specifier = ">=0.11.1,<0.12.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
     { name = "sentry-sdk", specifier = ">=2.19.0,<3.0.0" },
@@ -499,8 +499,8 @@ wheels = [
 
 [[package]]
 name = "pymarc"
-version = "5.3.1"
-source = { git = "https://gitlab.com/ahankinson/pymarc.git?rev=constructor-searching-optimizations#4078521bf6fd5cf1844259792d1f4c84f0b85deb" }
+version = "5.4.0"
+source = { git = "https://gitlab.com/pymarc/pymarc.git?rev=main#b1a69ae95d7e0c39066e043b40cf22bf453797f6" }
 
 [[package]]
 name = "pyreqwest"

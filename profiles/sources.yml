@@ -511,5 +511,11 @@ external_resources_json:
 iiif_manifest_uris_sm:
   processor: "_get_iiif_manifest_uris"
 
+contributing_project_ids:
+  field: "910"
+  subfield: "0"
+  multiple: true
+  value_prefix: "institution_"
+
 # 930 is works, but this is in flux so we won't index them (yet)
 # 980 is an internal note, so it is not indexed.

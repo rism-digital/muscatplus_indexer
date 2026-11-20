@@ -30,6 +30,10 @@ def create_digital_object_index_document(record: dict, cfg: dict) -> dict:
         urls = {
             "encoding_url_s": f"{BASE_MUSCAT_URL}{left_padded_path}/incipits/{filename}"
         }
+    elif media_type == "text/markdown":
+        urls = {
+            "text_url_s": f"{BASE_MUSCAT_URL}{left_padded_path}/original/{filename}"
+        }
     else:
         log.warning(
             "Could not determine a media URL for type %s on object %s",

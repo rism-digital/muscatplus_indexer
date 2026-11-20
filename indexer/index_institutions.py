@@ -59,6 +59,13 @@ SELECT i.id, i.marc_source, i.siglum,
         WHERE pc.institution_id = i.id
             AND pc.marc_tag = '910'
     ) AS people_contribution_count,
+    (SELECT COUNT(DISTINCT pc.source_id)
+        FROM {dbname}.sources_to_institutions AS pc
+        JOIN {dbname}.sources AS ss ON pc.source_id = ss.id
+        WHERE pc.institution_id = i.id
+            AND pc.marc_tag = '910'
+            AND ss.wf_stage = 1
+    ) AS sources_contribution_count,
     (SELECT jsonb_agg(DISTINCT
                  jsonb_build_object('id', pub.id,
                              'author', pub.author,
@@ -127,10 +134,13 @@ GROUP BY i.id
 ORDER BY i.id ASC;
 """  # noqa: S608
 
-    with postgres_pool.connection() as conn, server_side_cursor(conn, "institutions") as curs:
-            curs.execute(sql)
-            while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
-                yield rows
+    with (
+        postgres_pool.connection() as conn,
+        server_side_cursor(conn, "institutions") as curs,
+    ):
+        curs.execute(sql)
+        while rows := curs.fetchmany(cfg["postgres"]["resultsize"]):
+            yield rows
 
 
 def index_institutions(cfg: dict) -> bool:

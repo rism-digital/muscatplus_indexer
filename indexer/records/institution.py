@@ -79,6 +79,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
     )
 
     people_contribution_count: int = record.get("people_contribution_count", 0)
+    sources_contribution_count: int = record.get("sources_contribution_count", 0)
 
     related_institutions: list = record["institution_relationships"] or []
 
@@ -190,6 +191,7 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "total_sources_i": total_count,
         "total_sources_boost": source_count_doc_boost,
         "people_contribution_count_i": people_contribution_count,
+        "sources_contribution_count_i": sources_contribution_count,
         "num_sources_s": _get_num_sources_facet(total_count),
         "bibliographic_references_json": bibliographic_references_json,
         "bibliographic_references_sm": bibliographic_reference_titles,
@@ -201,7 +203,9 @@ def create_institution_index_document(record: dict, cfg: dict) -> dict[str, obje
         "related_places_json": orjson.dumps(related_places).decode("utf-8")
         if related_places
         else None,
-        "is_contributing_project_b": record["is_contributing_project"],
+        "is_contributing_project_b": (
+            (people_contribution_count + sources_contribution_count) > 0
+        ),
         "created": record["created"].strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated": record["updated"].strftime("%Y-%m-%dT%H:%M:%SZ"),
     }

@@ -22,6 +22,11 @@ accession_number_s:
   field: "541"
   subfield: "e"
 
+other_shelfmarks_sm:
+  field: "591"
+  subfield: "a"
+  multiple: true
+
 siglum_s:
   field: "852"
   subfield: "a"

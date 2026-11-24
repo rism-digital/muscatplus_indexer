@@ -517,5 +517,9 @@ contributing_project_ids:
   multiple: true
   value_prefix: "institution_"
 
+contributing_projects_json:
+  processor: "_get_contributing_projects_data"
+  json: true
+
 # 930 is works, but this is in flux so we won't index them (yet)
 # 980 is an internal note, so it is not indexed.

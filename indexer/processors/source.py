@@ -2,7 +2,6 @@ import itertools
 import logging
 from collections import defaultdict
 
-import orjson
 import pymarc
 
 from indexer.helpers.identifiers import country_code_from_siglum
@@ -613,3 +612,21 @@ def _get_periodical_series_data(record: pymarc.Record) -> list | None:
         ret.append({"title": field.get("a"), "number": field.get("v")})
 
     return ret
+
+
+def _get_contributing_projects_data(record: pymarc.Record) -> list | None:
+    if "910" not in record:
+        return None
+
+    fields: list[pymarc.Field] = record.get_fields("910")
+
+    return [
+        {
+            "type": "institution",
+            "name": f.get("a", "[Unknown name]"),
+            "relationship": "contributing_project",
+            "institution_id": f"institution_{f['0']}",
+            "project_url": f.get("u"),
+        }
+        for f in fields
+    ]

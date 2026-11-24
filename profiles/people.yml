@@ -72,6 +72,10 @@ contributing_project_ids:
   multiple: true
   value_prefix: "institution_"
 
+contributing_projects_json:
+  processor: "_get_contributing_projects_data"
+  json: true
+
 related_people_json:
   processor: "_get_related_people_data"
   json: true
@@ -88,8 +92,4 @@ related_institutions_json:
 
 external_resources_json:
   processor: "_get_external_resources_data"
-  json: true
-
-contributing_projects_json:
-  processor: "_get_contributing_projects_data"
   json: true
